@@ -62,22 +62,27 @@ class Display(
 ):
     def __init__(self):
         # Setup Display
+        # FlightWall: Adafruit Triple RGB Matrix Bonnet (6358), "active3" pinout.
+        # Configured below for the Phase 0 SINGLE-PANEL test. For the full 16-panel
+        # wall (3 chains of 6+5+5) switch chain_length->6, parallel->3, and drop
+        # pwm_bits to 7-9. See the inline "(wall: ...)" notes on each line.
         options = RGBMatrixOptions()
-        options.hardware_mapping = "adafruit-hat-pwm" if HAT_PWM_ENABLED else "adafruit-hat"
+        options.hardware_mapping = "regular"      # Triple Bonnet active3 — NOT adafruit-hat/-pwm
         options.rows = 32
         options.cols = 64
-        options.chain_length = 1
-        options.parallel = 1
-        options.row_address_type = 0
+        options.chain_length = 1                  # single-panel test (wall: 6 = longest chain)
+        options.parallel = 1                      # single-panel test (wall: 3 chains)
+        options.row_address_type = 0              # 1/16 scan ABCD; try 3 or 5 if rows scramble on hw
+        options.panel_type = "FM6126A"            # FM6124-family init sequence (else: no output/garbage)
         options.multiplexing = 0
-        options.pwm_bits = 11
+        options.pwm_bits = 11                     # one panel (wall: drop to 7-9 if refresh < ~100 Hz)
         options.brightness = BRIGHTNESS
         options.pwm_lsb_nanoseconds = 130
-        options.led_rgb_sequence = "RGB"
-        options.pixel_mapper_config = ""
+        options.led_rgb_sequence = "RGB"          # try RBG/BGR/GRB if colors come out swapped on hw
+        options.pixel_mapper_config = ""          # wall: set a mapper for the uneven 6+5+5 chains
         options.show_refresh_rate = 0
-        options.gpio_slowdown = GPIO_SLOWDOWN
-        options.disable_hardware_pulsing = True
+        options.gpio_slowdown = GPIO_SLOWDOWN     # config.py = 4 for Pi 4 (try 5 if garbage on hw)
+        options.disable_hardware_pulsing = False  # active3/regular supports hardware PWM natively
         options.drop_privileges = True
         self.matrix = RGBMatrix(options=options)
 
