@@ -80,6 +80,27 @@ try/except in the code and intentionally left unset → disabled.)
 - Changed from brief: entry point `main.py`→`flight-tracker.py`; hostname `flightpi`→`flightwall` (repo-wide).
 - Next: commit in logical groups, create `g-vansh/flightwall`, push main. Flashing + all Pi steps PENDING (no card, Pi offline).
 
+### 2026-06-14 — Rebrand to "vestor" (owner code name)
+- Did: owner set the project code name to **vestor**. Standardized the whole repo:
+  - `git mv flight-tracker.py vestor-tracker.py`; `git mv services/flightwall.service
+    services/vestor.service` (ExecStart + WorkingDirectory + EnvironmentFile →
+    `/home/pi/vestor`, entry point `vestor-tracker.py`).
+  - Hostname `flightwall` → `vestor` everywhere (`vestor.local`): scripts, AGENTS,
+    RUNBOOK, OPEN_QUESTIONS, `.env`/`.env.example` PI_HOST, `custom.toml.example`.
+  - On-Pi path `/home/pi/flightwall` → `/home/pi/vestor`; clone URL + repo refs
+    `g-vansh/flightwall` → `g-vansh/vestor` (install_app.sh, install_service.sh, AGENTS).
+  - Brand `FlightWall` → `Vestor` in README, NOTICE, config.py header, display comment.
+  - Fixed stale `main.py` entry-point refs in AGENTS/RUNBOOK → `vestor-tracker.py`.
+- Verified: `git grep -i flightwall` / `flight-tracker` → no tracked refs remain
+  (except upstream artifact `assets/FlightTracker.service`, left untouched for
+  attribution); `python3 -m py_compile` clean; `bash -n` clean on scripts.
+- Owner inputs received this session: WiFi SSID/password, pi password = `vestor`
+  (baked only into gitignored `scripts/custom.toml`, never committed).
+- Changed from brief: code name flightwall → vestor (owner instruction); GitHub repo
+  renamed to `g-vansh/vestor` (flagged in OPEN_QUESTIONS).
+- Next: generate gitignored `custom.toml`, commit+push, flash SD (rpi-imager GUI —
+  device confirmation needed), then owner powers on the Pi.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

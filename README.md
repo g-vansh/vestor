@@ -1,4 +1,4 @@
-# FlightWall
+# Vestor
 
 An RGB LED matrix that shows aircraft passing over Boston as seen from a window in
 Cambridge, MA — built on a Raspberry Pi 4 + Adafruit Triple RGB Matrix Bonnet driving
@@ -23,4 +23,4 @@ logged in `docs/BUILD_LOG.md`.
 - `display/__init__.py` — matrix init (Triple Bonnet: `regular` / `parallel` / `FM6126A`)
 - `scenes/`, `data/` — modular scenes and data clients
 - `scripts/` — `flash_sd.sh`, `setup_pi.sh`, `install_app.sh`, `install_service.sh`
-- `services/flightwall.service` — systemd unit
+- `services/vestor.service` — systemd unit

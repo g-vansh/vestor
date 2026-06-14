@@ -1,6 +1,6 @@
-# AGENTS.md — FlightWall Project
+# AGENTS.md — Vestor Project
 
-> **You are a Claude Code agent with full autonomy on this project.** Read this entire file before doing anything. It is the source of truth for the FlightWall build: a Raspberry Pi–driven RGB LED matrix that shows aircraft passing over Boston/Dorchester as seen from the owner's window, and will grow into a modular multi-scene dashboard (flights → MBTA → Bluebikes → weather → animations).
+> **You are a Claude Code agent with full autonomy on this project.** Read this entire file before doing anything. It is the source of truth for the Vestor build: a Raspberry Pi–driven RGB LED matrix that shows aircraft passing over Boston/Dorchester as seen from the owner's window, and will grow into a modular multi-scene dashboard (flights → MBTA → Bluebikes → weather → animations).
 >
 > The owner (GitHub `g-vansh`) has explicitly delegated this to you. **You may install software, edit configs, commit to `main`, SSH into the Pi, and persist secrets without asking.** The only things you must do carefully are listed in **§3 Autonomy Contract**. Default to acting, not asking.
 
@@ -73,7 +73,7 @@ When in doubt: prefer a reversible action, log it, and continue. Append blockers
 
 ## 4. Git / GitHub Workflow
 
-**Approach: clone upstream, re-point to a new `g-vansh` repo, keep upstream as a remote.** This preserves its-a-plane-python's history and lets you pull future upstream fixes, while making `g-vansh/flightwall` the source of truth.
+**Approach: clone upstream, re-point to a new `g-vansh` repo, keep upstream as a remote.** This preserves its-a-plane-python's history and lets you pull future upstream fixes, while making `g-vansh/vestor` the source of truth.
 
 **[MAC] Commands:**
 ```bash
@@ -82,12 +82,12 @@ brew install gh git || true
 gh auth status || gh auth login        # device flow; owner approves once
 
 # Clone upstream, rename remotes
-git clone https://github.com/ColinWaddell/its-a-plane-python.git flightwall
-cd flightwall
+git clone https://github.com/ColinWaddell/its-a-plane-python.git vestor
+cd vestor
 git remote rename origin upstream       # keep upstream for future pulls
 
 # Create the new repo under g-vansh and point origin at it
-gh repo create g-vansh/flightwall --public --source=. --remote=origin --push
+gh repo create g-vansh/vestor --public --source=. --remote=origin --push
 # (use --private instead of --public if the owner later prefers; GPL note below)
 
 git branch -M main
@@ -114,11 +114,11 @@ git push -u origin main
 **What goes where:**
 - **WiFi credentials** are NOT in `.env` — they're baked into the SD image at flash time via the Imager / `custom.toml` (§6b). They never need to live in the repo.
 - **API keys** (`OPENWEATHER_API_KEY`, `MBTA_API_KEY`) go in `.env` on the Pi (and `.env` on the Mac for any local testing). Bluebikes (GBFS) and NWS need **no key**.
-- **Pi connection details** (hostname `flightwall.local`, user `pi`) can live in a gitignored `.env` on the Mac for your SSH convenience.
+- **Pi connection details** (hostname `vestor.local`, user `pi`) can live in a gitignored `.env` on the Mac for your SSH convenience.
 
 **How the app reads them:** load `.env` at startup (e.g. `python-dotenv`) or `source` it in the systemd unit via `EnvironmentFile=`. `config.py` (committed, no secrets) imports from environment / `config_secrets.py` (gitignored). Keep the split clean: **structure in `config.py`, secrets in `.env`/`config_secrets.py`.**
 
-**Persisting so the owner never re-enters:** store the populated `.env` on the Pi at `/home/pi/flightwall/.env` (root-readable, mode `600`) and keep a copy on the Mac at the repo root (also gitignored). Once written, they persist across reboots and redeploys. Record in `BUILD_LOG.md` *that* keys were set (never the values).
+**Persisting so the owner never re-enters:** store the populated `.env` on the Pi at `/home/pi/vestor/.env` (root-readable, mode `600`) and keep a copy on the Mac at the repo root (also gitignored). Once written, they persist across reboots and redeploys. Record in `BUILD_LOG.md` *that* keys were set (never the values).
 
 **Honest tradeoff:** these are plaintext-on-disk secrets on machines the owner controls — appropriate for a hobby device, not for shared/production systems. Mode `600` + gitignore is the right bar here. Do not over-engineer (no vault needed).
 
@@ -130,7 +130,7 @@ Start from its-a-plane-python's layout and evolve it toward modular scenes. Upst
 
 **Target structure** (create missing dirs; keep upstream files working):
 ```
-flightwall/
+vestor/
 ├── AGENTS.md                  # this file
 ├── LICENSE                    # GPL-3.0 (keep upstream)
 ├── NOTICE.md                  # attribution + change log
@@ -141,7 +141,7 @@ flightwall/
 ├── config.py                  # committed: geometry, ZONE_HOME, scene config (NO secrets)
 ├── config_secrets.example.py  # committed template
 ├── config_secrets.py          # gitignored
-├── main.py / flight-tracker.py# entry point (upstream)
+├── vestor-tracker.py          # entry point
 ├── display/                   # matrix init + Animator (EDIT __init__.py — see below)
 ├── scenes/                    # one module per scene
 │   ├── flight.py              # existing flight scenes (refactor from upstream)
@@ -161,7 +161,7 @@ flightwall/
 │   ├── install_app.sh         # [PI] venv + its-a-plane + config edits
 │   └── install_service.sh     # [PI] systemd unit
 ├── services/
-│   └── flightwall.service     # systemd unit template
+│   └── vestor.service     # systemd unit template
 └── docs/
     ├── HARDWARE.md  RUNBOOK.md  BUILD_LOG.md  OPEN_QUESTIONS.md  TROUBLESHOOTING.md  ROADMAP.md
 ```
@@ -180,10 +180,10 @@ Write each script into `scripts/`, make them **idempotent and re-runnable**, com
 ### 7b. [MAC] Flash the SD card (headless, scripted)
 The one step touching physical media. Two routes — prefer the scriptable one, fall back to GUI.
 
-- **Scriptable:** `scripts/flash_sd.sh` — uses `rpi-imager` CLI if available (`brew install --cask raspberry-pi-imager`; the binary supports a `--cli <image> <device>` mode), OR flashes the base **Raspberry Pi OS Lite (64-bit, Bookworm)** image then mounts the boot partition and writes a **`custom.toml`** (Bookworm's first-boot config) to preconfigure: hostname `flightwall`, user `pi` + password hash, **WiFi (SSID/PSK)**, **enable SSH**, locale `America/New_York`, WiFi country `US`. Generate the password hash with `openssl passwd -6`. **Before writing: `diskutil list`, confirm the ≈64GB SD device, and pass it explicitly** (see §3 guardrail). After write, `diskutil eject`.
+- **Scriptable:** `scripts/flash_sd.sh` — uses `rpi-imager` CLI if available (`brew install --cask raspberry-pi-imager`; the binary supports a `--cli <image> <device>` mode), OR flashes the base **Raspberry Pi OS Lite (64-bit, Bookworm)** image then mounts the boot partition and writes a **`custom.toml`** (Bookworm's first-boot config) to preconfigure: hostname `vestor`, user `pi` + password hash, **WiFi (SSID/PSK)**, **enable SSH**, locale `America/New_York`, WiFi country `US`. Generate the password hash with `openssl passwd -6`. **Before writing: `diskutil list`, confirm the ≈64GB SD device, and pass it explicitly** (see §3 guardrail). After write, `diskutil eject`.
 - **GUI fallback:** if CLI flashing is unreliable, instruct the owner once through Raspberry Pi Imager's OS-customization (the only likely manual touch in the whole build) and document it in `BUILD_LOG.md`.
 
-Insert SD into Pi, power on, wait, then from the Mac: `ssh pi@flightwall.local`.
+Insert SD into Pi, power on, wait, then from the Mac: `ssh pi@vestor.local`.
 
 ### 7c. [PI] OS base + matrix driver — `scripts/setup_pi.sh`
 ```bash
@@ -204,8 +204,8 @@ The installer is interactive; if running non-interactively, drive it carefully o
 
 ### 7d. [PI] App install + the critical edits — `scripts/install_app.sh`
 ```bash
-cd /home/pi && git clone https://github.com/g-vansh/flightwall.git || (cd flightwall && git pull)
-cd /home/pi/flightwall
+cd /home/pi && git clone https://github.com/g-vansh/vestor.git || (cd vestor && git pull)
+cd /home/pi/vestor
 python3 -m venv env && source env/bin/activate
 pip install -r requirements.txt
 # install the matrix python binding INTO this venv:
@@ -233,7 +233,7 @@ options.drop_privileges      = True
 Populate `config.py` for this location: `ZONE_HOME = {tl_y:42.400, tl_x:-71.120, br_y:42.280, br_x:-70.980}`, `LOCATION_HOME=[42.354,-71.107,0.005]`, `MIN_ALTITUDE=100`, `BRIGHTNESS=50`, `JOURNEY_CODE_SELECTED="BOS"`, weather location `Cambridge,MA,US`. Keep keys in `.env`. Commit all of this.
 
 ### 7e. [PI] systemd service — `scripts/install_service.sh`
-Install `services/flightwall.service` to `/etc/systemd/system/`, `EnvironmentFile=/home/pi/flightwall/.env`, `WorkingDirectory=/home/pi/flightwall`, `ExecStart=/home/pi/flightwall/env/bin/python3 main.py`, `Restart=always`, run as `pi`. Then `daemon-reload`, `enable --now`, check `systemctl status` and `journalctl -u flightwall -f`. It will restart-loop harmlessly until a panel is attached — that's expected pre-hardware.
+Install `services/vestor.service` to `/etc/systemd/system/`, `EnvironmentFile=/home/pi/vestor/.env`, `WorkingDirectory=/home/pi/vestor`, `ExecStart=/home/pi/vestor/env/bin/python3 vestor-tracker.py`, `Restart=always`, run as `pi`. Then `daemon-reload`, `enable --now`, check `systemctl status` and `journalctl -u vestor -f`. It will restart-loop harmlessly until a panel is attached — that's expected pre-hardware.
 
 ### 7f. [EITHER] Everything testable WITHOUT panels (do all of this now)
 Flash, boot, SSH, all installs, all config edits, the service install, secrets, repo — **all dry-runnable**. The service running (even error-looping for lack of a panel) confirms the software path. Mark hardware-gated steps clearly.
@@ -249,7 +249,7 @@ sudo ./demo --led-rows=32 --led-cols=64 --led-gpio-mapping=regular \
 - No output → check `--led-panel-type=FM6126A` and that the PSU is on.
 - Wrong colors → try `--led-rgb-sequence=RBG` (or BGR/GRB); record the winner into `display/__init__.py`.
 - Scrambled rows → try `--led-row-addr-type=3` then `5`.
-- Note the Hz (want ≥80–100). Then run the app (`main.py`) with `chain_length=1, parallel=1`.
+- Note the Hz (want ≥80–100). Then run the app (`vestor-tracker.py`) with `chain_length=1, parallel=1`.
 
 ### 7h. [PI] Scale to the full wall (Phase 1)
 Set `chain_length=6`, `parallel=3`; wire 3 chains (6+5+5), Port 2 = center if relevant; add a pixel-mapper for the uneven chains; re-tune `slowdown-gpio` (4→5 if garbage); drop `pwm_bits` to 7–9 if refresh < ~100 Hz. Two PSUs + bus bars, inject power along the run.
@@ -258,11 +258,11 @@ Set `chain_length=6`, `parallel=3`; wire 3 chains (6+5+5), Port 2 = center if re
 
 ## 8. Testing & Validation
 
-- **After flash/boot:** `ssh pi@flightwall.local` succeeds; `hostnamectl` shows `flightwall`; internet via `ping -c1 github.com`.
+- **After flash/boot:** `ssh pi@vestor.local` succeeds; `hostnamectl` shows `vestor`; internet via `ping -c1 github.com`.
 - **After driver install:** `~/rpi-rgb-led-matrix/examples-api-use/demo` exists; runs (with panel) and prints `Hardware gpio mapping: regular`.
 - **After app install:** `env/bin/python3 -c "import rgbmatrix"` succeeds inside the venv; `pip check` clean.
 - **After config edits:** `grep` `display/__init__.py` shows `regular`, `FM6126A`, `disable_hardware_pulsing = False`.
-- **After service install:** `systemctl is-enabled flightwall` = enabled; `journalctl -u flightwall` shows the loop (and, pre-panel, the expected "no matrix" error — acceptable).
+- **After service install:** `systemctl is-enabled vestor` = enabled; `journalctl -u vestor` shows the loop (and, pre-panel, the expected "no matrix" error — acceptable).
 - **Hardware test:** demo lights the panel, colors correct, refresh ≥80 Hz, app renders a flight when one is overhead.
 - **Idempotency:** every `scripts/*.sh` can be re-run without harm — assert this by running twice.
 
@@ -280,7 +280,7 @@ Set `chain_length=6`, `parallel=3`; wire 3 chains (6+5+5), Port 2 = center if re
 | Persistent flicker | Sound not disabled / HW pulse off | Confirm `snd_bcm2835` blacklisted + `dtparam=audio=off`; `disable_hardware_pulsing=False` |
 | Pi won't boot after cmdline edit | Malformed `cmdline.txt` | Re-mount SD on Mac, restore `cmdline.txt.bak` |
 | No flights ever | FlightRadarAPI upstream change | `pip install FlightRadarAPI -U`; or `git fetch upstream && merge` |
-| Service won't start | Path/env/caps | Check `EnvironmentFile`, venv path, `setcap`, `journalctl -u flightwall` |
+| Service won't start | Path/env/caps | Check `EnvironmentFile`, venv path, `setcap`, `journalctl -u vestor` |
 | Can't SSH | WiFi/SSH not baked in | Re-flash with correct `custom.toml`; verify SSID/country=US |
 
 ## 10. Roadmap / Future Scenes (also write to `docs/ROADMAP.md`)
@@ -294,8 +294,8 @@ Set `chain_length=6`, `parallel=3`; wire 3 chains (6+5+5), Port 2 = center if re
 ---
 
 ## 11. Definition of Done (Phase 0)
-- New `g-vansh/flightwall` repo exists, builds from a clean clone, GPL-compliant, secrets gitignored.
-- Pi flashed, headless, reachable at `flightwall.local`; driver + app + service installed; configs correct (`regular`/`FM6126A`/`parallel=1`).
+- New `g-vansh/vestor` repo exists, builds from a clean clone, GPL-compliant, secrets gitignored.
+- Pi flashed, headless, reachable at `vestor.local`; driver + app + service installed; configs correct (`regular`/`FM6126A`/`parallel=1`).
 - One panel lights up, colors correct, refresh ≥80 Hz, a real flight renders.
 - `BUILD_LOG.md` tells the full story; `OPEN_QUESTIONS.md` holds anything you couldn't resolve.
 - Owner has to do **nothing** except wire the panel and watch it work.

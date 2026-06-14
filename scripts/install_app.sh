@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # [PI] Idempotent: clone/pull app, venv, deps, matrix binding, setcap. Re-runnable.
 set -euo pipefail
-APP="$HOME/flightwall"
+APP="$HOME/vestor"
 
 if [ ! -d "$APP/.git" ]; then
-  git clone https://github.com/g-vansh/flightwall.git "$APP"
+  git clone https://github.com/g-vansh/vestor.git "$APP"
 else
   git -C "$APP" pull --ff-only || true
 fi

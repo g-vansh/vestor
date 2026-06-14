@@ -1,4 +1,4 @@
-"""FlightWall configuration (committed — NO secrets).
+"""Vestor configuration (committed — NO secrets).
 
 Location: 540 Memorial Drive, Cambridge MA (~42.354 N, -71.107 W), facing
 south/southeast toward Logan/BOS traffic over Dorchester and the harbor.

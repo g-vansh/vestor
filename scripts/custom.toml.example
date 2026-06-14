@@ -1,4 +1,4 @@
-# FlightWall headless first-boot config for Raspberry Pi OS Lite (64-bit, Bookworm).
+# Vestor headless first-boot config for Raspberry Pi OS Lite (64-bit, Bookworm).
 #
 # COPY to scripts/custom.toml (gitignored), fill in the WiFi SSID/password and a
 # pi password, then write it to the SD card's bootfs at /boot/firmware/custom.toml
@@ -16,7 +16,7 @@
 config_version = 1
 
 [system]
-hostname = "flightwall"
+hostname = "vestor"
 
 [user]
 name = "pi"

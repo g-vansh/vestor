@@ -1,6 +1,6 @@
 # NOTICE
 
-FlightWall is derived from **ColinWaddell/its-a-plane-python**
+Vestor is derived from **ColinWaddell/its-a-plane-python**
 (https://github.com/ColinWaddell/its-a-plane-python), licensed under **GPL-3.0**.
 This repository remains licensed under GPL-3.0; see `LICENSE`. Original copyright
 notices are retained.

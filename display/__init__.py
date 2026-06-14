@@ -62,7 +62,7 @@ class Display(
 ):
     def __init__(self):
         # Setup Display
-        # FlightWall: Adafruit Triple RGB Matrix Bonnet (6358), "active3" pinout.
+        # Vestor: Adafruit Triple RGB Matrix Bonnet (6358), "active3" pinout.
         # Configured below for the Phase 0 SINGLE-PANEL test. For the full 16-panel
         # wall (3 chains of 6+5+5) switch chain_length->6, parallel->3, and drop
         # pwm_bits to 7-9. See the inline "(wall: ...)" notes on each line.
