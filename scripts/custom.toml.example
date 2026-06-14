@@ -1,0 +1,41 @@
+# FlightWall headless first-boot config for Raspberry Pi OS Lite (64-bit, Bookworm).
+#
+# COPY to scripts/custom.toml (gitignored), fill in the WiFi SSID/password and a
+# pi password, then write it to the SD card's bootfs at /boot/firmware/custom.toml
+# (Bookworm path — NOT /boot/). The filled file contains secrets: never commit it.
+#
+# Notes:
+#  - WiFi password MUST be plaintext (password_encrypted = false): the encrypted
+#    path is unreliable on Bookworm.
+#  - WiFi `country` is REQUIRED or the radio stays disabled.
+#  - To use an ENCRYPTED pi password instead of plaintext: run
+#      openssl passwd -5 'yourpassword'
+#    paste the $5$... hash as `password` and set password_encrypted = true under
+#    [user] ONLY (keep the WiFi password plaintext).
+
+config_version = 1
+
+[system]
+hostname = "flightwall"
+
+[user]
+name = "pi"
+password = "CHANGEME_pi_password"
+password_encrypted = false
+
+[ssh]
+enabled = true
+password_authentication = true
+# Optional: paste your Mac key (cat ~/.ssh/id_ed25519.pub) to log in without a password:
+# authorized_keys = [ "ssh-ed25519 AAAA... user@host" ]
+
+[wlan]
+ssid = "OWNER_WIFI_SSID"
+password = "OWNER_WIFI_PASSWORD"
+password_encrypted = false
+hidden = false
+country = "US"
+
+[locale]
+keymap = "us"
+timezone = "America/New_York"
