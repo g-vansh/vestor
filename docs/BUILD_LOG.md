@@ -101,6 +101,36 @@ try/except in the code and intentionally left unset → disabled.)
 - Next: generate gitignored `custom.toml`, commit+push, flash SD (rpi-imager GUI —
   device confirmation needed), then owner powers on the Pi.
 
+### 2026-06-14 — SD card flashed (rpi-imager GUI, screen-controlled)
+- Did: flashed the microSD (in this Mac's built-in SDXC reader) with **Raspberry Pi
+  Imager v2.0.8**, driven via screen control after the owner explicitly confirmed the
+  target device AND authorized GUI automation ("yes i can confirm both").
+  - Device = Raspberry Pi 4; OS = **Raspberry Pi OS Lite (64-bit)**; Storage =
+    "Apple SDXC Reader Media" (verified earlier as 58.2 GB / `/Volumes/Untitled` —
+    NOT the internal SSD; satisfies hard stop #1, 100% device certainty).
+  - Applied settings via Imager's **built-in OS Customisation wizard** (not custom.toml):
+    hostname `vestor`; locale Washington D.C. → tz America/New_York, keymap us;
+    user `pi` / password `vestor`; Wi-Fi SSID `MIT` (password verified char-by-char via
+    the reveal eye before writing); **SSH enabled, password authentication**; Raspberry
+    Pi Connect left OFF (declined cloud sign-in — local SSH is sufficient).
+  - Confirmed the ERASE warning named "Apple SDXC Reader Media" before clicking
+    "I UNDERSTAND, ERASE AND WRITE". Imager v2.0.8 began the write without prompting for
+    the macOS admin password.
+- Changed from brief / deviations (recorded, not stalled):
+  - **OS version: Bookworm → Trixie.** Imager no longer offers a Bookworm 64-bit Lite
+    image; the current "Raspberry Pi OS Lite (64-bit)" is Debian **Trixie**-based. Chose
+    Trixie Lite 64-bit. Implication: the hzeller `rgbmatrix` build + `gpio_slowdown=4`
+    were tuned for Bookworm; Trixie ships a newer kernel/libgpiod, so re-confirm timing
+    at the Phase 0 single-panel test.
+  - **First-boot config method: Imager wizard, not `custom.toml`.** The settings were
+    baked into the image by the wizard, so the gitignored `scripts/custom.toml` is now a
+    redundant backup path rather than the active mechanism. No plaintext secrets land on
+    the FAT boot partition this way.
+- Verified: write initiated; "Writing in progress — do not disconnect the storage
+  device" / "Unmounting drive…" observed. (Completion + eject pending.)
+- Next: confirm "Write Successful", eject the card, owner inserts it in the Pi and powers
+  on. Then SSH to `vestor.local` (pi/vestor). STOP before any live LED-panel test (#5).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
