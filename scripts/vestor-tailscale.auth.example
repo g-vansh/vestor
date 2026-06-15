@@ -1,0 +1,15 @@
+# Vestor — Tailscale first-boot auth key (TEMPLATE).
+#
+# 1. Generate a key at: https://login.tailscale.com/admin/settings/keys
+#      Reusable:     ON   (survives re-flashes and first-boot retries)
+#      Pre-approved: ON   (only needed if your tailnet enforces device approval)
+#      Ephemeral:    OFF  (the wall display must persist, not vanish when offline)
+#      Expiry:       short is fine (e.g. 1 day) — it is only used once, at first boot
+#      Tag (optional): tag:vestor, if you manage ACLs by tag
+# 2. Copy this file to  scripts/vestor-tailscale.auth  (gitignored, NEVER committed).
+# 3. Replace the line below with ONLY the key (one line, no quotes, no comment).
+#
+# install_tailscale_firstboot.sh reads scripts/vestor-tailscale.auth, bakes the key
+# onto the SD boot partition, and the Pi shreds it after enrollment succeeds.
+
+tskey-auth-REPLACE-WITH-YOUR-REUSABLE-PREAPPROVED-KEY

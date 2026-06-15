@@ -131,6 +131,54 @@ try/except in the code and intentionally left unset → disabled.)
 - Next: confirm "Write Successful", eject the card, owner inserts it in the Pi and powers
   on. Then SSH to `vestor.local` (pi/vestor). STOP before any live LED-panel test (#5).
 
+### 2026-06-14 — Tailscale first-boot enrollment (reachability fix, coded)
+- Context: the Pi booted fine but is **unreachable** over MIT's "MIT" SSID. That SSID
+  is a Juniper Mist **per-user-PSK (BYOD/IoT)** network with **client isolation +
+  blocked mDNS by design** — `vestor.local` never resolves, the Mac's ARP table shows
+  only the gateway, and MIT publishes no DNS for the device. Mac SSH client itself
+  verified healthy (OpenSSH 10.2, GitHub auth OK), so this is a network-fabric block,
+  not an SSH problem. MIT SECURE (802.1X) rejected: storing a Kerberos master
+  credential on a wall appliance is brittle + a credential-exposure risk, and likely
+  wouldn't fix peer reachability anyway. Personal APs/routers are barred on MITnet.
+- Decision: **Tailscale** overlay mesh. The Pi dials OUTBOUND (WireGuard / DERP
+  relays) to the tailnet, sidestepping L2 isolation; opens no inbound ports; is not a
+  personal AP → MITnet-policy-compliant. Keeps the Pi on the correct MIT PSK Wi-Fi.
+  Doubles as the connectivity test (node appears in the Tailscale admin console).
+- Did (all code, no hardware, no secrets committed):
+  - `scripts/tailscale_bootstrap.sh` — **[PI] stage-2** oneshot. Idempotent +
+    self-cleaning: installs Tailscale if missing, `tailscale up --hostname=vestor
+    --ssh --accept-dns=false` using a key read from `/etc/vestor/tailscale.authkey`,
+    reports the tailnet IP, then **shreds the key and `systemctl disable`s itself**.
+  - `services/vestor-tailscale-bootstrap.service` — `Type=oneshot`,
+    `After/Wants=network-online.target` (install + control-plane both need internet,
+    which the early firstrun stage lacks). No `Restart=`; stays enabled so a failed
+    run retries next boot, script self-disables on success.
+  - `scripts/install_tailscale_firstboot.sh` — **[MAC]** stager. Run AFTER Imager's
+    wizard flash, BEFORE eject. Copies the 3 payload files into `<bootfs>/vestor/`
+    and **prepends a fully `|| true`-guarded block after firstrun.sh's shebang**
+    (stage 1) that, on first boot, installs the script+unit+key into the rootfs and
+    enables the oneshot. Self-guarded so it can NEVER abort the wizard's `set -e`
+    Wi-Fi/SSH setup. Idempotent (marker-guarded). **Does NOT touch cmdline.txt**
+    (hard stop #2 untouched).
+  - `scripts/vestor-tailscale.auth.example` (committed) + gitignore for the real
+    `vestor-tailscale.auth` / `*.authkey` (hard stop #3).
+- Verified: `bash -n` + `shellcheck` clean on both scripts; `git check-ignore`
+  confirms the real auth-key file is ignored; **dry-ran the stager against a synthetic
+  bootfs/firstrun.sh** → block injected after shebang, result still valid bash, second
+  run idempotent (1 marker), cmdline.txt line-count unchanged, key staged chmod 600.
+- Two-stage rationale: Tailscale is *how* we'll get SSH, so it can't be installed
+  *over* SSH — it must self-bootstrap from the card. Stage 1 (firstrun, no network)
+  only drops a persistent unit; stage 2 (next boot, network up) does the networked
+  install + enroll.
+- Changed from brief: adds a VPN layer not in the original plan, forced by MIT client
+  isolation. `ssh pi@vestor.local` (mDNS) is replaced by `ssh pi@vestor` over the
+  tailnet (Tailscale SSH / MagicDNS).
+- Next (owner-gated): owner creates a free Tailscale account + a **Reusable +
+  Pre-approved** auth key → I re-flash (cached Trixie image, same settings) + run the
+  stager + eject → owner powers on → `vestor` appears in the console → install
+  Tailscale on the Mac → `ssh pi@vestor` → run setup/install scripts. STOP before any
+  live LED-panel test (#5).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

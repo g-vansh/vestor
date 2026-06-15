@@ -13,7 +13,22 @@ Anything ambiguous or needing the owner. Everything else was built. Updated 2026
 4. **Entry point = `vestor-tracker.py`** (renamed from upstream `flight-tracker.py`);
    `services/vestor.service` `ExecStart` points at it.
 
+## Needs owner input (blocks reaching the Pi)
+8. **Tailscale auth key.** The Pi is unreachable on MIT's "MIT" SSID (per-user-PSK
+   BYOD network with client isolation + blocked mDNS — `vestor.local` can't resolve).
+   Fix is baked-in Tailscale (see BUILD_LOG 2026-06-14). **Owner action:** create a
+   free account at login.tailscale.com, generate an auth key (Settings → Keys) with
+   **Reusable ON, Pre-approved ON, Ephemeral OFF**, and hand it over. I drop it into
+   `scripts/vestor-tailscale.auth` (gitignored, never committed), re-flash + stage,
+   you power on, and `vestor` shows up in your Tailscale console. Then `ssh pi@vestor`.
+
 ## Decisions I made autonomously (flagged so the owner can override)
+- **Tailscale chosen over MIT SECURE / Ethernet for reachability.** MIT SECURE
+  (802.1X) was rejected (Kerberos credential exposed on a wall appliance, brittle,
+  uncertain it even fixes peer reachability); no Ethernet cable on hand; personal
+  APs/routers are barred on MITnet. Tailscale is outbound-only, policy-compliant, and
+  durable for a wall-mounted display. To undo: `sudo tailscale down && sudo apt remove
+  tailscale` on the Pi and delete the node in the console.
 - **GitHub repo renamed `g-vansh/flightwall` → `g-vansh/vestor`** to match the code
   name. GitHub auto-redirects the old URL. To revert: rename back in repo Settings
   and `git remote set-url origin`.

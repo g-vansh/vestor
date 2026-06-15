@@ -1,0 +1,18 @@
+[Unit]
+Description=Vestor first-boot Tailscale enrollment (one-shot, self-disabling)
+# Wait for real connectivity: installing Tailscale and reaching the control plane
+# both need the internet, which is NOT up during the early firstrun.sh stage.
+After=network-online.target
+Wants=network-online.target
+# Skip cleanly if the bootstrap script was never installed.
+ConditionPathExists=/usr/local/sbin/tailscale_bootstrap.sh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/tailscale_bootstrap.sh
+# No Restart= here: Type=oneshot does not honor it reliably. Instead the unit stays
+# ENABLED, so a failed run simply retries on the next boot; the script disables the
+# unit itself once enrollment succeeds.
+
+[Install]
+WantedBy=multi-user.target

@@ -7,6 +7,11 @@ config_secrets.py
 custom.toml
 scripts/custom.toml
 
+# Tailscale reusable auth key (secret) — only the .example is committed
+scripts/vestor-tailscale.auth
+vestor-tailscale.auth
+*.authkey
+
 # Python
 env/
 venv/
