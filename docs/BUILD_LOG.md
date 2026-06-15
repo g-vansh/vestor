@@ -179,6 +179,42 @@ try/except in the code and intentionally left unset → disabled.)
   Tailscale on the Mac → `ssh pi@vestor` → run setup/install scripts. STOP before any
   live LED-panel test (#5).
 
+### 2026-06-14 — Tailscale armed on the existing card (no re-flash) + key received
+- Owner provided the Tailscale auth key (Reusable). Stored ONLY in gitignored
+  `scripts/vestor-tailscale.auth` (chmod 600); `git status` confirms untracked.
+  Owner also installed + logged into Tailscale on the Mac.
+- Decision: **skip the re-flash.** The card already boots and joins MIT Wi-Fi
+  (proven), so instead of erasing a working install (and driving the Imager GUI
+  again) I re-armed the Pi's own first-boot mechanism directly on the FAT `bootfs`
+  partition. macOS can't write the ext4 rootfs, so a tiny on-Pi `firstrun.sh` is the
+  bridge that copies the payload into the rootfs and enables the one-shot.
+- Did (card in Mac's SD slot = `/dev/disk9`, boot partition `/Volumes/bootfs`;
+  positively NOT the internal SSD = disk0/disk3, 500 GB APFS):
+  - Backed up `cmdline.txt` → `cmdline.txt.bak` (hard stop #2).
+  - Staged `bootfs/vestor/{tailscale_bootstrap.sh, vestor-tailscale-bootstrap.service,
+    vestor-tailscale.auth}`.
+  - Wrote `bootfs/firstrun.sh` (set +e, guaranteed `exit 0`; installs the stage-2
+    one-shot + key into the rootfs, `systemctl enable`, shreds the FAT key copy, logs
+    to `bootfs/vestor-firstboot.log`, then strips its own token + deletes itself).
+  - Appended exactly one token to the single-line `cmdline.txt`:
+    `systemd.run=/boot/firmware/firstrun.sh systemd.run_success_action=reboot
+    systemd.unit=kernel-command-line.target`.
+  - Captured the whole procedure as a reusable, shellcheck-clean script:
+    `scripts/rearm_tailscale_existing_card.sh` (idempotent; verifies one line; restores
+    backup if the edit ever produced >1 line).
+- Verified: `firstrun.sh` passes `bash -n`; `cmdline.txt` 169→282 bytes, still ONE
+  line, no trailing newline, `diff` shows ONLY the appended token, token present once;
+  AppleDouble metadata cleaned (`dot_clean`); card ejected (`diskutil eject` →
+  "disk9 ejected", device gone).
+- Boot flow expected: power on → systemd runs firstrun (early, no net) → installs +
+  enables `vestor-tailscale-bootstrap.service` → reboots → service waits for
+  network-online → installs Tailscale + `tailscale up --hostname=vestor --ssh` →
+  shreds key, self-disables. `vestor` then appears in the Tailscale console; reach via
+  `ssh pi@vestor`. ETA a few minutes after power-on (Tailscale download dominates).
+- Changed from brief: chose the no-reflash re-arm over the documented re-flash path
+  (`install_tailscale_firstboot.sh`); both now exist in the repo.
+- Next: owner powers on the Pi. STOP before any live LED-panel test (#5).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
