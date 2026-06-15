@@ -215,6 +215,54 @@ try/except in the code and intentionally left unset → disabled.)
   (`install_tailscale_firstboot.sh`); both now exist in the repo.
 - Next: owner powers on the Pi. STOP before any live LED-panel test (#5).
 
+### 2026-06-14 — On-Pi provisioning over Tailscale (driver + app + service, NO panel)
+- Owner confirmed "vestor is on tailscale now." Pi enrolled: `vestor` @ `100.91.127.127`
+  (direct LAN path 10.31.134.31). SSH works over the tailnet via **Tailscale identity
+  auth** — no Unix password needed (`ssh pi@100.91.127.127`, Trixie, Python 3.13.5).
+- Did (all over SSH, as `pi`, never root; sudo via `echo vestor | sudo -S`):
+  - git + clone `g-vansh/vestor` → `~/vestor`; clone hzeller upstream matrix →
+    `~/rpi-rgb-led-matrix` (commit `41809e4`, 2026-06-07).
+  - apt build toolchain: build-essential, python3-dev/venv, **cmake + ninja-build**,
+    libcap2-bin, curl.
+  - venv `~/vestor/env`; upgraded pip/wheel; Cython.
+  - Built the `rgbmatrix` binding from the matrix **repo root** via scikit-build-core +
+    CMake, then `pip install` of app deps with `rgbmatrix` filtered out. `import
+    rgbmatrix` → **OK**.
+  - `setcap cap_sys_nice=eip` on the resolved interpreter (`/usr/bin/python3.13`) for
+    non-root RT scheduling (#4). Verified via `getcap`.
+  - Scaffolded `.env` (chmod 600; weather/MBTA keys optional, default ""). Byte-compiled
+    app sources; ran a **hardware-free import smoke test** (`import config; import
+    display` — `BRIGHTNESS=50`, full scene/animator/rgbmatrix import graph resolves
+    WITHOUT constructing `RGBMatrix`, which only happens in `Display.__init__`).
+  - Flicker tweaks (root, with backups): `dtparam=audio=off` in config.txt; blacklist
+    `snd_bcm2835`; appended `isolcpus=3` to cmdline.txt — verified still **ONE line**,
+    no trailing newline (#2). Backups: `config.txt.vestorbak`, `cmdline.txt.vestorbak`.
+  - Installed `vestor.service` + daemon-reload, then **left it `disabled` + `inactive`**
+    — the panel must not start unsupervised (#5).
+- **Key deviation (driver build):** modern hzeller upstream moved Python packaging to
+  **scikit-build-core/CMake with a root `pyproject.toml`** — there is NO
+  `bindings/python/setup.py` anymore, so the old `pip install bindings/python` fails.
+  Correct path is `pip install <repo-root>`, which needs cmake + ninja. Its CMakeLists
+  also compiles `shims/pillow.c` unconditionally, which `#include`s Pillow's private
+  libImaging headers (`Imaging.h`, `ImPlatform.h`, `Mode.h`, `Arrow.h`,
+  `ImagingUtils.h`) — NOT shipped in Pillow wheels. Fix: fetch those 5 headers (pinned
+  Pillow 12.2.0) onto `CPATH` at build time only. The app never calls
+  `SetImage(PILImage)` and the shim doesn't link libpillow, so this adds **no runtime
+  Pillow dependency** (Pillow stays absent from requirements.txt).
+- Reconciled the repo scripts to this proven process (shellcheck-clean):
+  `setup_pi.sh` (drop the interactive Adafruit installer → apt cmake/ninja + clone
+  upstream; newline-safe cmdline edit), `install_app.sh` (repo-root scikit-build-core
+  build + CPATH Pillow headers + filtered requirements + correct ordering),
+  `install_service.sh` (install only — no `enable --now`), and RUNBOOK steps 3–5.
+- Verified: `rgbmatrix import OK`; app import graph OK; `getcap` shows cap_sys_nice;
+  cmdline.txt = 1 line; `systemctl is-enabled vestor` = disabled, `is-active` = inactive.
+- Changed from brief: adapted to upstream's scikit-build-core migration (cmake/ninja +
+  Pillow-header workaround) — not anticipated in the brief, which assumed the classic
+  `make` + `bindings/python` build.
+- Next: **supervised Phase 0** — wire ONE panel (data→Port 1, power→PSU), `systemctl
+  start vestor` (or run `vestor-tracker.py`) WHILE watching; tune rgb-sequence /
+  row-address / gpio-slowdown on real hardware; only then `systemctl enable vestor`.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
