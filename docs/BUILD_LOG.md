@@ -362,6 +362,47 @@ verified via `--help`; not yet run on hardware). With ONE panel (data→Port 1, 
 - Next: **supervised Phase 0** once panels arrive — run the demo command above WHILE watching
   the single panel, tune, then port settings into the app and enable the service.
 
+## 2026-06-15 — Design system + faithful simulator + live data clients
+Big autonomous build answering the "design it mind-blowingly, simulate it, save the
+docs" request. Two display targets: the **64×32** Phase-0 flights-only panel and the
+full **1024×32** (16-panel, 201.6") wall as one ultra-wide ribbon.
+
+- Did:
+  - **`sim/`** — a zero-dependency browser simulator (`file://`, classic `<script>`,
+    no build step) that renders the real HUB75 phosphor optically: linear framebuffer
+    → gamma 2.2 LUT → round-dot mask (destination-in) → 2-pass additive bloom →
+    scanline/seam/vignette. `led.js` (LEDMatrix + LEDRenderer, two authored bitmap
+    fonts), `scenes.js` (split-flap Solari board, radar sweep, flight hero, weather
+    **°C + °F**, Bluebikes, shuttle, clock, extras, status endcap), `data.js`
+    (synthetic model + live overlay), `app.js` (3 wall modes: dashboard / flight
+    takeover / marquee + the single panel). "Departure Board Noir" aesthetic
+    (sodium-amber on control-black; Major Mono / Saira / IBM Plex Mono / Silkscreen).
+  - **`docs/design/`** — DESIGN.md (full visual system), API_REFERENCE.md (every
+    source with verified endpoints/ids/CORS), RESEARCH.md (projects surveyed + 32px
+    patterns), README.md index.
+  - **`tools/clients/`** — stdlib Python clients shaped to mirror the sim DataModel:
+    `weather.py` (Open-Meteo, both units), `bluebikes.py` (GBFS, classic/e-bike
+    split), `mit_shuttle.py` (Passio GTFS-rt + static-GTFS route fallback),
+    `flights.py` (adsb.lol + hexdb enrichment, haversine, TTL cache), `_http.py`,
+    `test_live.py` harness.
+- Verified (all live, 2026-06-15):
+  - `test_live.py` → **ALL PASS**: weather (22°C/72°F), bikes (18 classic/0 e-bike),
+    shuttle (empty — Tech is daytime-only, correct), flights (hero on Logan approach).
+  - Browser sim renders all 7 zones, both panel sizes, 3 modes — **no console
+    errors**; LIVE toggle pulls real weather + bikes + **airplanes.live** flights
+    (hero seen live: TAP216L BOS→LIS, JBU560 KIN→JFK, with hexdb route/city/operator
+    enrichment). Synthetic shuttle math validated with an injected protobuf
+    (`tech=[3,12]`, `tech_nw=[7]`).
+- Changed from brief / corrected earlier research:
+  - **Shuttle "Tech NW = 63319" was wrong** — that route doesn't exist. Grad Junction
+    West (`180113`, confirmed) is served by `63220` "Tech Shuttle" and
+    `56642`/`71674` "Tech Shuttle 2" (the 2nd is what `tech_nw` now carries).
+  - **ADS-B CORS split:** adsb.lol/adsb.fi omit CORS → browser blocked; **airplanes.live**
+    sends CORS with the identical schema, so the sim reads it while the Pi reads
+    adsb.lol. Documented in API_REFERENCE.md.
+- Next: wire the Python clients into the real `display/` render path (Phase-1) and
+  fold the 384×96 electrical canvas → 1024×32 logical via `pixel_mapper_config`.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VESTOR · LED Wall Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=Saira+Condensed:wght@300;500;700;900&family=IBM+Plex+Mono:wght@300;400;500;600&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="grain"></div>
+<div class="scanflood"></div>
+
+<!-- ============================ TOP STRIP ============================ -->
+<header class="strip">
+  <div class="strip-left">
+    <span class="wordmark">vestor</span>
+    <span class="strip-sub">flight wall · 540 memorial dr</span>
+  </div>
+  <div class="strip-right">
+    <span class="pill" id="pill-mode">DASHBOARD</span>
+    <span class="pill pill-live" id="pill-src">SIM</span>
+    <span class="pill pill-clock" id="pill-clock">--:--:--</span>
+    <span class="pill pill-fps" id="pill-fps">-- FPS</span>
+  </div>
+</header>
+
+<main>
+  <!-- ============================ HERO ============================ -->
+  <section class="hero reveal">
+    <div class="hero-eyebrow">RGB LED MATRIX DASHBOARD · 16× P5 64×32 · ADAFRUIT TRIPLE BONNET · RPi4</div>
+    <h1 class="hero-title">A 201-inch<br><em>departure board</em><br>for the sky over Cambridge.</h1>
+    <p class="hero-lede">One unbroken <b>1024 × 32</b> pixel ribbon — sixteen HUB75 panels, side by side —
+      narrating live flights, weather in <b>°C and °F</b>, Bluebikes at Pacific St, the MIT Tech Shuttle,
+      and whatever else is moving overhead. Rendered below exactly as the phosphor will glow.</p>
+  </section>
+
+  <!-- ============================ THE WALL ============================ -->
+  <section class="module reveal" id="wall-module">
+    <div class="module-head">
+      <h2>THE WALL · <span class="dim">PHASE 1</span></h2>
+      <div class="dims">
+        <span><b>1024</b>×32 px</span><span class="sep">/</span>
+        <span><b>16</b> panels</span><span class="sep">/</span>
+        <span><b>201.6"</b> wide</span><span class="sep">/</span>
+        <span><b>5120</b>mm</span>
+      </div>
+    </div>
+
+    <div class="wall-frame">
+      <div class="ruler" id="ruler"></div>
+      <div class="wall-viewport" id="wall-viewport">
+        <canvas id="wall" class="ledwall"></canvas>
+      </div>
+      <div class="seamguide" id="seamguide"></div>
+    </div>
+
+    <!-- zone legend -->
+    <div class="legend" id="legend"></div>
+
+    <!-- console -->
+    <div class="console">
+      <div class="ctl">
+        <label>SCENE MODE</label>
+        <div class="seg" id="seg-mode">
+          <button data-mode="dashboard" class="on">DASHBOARD</button>
+          <button data-mode="takeover">FLIGHT TAKEOVER</button>
+          <button data-mode="marquee">MARQUEE</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label>DATA SOURCE</label>
+        <div class="seg" id="seg-src">
+          <button data-src="sim" class="on">SIMULATED</button>
+          <button data-src="live">LIVE APIS</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label>BRIGHTNESS <span id="lbl-bri">50</span></label>
+        <input type="range" id="sl-bri" min="10" max="100" value="50">
+      </div>
+      <div class="ctl">
+        <label>VIEW</label>
+        <div class="seg" id="seg-fit">
+          <button data-fit="actual" class="on">1:1 PAN</button>
+          <button data-fit="fit">FIT WIDTH</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label>AUTO-PAN</label>
+        <div class="seg" id="seg-pan">
+          <button data-pan="on" class="on">ON</button>
+          <button data-pan="off">OFF</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ SINGLE PANEL ============================ -->
+  <section class="module reveal" id="panel-module">
+    <div class="module-head">
+      <h2>PHASE 0 · <span class="dim">SINGLE-PANEL FLIGHT TEST</span></h2>
+      <div class="dims"><span><b>64</b>×32 px</span><span class="sep">/</span><span><b>1</b> panel</span><span class="sep">/</span><span>FM6124D</span></div>
+    </div>
+    <div class="panel-wrap">
+      <div class="panel-bezel">
+        <canvas id="panel" class="ledpanel"></canvas>
+      </div>
+      <div class="panel-note">
+        <p>The very first thing that lights up. A single 64×32 panel wired data→Port 1,
+          running <b>flights only</b>: a live radar disc, a split-flap callsign, the route, and
+          altitude/speed. This is the hardware-gated <b>hard-stop #5</b> moment — everything you
+          see here is what the supervised bring-up should produce.</p>
+        <code class="cmd">demo -D0 --led-rows=32 --led-cols=64 --led-chain=1 --led-gpio-mapping=regular --led-slowdown-gpio=4</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ SOURCES ============================ -->
+  <section class="module reveal" id="sources">
+    <div class="module-head"><h2>LIVE DATA SOURCES</h2><div class="dims"><span>ALL PUBLIC · NO SCRAPING</span></div></div>
+    <div class="src-grid" id="src-grid"></div>
+  </section>
+
+  <footer class="foot reveal">
+    <div><span class="wordmark small">vestor</span> · GPL-3.0 · derived from its-a-plane-python</div>
+    <div class="dim">faithful HUB75 optical sim — gamma 2.2, round emitters, additive bloom, 64px seams</div>
+  </footer>
+</main>
+
+<script src="led.js"></script>
+<script src="scenes.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
