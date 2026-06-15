@@ -113,7 +113,10 @@ def grab_current_temperature(location, units="metric"):
     except WeatherError:
         grab_weather.cache_clear()
 
-    if units == "imperial":
+    # On a failed fetch current_temp is None; only convert real readings.
+    # (Returning None here is the contract the caller expects -- it guards None;
+    # an unguarded None * float would raise TypeError and escape that handling.)
+    if units == "imperial" and current_temp is not None:
         current_temp = (current_temp * (9.0 / 5.0)) + 32
 
     return current_temp

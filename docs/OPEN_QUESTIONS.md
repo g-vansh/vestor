@@ -46,7 +46,9 @@ Anything ambiguous or needing the owner. Everything else was built. Updated 2026
    `row_address_type=0`, `gpio_slowdown=4` are correct starting points but the FM6124
    panel family often needs a second pass. Knobs to try live: rgb_sequence RBG/BGR/GRB,
    row_addr_type 3 or 5, slowdown 5. Record the winners back into `display/__init__.py`.
-7. **FM6126A + active3 replug gotcha (Phase 1).** The FM6126A init initializes all 3
-   chains in one `--led-parallel=3` run; if you re-plug panels into different chains,
-   power-cycle and re-init rather than re-sending init under a different topology
-   (hzeller issue #947).
+7. **FM6126A init replug gotcha — ONLY IF we end up needing the FM6126A fallback (Phase 1).**
+   Our panels are **FM6124D = standard, no init needed** (confirmed 2026-06-14; see
+   BUILD_LOG), so this should not apply. But if Phase 0 reveals the panels stay black
+   without `--led-panel-type=FM6126A`: that init initializes all 3 chains in one
+   `--led-parallel=3` run; if you re-plug panels into different chains, power-cycle and
+   re-init rather than re-sending init under a different topology (hzeller issue #947).

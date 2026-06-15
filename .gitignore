@@ -23,5 +23,9 @@ __pycache__/
 *.img.gz
 *.bak
 
+# Emulator render-test artifacts (tools/emulator_capture.py)
+emulator_config.json
+emu_frames/
+
 # OS
 .DS_Store

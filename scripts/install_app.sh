@@ -61,5 +61,5 @@ sudo getcap "$PYBIN"
 [ -f .env ] || cp .env.example .env
 chmod 600 .env
 echo ">>> App installed. Edit $APP/.env for optional API keys (kept out of git)."
-echo ">>> CONFIRM display/__init__.py uses: regular / FM6126A / parallel=1 / disable_hardware_pulsing=False"
+echo ">>> CONFIRM display/__init__.py uses: regular / panel_type=\"\" (FM6124D standard) / parallel=1 / disable_hardware_pulsing=False"
 echo ">>> Next: scripts/install_service.sh   (installs the unit; does NOT start the panel)."

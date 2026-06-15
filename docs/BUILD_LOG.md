@@ -263,6 +263,105 @@ try/except in the code and intentionally left unset → disabled.)
   start vestor` (or run `vestor-tracker.py`) WHILE watching; tune rgb-sequence /
   row-address / gpio-slowdown on real hardware; only then `systemctl enable vestor`.
 
+## 2026-06-14 — Pre-hardware validation (panels ~2 weeks out)
+
+**Goal:** while the 16 P5 panels ship, (a) deeply confirm the whole hardware chain is
+compatible and (b) run every software test possible WITHOUT panels, to maximize Phase 0
+confidence. No live LED test (hard stop #5 still in force).
+
+**Panels being bought (owner, confirmed from listing photos):** 16× MUEN P5 indoor,
+320×160 mm, **64×32**, **1/16 scan**, HUB75, SMD2121, 5V, driver chip **FM6124D**.
+Driven by the Adafruit **Triple** RGB Matrix Bonnet (PID **6358**, "active3"); powered by
+**2× Mean Well LRS-350-5** (5V/60A each).
+
+### Research (3 web-research passes, primary sources) — findings & what changed
+- **Triple Bonnet 6358 → `hardware_mapping="regular"` (NOT adafruit-hat), `parallel=3`.**
+  Adafruit's own guide: the active3 pinout = library `regular` mapping + `--led-parallel=3`
+  (there is no mapping literally named "active3"). The `adafruit-hat`/`-pwm` mappings only
+  support 1 parallel chain. **Confirms our committed config.** The Address-E line is
+  irrelevant for 64×32 1/16-scan panels (A–D only); the bonnet's on-board E switch matters
+  only for 64×64. `disable_hardware_pulsing=False` is correct (the no-hardware-pulse flag is
+  debug-only and hurts stability; the right fix for the PWM/audio conflict is blacklisting
+  `snd_bcm2835`, already done).
+- **FM6124D needs NO init sequence → `panel_type` should start EMPTY.** FM6124 is a standard
+  constant-current driver (like MBI5124/ICN2038S); only **FM6126A**/**FM6127** need a
+  power-on init string. The `demo` binary's own `--help` lists only `FM6126A`/`FM6127` as
+  supported panel-types — FM6124's absence is deliberate. Forcing `FM6126A` onto an FM6124
+  sends register writes it interprets as pixel data → garbage, which masks a working panel.
+  **CHANGE:** `display/__init__.py` `panel_type` `"FM6126A"` → `""`, with a comment demoting
+  `FM6126A`→`FM6127` to fallback #1 (set only if the panel stays black, then remove again).
+- **Power: 2× LRS-350-5 = 120 A / 600 W is comfortable for real content, NOT for all-white.**
+  LRS-350-5 is 5V/60A/**300W** (derated; "350" is the series, not the 5V wattage). Per 64×32
+  P5 panel: ~8A all-white max, ~4A Adafruit design figure, ~2A typical. 16 panels: all-white
+  **128A/640W = 107% (over)**; design **64A/320W = 53%**; typical **32A/160W = 27%**. Verdict:
+  fine for flight-tracker content, but cap brightness so a stray full-white frame can't exceed
+  capacity — our `BRIGHTNESS=50` already ~halves worst case (→ ~64A, well within 120A). For
+  unrestricted full white, add a 3rd LRS-350-5. **Injection:** parallel-inject 5V at every
+  panel/pair (never daisy-chain power through HUB75), bus-bar topology, AWG 10–12 trunks /
+  AWG 14–16 pigtails, keep the far panel ≥4.8V, common-ground all PSUs + the Pi/HAT.
+
+### Tests run on the Pi (network/CPU only — no LED hardware)
+- **Live flight-data fetch (FlightRadar24 / `utilities.overhead.Overhead`)** for the Cambridge
+  ZONE_HOME: **PASS** — returned a live flight (e.g. `DAL888` A321 MCO→BOS @650ft). Benign
+  noise: FR24 sets `Content-Encoding: gzip` on already-decompressed JSON; the API layer logs a
+  warning and falls back to raw bytes (parses fine). Data items are **dicts**
+  (`plane/origin/destination/vertical_speed/altitude/callsign`), which is what the scenes read.
+- **End-to-end headless render via RGBMatrixEmulator (`raw` adapter):** **PASS.** Added a
+  committed test harness `tools/emulator_capture.py` + a `tools/rgbmatrix_emulator_shim/`
+  package that makes `import rgbmatrix` resolve to the emulator (inserted at `sys.path[0]`, no
+  app source edits). Ran the REAL `display.Display()` and captured 12 PNG frames. Visual
+  inspection confirmed: **clock** (`23:46`), **day/date** (`Sunday 14-6-2026`), and a full
+  **live-flight render** (`DCA ▶ BOS`, `AAL3207`, `1/2`, `Airbus`) — i.e. clock/day/date/weather/
+  overhead/journey/plane-details scenes, fonts, colours, and scene transitions all render
+  correctly. (Emulator + its Pillow dep installed in the venv for testing only; not a runtime
+  dependency of the app.)
+
+### Bug found & fixed via the render test
+- **`scenes/weather.py: grab_current_temperature` crashed the whole app** when a temperature
+  fetch fails AND `TEMPERATURE_UNITS="imperial"`: it caught `WeatherError`, left `current_temp`
+  = `None`, then ran `None * (9.0/5.0)` → `TypeError`. That `TypeError` is not a `WeatherError`,
+  so it escaped the provider loop's `except WeatherError` and killed the app. This path triggers
+  whenever the (optional) weather provider is unreachable — i.e. it would also crash on real
+  hardware. **FIX:** guard the conversion (`if units == "imperial" and current_temp is not
+  None:`) so failure returns `None` — the contract the caller already handles (`if
+  self.current_temperature:`). Re-ran the render test: all 12 frames clean, exit 0.
+
+### Geometry math (validated)
+- **Phase 0:** 1×64×32 P5 = 2048 px; 64×5mm × 32×5mm = **320×160 mm** — matches the datasheet
+  (P5 pitch internally consistent).
+- **Phase 1 wall (6+5+5):** hzeller requires a **uniform** `chain_length`, so canvas =
+  `chain_length=6 × parallel=3` = **384×96** logical px. 16 real panels = 32 768 lit px; the
+  remainder **4096 px = exactly 2 panel-slots** are unused/dark (the missing 6th panel on the
+  two 5-panel chains). Physical rows: 1920 / 1600 / 1600 mm wide × 480 mm tall. **Phase-1 TODO:**
+  a `pixel_mapper_config` (e.g. `Rotate`/`Remap`) to fold the layout into the intended physical
+  shape — exact mapper depends on the final wall arrangement (not yet locked); leave the two
+  tail slots unrendered or remap them out.
+
+### Phase 0 supervised test plan (ready; DO NOT run until owner present + panel wired)
+hzeller `demo` binary already built at `~/rpi-rgb-led-matrix/examples-api-use/demo` (ARM64,
+verified via `--help`; not yet run on hardware). With ONE panel (data→Port 1, power→PSU):
+1. **Driver-level smoke test** (sudo; drops privs after init):
+   `sudo ~/rpi-rgb-led-matrix/examples-api-use/demo -D0 --led-gpio-mapping=regular
+   --led-rows=32 --led-cols=64 --led-chain=1 --led-parallel=1 --led-slowdown-gpio=4
+   --led-show-refresh`  (NO `--led-panel-type` first; FM6124D is standard).
+2. **Tuning ladder if output is wrong:** black → add `--led-panel-type=FM6126A` (then `FM6127`),
+   then REMOVE again · wrong colours → cycle `--led-rgb-sequence` RBG/GRB/GBR/BRG/BGR ·
+   split/doubled rows → `--led-multiplexing=1..3` · scrambled rows → `--led-row-addr-type=1/2` ·
+   flicker → raise `--led-slowdown-gpio` to 5. Confirm refresh >100 Hz (>300 Hz if filmed).
+3. **Then the app:** `sudo systemctl start vestor` + `journalctl -u vestor -f` while watching;
+   port the winning rgb-sequence/row-addr/slowdown into `display/__init__.py`; only once correct
+   `sudo systemctl enable vestor` for boot persistence.
+
+- Did: 3 research passes; reconciled `panel_type`→`""`; live FR24 fetch test; headless
+  end-to-end emulator render (new `tools/` harness+shim); found+fixed the weather `None`
+  crash; validated geometry; verified the prebuilt `demo` binary; wrote the Phase 0 plan.
+- Verified: FR24 returns live Cambridge flights; 12 emulator frames render clock/date/flight
+  correctly; weather fix → clean exit 0; `demo --help` confirms FM6124 needs no panel-type.
+- Changed from brief: discovered FM6124 (not FM6126A) is our chip → `panel_type` emptied;
+  found a real upstream weather crash on the no-API-key path and fixed it.
+- Next: **supervised Phase 0** once panels arrive — run the demo command above WHILE watching
+  the single panel, tune, then port settings into the app and enable the service.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

@@ -1,7 +1,7 @@
 # TROUBLESHOOTING
 | Symptom | Cause | Fix |
 |---|---|---|
-| No output | FM6124 not initialized | `--led-panel-type=FM6126A` |
+| No output (black) | Panel needs init (rare for FM6124) | Try `--led-panel-type=FM6126A`, then `=FM6127`; remove again if no help |
 | Dim/reddish | Power | Confirm 5V/60A PSU on + wired (Pi can't power panels) |
 | Garbage pixels | Pi 4 too fast | `--led-slowdown-gpio` 4→5 |
 | Colors swapped | RGB order | `--led-rgb-sequence` RBG/BGR/GRB |

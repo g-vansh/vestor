@@ -73,7 +73,9 @@ class Display(
         options.chain_length = 1                  # single-panel test (wall: 6 = longest chain)
         options.parallel = 1                      # single-panel test (wall: 3 chains)
         options.row_address_type = 0              # 1/16 scan ABCD; try 3 or 5 if rows scramble on hw
-        options.panel_type = "FM6126A"            # FM6124-family init sequence (else: no output/garbage)
+        options.panel_type = ""                   # FM6124D is a STANDARD driver (no init). Fallback #1 if
+                                                  # panel stays BLACK: set "FM6126A" (then "FM6127"), then
+                                                  # REMOVE again before tuning rgb-sequence/row-addr.
         options.multiplexing = 0
         options.pwm_bits = 11                     # one panel (wall: drop to 7-9 if refresh < ~100 Hz)
         options.brightness = BRIGHTNESS
