@@ -268,7 +268,7 @@ const WMO_ICON = (code, isDay) => {
   return 'cloud';
 };
 const WMO_TEXT = (code) => {
-  const map = { 0: 'CLEAR', 1: 'MFAIR', 2: 'PARTLY', 3: 'CLOUDY', 45: 'FOG', 48: 'RIME',
+  const map = { 0: 'CLEAR', 1: 'FAIR', 2: 'PARTLY', 3: 'CLOUDY', 45: 'FOG', 48: 'RIME',
     51: 'DRIZZLE', 53: 'DRIZZLE', 55: 'DRIZZLE', 61: 'RAIN', 63: 'RAIN', 65: 'HVY RAIN',
     71: 'SNOW', 73: 'SNOW', 75: 'HVY SNOW', 80: 'SHOWERS', 81: 'SHOWERS', 82: 'STORM',
     95: 'THUNDER', 96: 'THUNDER', 99: 'THUNDER' };
@@ -294,7 +294,7 @@ class WeatherScene {
     m.textRight(rx, y + 1, 'H' + Math.round(wx.hiC) + '°', PAL.redDim, 1, '3x5');
     m.textRight(rx, y + 7, 'L' + Math.round(wx.loC) + '°', PAL.cyanDim, 1, '3x5');
     m.textRight(rx, y + 14, Math.round(wx.humidity) + '%RH', PAL.cyan, 1, '3x5');
-    m.textRight(rx, y + 20, Math.round(wx.windKph) + 'KH', PAL.white, 1, '3x5');
+    m.textRight(rx, y + 20, Math.round(wx.windKph) + 'KPH', PAL.white, 1, '3x5');
     // wind dir arrow
     this._windArrow(m, rx - 4, y + 27, wx.windDir, t);
     // feels-like ribbon at bottom

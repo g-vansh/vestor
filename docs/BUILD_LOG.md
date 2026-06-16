@@ -403,6 +403,38 @@ full **1024×32** (16-panel, 201.6") wall as one ultra-wide ribbon.
 - Next: wire the Python clients into the real `display/` render path (Phase-1) and
   fold the 384×96 electrical canvas → 1024×32 logical via `pixel_mapper_config`.
 
+## 2026-06-16 — Simulator visual QA pass + label polish
+Full "does everything fit and look good" review of the wall, driven by a crisp
+debug-readout technique: read `wallM.buf` (linear-light Float32) directly, apply
+gamma 2.2 per pixel, and blit each logical LED at integer scale into an injected
+overlay canvas — legibility verification decoupled from the optical bloom/dot-mask
+layer. Top-level `<script>` consts (`wallM`, `data`, `mode`, `WMO_TEXT`) are
+reachable by name from the page eval context, which makes this possible.
+
+- Verified (all fit, no overflow/collision):
+  - Dashboard ribbon — all 7 zones: clock (`11:47` + date), weather (icon · °C · °F ·
+    H/L · %RH · wind · feels-like), **flight hero** (radar sweep + "N TRK", split-flap
+    callsign, type, route, city pair, FL/kt/vspeed, distance), bikes (classic vs
+    e-bike split + docks), shuttle (TECH / TECH NW soonest-big + next-ups dim),
+    extras (moon phase + %), status endcap (vertical VESTOR, ● LIVE, heartbeat
+    sparkline).
+  - Flight **takeover** mode — giant Solari callsign + arriving/route across the full
+    1024px ribbon, fits.
+  - **°C and °F both rendered** in the weather zone (the explicit brief requirement),
+    confirmed at scale 8.
+- Changed (polish):
+  - Weather condition label ladder cleaned: WMO code 1 `MFAIR` → **`FAIR`** (read like
+    a render glitch; now CLEAR→FAIR→PARTLY→CLOUDY reads as a clarity gradient).
+    `sim/scenes.js` `WMO_TEXT`. (Python `weather.py` keeps the verbose "MOSTLY FAIR" —
+    it isn't pixel-constrained.)
+  - Wind unit `KH` → **`KPH`** (`sim/scenes.js`); one extra 3×5 glyph, still clears the
+    left-column temps in the 128px zone.
+  - Added `?v=2` cache-busting to the four local `<script>` tags in `sim/index.html`
+    so reloads (dev + Pi kiosk) reliably pick up edited JS instead of heuristically
+    caching it (server sends only `Last-Modified`, no `Cache-Control`).
+- Next: same Phase-1 wiring as the 06-15 entry (Python clients → real `display/`
+  render path; 384×96 electrical → 1024×32 logical via `pixel_mapper_config`).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
