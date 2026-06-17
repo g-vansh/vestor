@@ -107,15 +107,14 @@ function drawDashboard(t, dt) {
  * board of the other contacts on the right (airport-board aesthetic). */
 function drawTakeover(t, dt) {
   const f = data.heroFlight;
-  // left radar
-  S.drawRadar(wallM, 26, 16, 14,
+  // left radar — true circle, centered in the left gutter
+  S.drawRadar(wallM, 24, 14, 12,
     t, data.flights.slice(0, 8).map(x => ({
       a: (x.track || 0) * Math.PI / 180 - Math.PI / 2,
       d: clamp((x.distance || 5) / 25, 0.12, 0.95),
       color: x._hero ? PAL.amber : PAL.green,
     })), PAL.cyan, PAL.cyanDim);
-  wallM.text(4, 1, 'RADAR', PAL.cyanDim, 1, '3x5');
-  wallM.text(4, 27, data.flights.length + ' TRK', PAL.cyanDim, 1, '3x5');
+  wallM.textCenter(24, 27, data.flights.length + ' TRK', PAL.cyanDim, 1, '3x5');
 
   if (f && f.hex !== takeoverHex) {
     takeoverHex = f.hex;
@@ -126,18 +125,18 @@ function drawTakeover(t, dt) {
 
   // center hero: BIG callsign (scale 2) + route + cities
   if (f) {
-    takeoverCall.draw(wallM, 70, 2, PAL.amber, 2);         // 10x14 glyphs
-    wallM.text(70, 20, f.type + '  ' + (f._arriving ? 'ARRIVING' : 'DEPARTING'), PAL.purple, 1, '3x5');
-    takeoverRoute.draw(wallM, 70, 26, PAL.cyan, 1);
+    takeoverCall.draw(wallM, 70, 0, PAL.amber, 2);          // 10x14 glyphs, rows 0-13
+    wallM.text(70, 16, f.type + '  ' + (f._arriving ? 'ARRIVING' : 'DEPARTING'), PAL.purple, 1, '3x5'); // rows 16-20
+    takeoverRoute.draw(wallM, 70, 23, PAL.cyan, 1);         // rows 23-29
     // mid stats column ~ x300
-    wallM.text(300, 2, 'ALT', PAL.green, 1, '3x5');
-    wallM.text(300, 9, (f.alt ? Math.round(f.alt).toLocaleString() : '--') + ' FT', PAL.green, 1);
-    wallM.text(300, 19, 'SPD', PAL.warm, 1, '3x5');
-    wallM.text(300, 26, (f.gs ? Math.round(f.gs) : '--') + ' KT', PAL.warm, 1);
+    wallM.text(300, 1, 'ALT', PAL.green, 1, '3x5');
+    wallM.text(300, 8, (f.alt ? Math.round(f.alt).toLocaleString() : '--') + ' FT', PAL.green, 1);
+    wallM.text(300, 17, 'SPD', PAL.warm, 1, '3x5');
+    wallM.text(300, 24, (f.gs ? Math.round(f.gs) : '--') + ' KT', PAL.warm, 1);
     const climbing = f.vspeed > 64, descending = f.vspeed < -64;
     const vc = climbing ? PAL.green : descending ? PAL.red : PAL.amberDim;
-    wallM.text(372, 9, climbing ? '↑CLIMB' : descending ? '↓DESC' : '–LEVEL', vc, 1, '3x5');
-    wallM.text(372, 26, f.distance.toFixed(1) + ' MI', PAL.white, 1, '3x5');
+    wallM.text(372, 8, climbing ? '↑CLIMB' : descending ? '↓DESC' : '–LEVEL', vc, 1, '3x5');
+    wallM.text(372, 24, f.distance.toFixed(1) + ' MI', PAL.white, 1, '3x5');
   } else {
     wallM.text(120, 12, 'SCANNING THE CAMBRIDGE SKY...', PAL.amberDim, 1);
   }
@@ -268,7 +267,7 @@ function buildSources() {
     { t: 'ADS-B FLIGHTS', s: 'adsb.lol · hexdb.io · adsbdb', d: 'Live aircraft within 25 nm of 540 Memorial Dr; enriched with route + type. No key.', e: 'api.adsb.lol/v2/point/42.354/-71.107/25' },
     { t: 'WEATHER °C/°F', s: 'Open-Meteo', d: 'Current temp, apparent, humidity, wind, daily hi/lo, WMO code. Free, no key, CORS-OK.', e: 'api.open-meteo.com/v1/forecast' },
     { t: 'BLUEBIKES', s: 'GBFS 2.3 (Lyft)', d: 'Pacific St @ Purrington — classic vs e-bike counts, free docks. 60s TTL.', e: 'gbfs.lyft.com/gbfs/2.3/bos/en/station_status.json' },
-    { t: 'MIT SHUTTLE', s: 'Passio GTFS-realtime', d: 'Tech (63220) + Tech NW (63319) TripUpdates at Grad Junction West (180113).', e: 'passio3.com/mit/passioTransit/gtfs/realtime/tripUpdates' },
+    { t: 'MIT SHUTTLE', s: 'Passio GTFS-realtime', d: 'Tech + Tech NW (routes 56642/71674) TripUpdates at Grad Junction West (180113).', e: 'passio3.com/mit/passioTransit/gtfs/realtime/tripUpdates' },
     { t: 'MBTA RED LINE', s: 'MBTA v3 API', d: 'Predicted arrivals at Kendall/MIT (place-knncl) toward Alewife / Ashmont.', e: 'api-v3.mbta.com/predictions?stop=place-knncl' },
     { t: 'ISS OVERHEAD', s: 'wheretheiss.at', d: 'Sub-satellite point + pass timing relative to Cambridge for "look up!" alerts.', e: 'api.wheretheiss.at/v1/satellites/25544' },
     { t: 'AIR QUALITY', s: 'Open-Meteo AQ', d: 'US AQI / PM2.5 for the Cambridge grid cell, color-coded GOOD→HAZARD.', e: 'air-quality-api.open-meteo.com/v1/air-quality' },

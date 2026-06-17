@@ -99,30 +99,32 @@ class Marquee {
   }
 }
 
-/* ---- radar field (used by FlightScene) -------------------------------- */
+/* ---- radar field (used by FlightScene) — a TRUE circular PPI scope ----- */
 function drawRadar(m, cx, cy, r, t, blips, sweepColor, ringColor) {
-  // concentric rings
-  for (let rr = Math.floor(r / 3); rr <= r; rr += Math.floor(r / 3) || 1) {
-    for (let a = 0; a < Math.PI * 2; a += 0.18) {
-      const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 0.62;
-      m.add(Math.round(x), Math.round(y), ringColor, 28);
+  // concentric rings (circular: equal x/y radius). Finer angular step so the
+  // outer ring reads as a continuous circle on the dot grid.
+  for (let rr = Math.floor(r / 3) || 1; rr <= r; rr += Math.floor(r / 3) || 1) {
+    const step = 0.9 / rr;                 // denser sampling for bigger rings
+    for (let a = 0; a < Math.PI * 2; a += step) {
+      const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+      m.add(Math.round(x), Math.round(y), ringColor, rr === r ? 42 : 26);
     }
   }
-  // crosshair
+  // crosshair (square aspect)
   m.hline(cx - r, cx + r, cy, scale(ringColor, 0.5), 40);
-  m.vline(cx, cy - Math.round(r * 0.62), cy + Math.round(r * 0.62), scale(ringColor, 0.5), 40);
+  m.vline(cx, cy - r, cy + r, scale(ringColor, 0.5), 40);
   // sweep line + faint sector trail
   const ang = (t * 1.1) % (Math.PI * 2);
   for (let k = 0; k < 14; k++) {
     const a = ang - k * 0.05;
     const fade = (1 - k / 14);
-    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * 0.62;
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
     m.line(cx, cy, Math.round(x), Math.round(y), scale(sweepColor, fade * 0.5), 255);
   }
   // blips: brighten when sweep passes, then decay
   for (const b of blips) {
     const bx = cx + Math.cos(b.a) * (b.d * r);
-    const by = cy + Math.sin(b.a) * (b.d * r) * 0.62;
+    const by = cy + Math.sin(b.a) * (b.d * r);
     let da = ((ang - b.a) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
     const glow = da < 1.2 ? (1 - da / 1.2) : 0.12;
     m.add(Math.round(bx), Math.round(by), b.color || PAL.green, 120 + glow * 135);
@@ -200,12 +202,11 @@ class FlightScene {
 
   /* ---- 320px wall hero layout ---- */
   _drawWide(m, x, y, w, h, data, t, dt, f) {
-    // Left radar disc
-    const r = 14, cx = x + 17, cy = y + 16;
+    // Left radar disc — true circle, centered in the left 34px gutter
+    const r = 12, cx = x + 16, cy = y + 14;
     this._ensureBlips(data.flights, r);
     drawRadar(m, cx, cy, r, t, this.blips, PAL.cyan, PAL.cyanDim);
-    m.text(x + 2, y + 1, 'RADAR', PAL.cyanDim, 1, '3x5');
-    m.text(x + 2, y + 27, data.flights.length + ' TRK', PAL.cyanDim, 1, '3x5');
+    m.textCenter(cx, y + 27, data.flights.length + ' TRK', PAL.cyanDim, 1, '3x5');
 
     const bx = x + 38;            // board start
     const bw = w - 40;
@@ -319,30 +320,30 @@ class BluebikesScene {
     const b = data.bikes;
     m.text(x + 1, y + 1, 'BLUEBIKES', PAL.cyan, 1, '3x5');
     m.icon(x + w - 12, y, 'pin', PAL.cyanDim);
-    // station short name
+    // station short name (left) + free-dock count (right) share one row
     m.text(x + 1, y + 7, 'PACIFIC ST', PAL.cyanDim, 1, '3x5');
+    m.textRight(x + w - 1, y + 7, b.docks + ' DOCKS', PAL.cyanDim, 1, '3x5');
 
-    // classic bikes row
-    m.icon(x + 1, y + 13, 'bike', PAL.white);
-    m.text(x + 14, y + 14, 'CLASSIC', PAL.white, 1, '3x5');
-    m.textRight(x + w - 1, y + 13, String(b.classic), PAL.green, 1);
+    // classic bikes row — icon + label + big count
+    m.icon(x + 1, y + 14, 'bike', PAL.white);
+    m.text(x + 14, y + 15, 'CLASSIC', PAL.white, 1, '3x5');
+    m.textRight(x + w - 1, y + 14, String(b.classic), PAL.green, 1);
 
-    // ebikes row
-    m.icon(x + 4, y + 21, 'bolt', PAL.magenta);
-    m.text(x + 14, y + 22, 'E-BIKE', PAL.magenta, 1, '3x5');
-    m.textRight(x + w - 1, y + 21, String(b.ebikes), PAL.magenta, 1);
+    // ebikes row — bolt + label + big count
+    m.icon(x + 4, y + 23, 'bolt', PAL.magenta);
+    m.text(x + 14, y + 24, 'E-BIKE', PAL.magenta, 1, '3x5');
+    m.textRight(x + w - 1, y + 23, String(b.ebikes), PAL.magenta, 1);
 
-    // docks free as a tiny bar at the very bottom
+    // occupancy bar (filled = bikes present / capacity) along the bottom edge
     const free = b.docks, cap = b.capacity || (b.classic + b.ebikes + b.docks);
     const filled = Math.round((w - 2) * ((cap - free) / cap));
     m.hline(x + 1, x + w - 2, y + h - 1, PAL.cyanDim, 70);
     m.hline(x + 1, x + 1 + filled, y + h - 1, PAL.cyan, 200);
-    m.text(x + 1, y + h - 7, free + ' DOCKS', PAL.cyanDim, 1, '3x5');
 
-    // pulse the larger count if low availability
+    // pulse the classic count if low total availability
     if (b.classic + b.ebikes <= 2) {
       const p = (Math.sin(t * 6) * 0.5 + 0.5);
-      m.textRight(x + w - 1, y + 13, String(b.classic), mix(PAL.green, PAL.red, p), 1);
+      m.textRight(x + w - 1, y + 14, String(b.classic), mix(PAL.green, PAL.red, p), 1);
     }
   }
 }

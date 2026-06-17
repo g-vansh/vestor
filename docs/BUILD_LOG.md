@@ -435,6 +435,45 @@ reachable by name from the page eval context, which makes this possible.
 - Next: same Phase-1 wiring as the 06-15 entry (Python clients → real `display/`
   render path; 384×96 electrical → 1024×32 logical via `pixel_mapper_config`).
 
+## 2026-06-16 — Layout-bug fixes: circular radar, takeover hero spacing, bikes overlap
+User-reported visual defects, all root-caused with the crisp debug-readout technique
+(read `wallM.buf` linear → gamma → blit each LED at integer scale into an overlay
+canvas) and fixed by arithmetic, then re-verified at high zoom.
+
+- **Radar was an ellipse, not a circle.** `drawRadar` (`sim/scenes.js`) multiplied every
+  vertical coordinate by `0.62` (a zone-fit squash) — on a square-pixel canvas that
+  reads as a flattened oval. Fix: equal x/y radius (true circle); instead *shrink* the
+  radius and re-center it higher so the full circle fits a 32px-tall zone. Denser
+  angular sampling (`step = 0.9 / rr`) so the outer ring reads continuous; outer ring
+  brightened. Call sites updated: flight-hero wide (`r=12, cx=x+16, cy=y+14`), takeover
+  (`drawRadar(wallM, 24, 14, 12)`); dropped the "RADAR" word and centered "N TRK" under
+  the disc so the taller circle doesn't collide with labels.
+- **Takeover hero: yellow callsign overlapped/clipped by the lines below it.** Root cause
+  = font-baseline metrics: 5×7 glyphs draw downward from `y`, so route at `y+26` spanned
+  rows 26–32 and clipped (zone is rows 0–31), and the type/route lines crowded the
+  scale-2 callsign. Fix (`sim/app.js drawTakeover`): callsign `y=0` (rows 0–13), type +
+  ARRIVING/DEPARTING `y=16`, route `y=23` (rows 23–29). Mid-stats column similarly
+  un-clipped: ALT label `y1`/value `y8`, SPD label `y17`/value `y24`; climb & distance
+  aligned to those value rows. Verified `AAL519 / B738 DEPARTING / BOS-DCA` and
+  `ALT 18,220 FT / SPD 306 KT / +CLIMB / 13.9` all clear with no row-31 clip.
+- **Bikes: "10 DOCKS" overlapped "E-BIKE".** A 2-digit dock count widened the bottom-left
+  `N DOCKS` label until it ran horizontally and vertically into the e-bike row. Fixed by
+  a layout-flow change (`sim/scenes.js BluebikesScene`), not a nudge: the free-dock count
+  now shares the station-name row, right-aligned (`textRight(x+w-1, y+7, …)`); classic
+  row at `y+14`, e-bike row at `y+23`, occupancy bar on the bottom edge. Stress-tested at
+  worst case (classic 18 / e-bike 14 / 12 docks) — every count 2-digit, zero collision.
+- Also: corrected a stale source-card doc (`sim/app.js buildSources`) — MIT shuttle
+  routes are `56642/71674` (Tech / Tech NW), not the old `63319`. Bumped script
+  cache-bust `?v=2` → `?v=3` so reloads pick up the new JS.
+- **API liveness (answering the user's question):** all four Python clients live-tested
+  PASS. In the browser sim, SIM mode is synthetic; the LIVE toggle pulls real Open-Meteo
+  weather + Bluebikes GBFS + airplanes.live flights (CORS-OK). The shuttle stays
+  synthetic *in-browser only* (zero-dep JS can't decode GTFS-realtime protobuf); on the
+  Pi the Python `mit_shuttle.py` client decodes it for real. **Tech Shuttle confirmed
+  live**: route 63220 present, real arrivals `tech=[1,13,15]` min at Grad Junction West
+  (180113); the NW line was simply not running that late evening (correctly shows `--`).
+- Next: wire the Python clients into the real `display/` render path (Phase-1).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
