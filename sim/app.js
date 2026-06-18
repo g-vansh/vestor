@@ -137,14 +137,14 @@ function drawTakeover(t, dt) {
   tkOrigCity.update(dt); tkDestCity.update(dt);
 
   /* ============ PANEL 1 · CARRIER IDENTITY (x 10…330) ============ */
-  drawAirlineMark(wallM, 10, 3, 26, A, t);                 // big emblem, rows 3–28
-  const mw = markWidth(26, A);
-  const nx = 16 + mw;
-  wallM.text(nx, 4, A.name, A.color, 2);                   // brand wordmark, scale 2
+  // REAL full-colour carrier logo, fit big into rows 3–23 (the wow moment).
+  const [lw] = A.iata ? fitLogoBox(wallM, A.iata, 12, 3, 300, 20, 'left', 'center')
+                      : [0, 0];
+  if (lw === 0) wallM.text(12, 6, A.name, A.color, 2);     // wordmark fallback
   // sub-line: callsign (white) · type (brand-tinted) · registration (dim)
-  let sx = wallM.text(nx, 22, f.callsign || f.reg || '', PAL.white, 1, '5x7');
-  sx = wallM.text(sx + 6, 23, f.type || '', scale(A.color, 0.9), 1, '3x5');
-  if (f.reg && f.callsign) wallM.text(sx + 6, 23, f.reg, PAL.cyanDim, 1, '3x5');
+  let sx = wallM.text(12, 25, f.callsign || f.reg || '', PAL.white, 1, '5x7');
+  sx = wallM.text(sx + 6, 26, f.type || '', scale(A.color, 0.9), 1, '3x5');
+  if (f.reg && f.callsign) wallM.text(sx + 6, 26, f.reg, PAL.cyanDim, 1, '3x5');
 
   wallM.vline(338, 3, 28, PAL.cyanDim, 55);                // divider
 

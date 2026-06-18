@@ -13,7 +13,7 @@ What the hobbyist + maker community has built on exactly this hardware
 | Project / pattern | Steal-worthy idea |
 |---|---|
 | **its-a-plane-python** (our upstream, ColinWaddell) | Per-scene keyframe animation; FlightRadar24 nearest-plane focus; clean clock/date/weather rotation on a 64×32. Our flight scene extends its "one hero plane" idea with a **radar** + **split-flap**. |
-| **TheFlightWall** (AxisNimble OSS + theflightwall.com) | The *cleanest* flight card we found: one flight, **framed**, three centered lines — **airline name in the brand colour + logo**, `From: <City>`, aircraft type. The wow is *legibility + branding*, not density. Drove our **carrier-led** rewrite: lead with the airline emblem + brand-coloured wordmark and show **city names** before codes. (OSS note "airline logo lookup added soon" — not in their OSS yet; we built it.) |
+| **TheFlightWall** (AxisNimble OSS + theflightwall.com) | The *cleanest* flight card we found: one flight, **framed**, three centered lines — **airline name in the brand colour + logo**, `From: <City>`, aircraft type. The wow is *legibility + branding*, not density. Drove our **carrier-led** rewrite: lead with the **real full-colour airline logo** (sourced from `pics.avs.io`) and show **city names** before codes. (OSS note "airline logo lookup added soon" — not in their OSS yet, and their product logos live in proprietary firmware; we found a free CORS-enabled CDN and built it.) |
 | **Flightradar / "planes overhead" matrix builds** | A live **radar/compass sweep** with the home location at center reads instantly as "aircraft." We made it the flight zone's left anchor. |
 | **MTA/transit countdown clocks & subway-sign clones** | Right-aligned **minutes-to-arrival** rows with a route **bullet**; the real signage flips between "now/2 min/4 min." Drives our shuttle + MBTA rows and the **split-flap** motion. |
 | **Solari / split-flap board recreations** | The flip *is* the brand. Even a faked flip (cycling glyphs to target) sells "departure board." Implemented as `SplitFlap`. |
@@ -28,24 +28,36 @@ motion-with-meaning*. The wow factor on a 201" ribbon comes from **one
 unbroken narrative strip** + **diegetic motion** (flips, sweep), not from
 cramming effects.
 
-### Airline logos on a 32-px LED wall (resolved approach)
+### Airline logos on a 32-px LED wall (resolved approach — REAL logos)
 
-The reference product shows airline **logos**, and we wanted them too. How to put
-~30 carrier marks on a phosphor ribbon, legibly, at 7–26 px tall:
+The reference product (theflightwall.com) shows **crisp, full-colour, real**
+airline logos at panel height — not stylised marks. We chased the same look and
+**found the source**, after an initial wrong turn into procedural marks (which
+looked muddy and were rightly rejected).
 
-- **Bitmap/PNG logos lose.** Real airline logos (AirHex, brand kits, SVGs) are
-  designed for hundreds of px. Downscaled to 7–26 px tall and pushed through the
-  sim's gamma 2.2 + additive bloom they become anti-alias mush; you can't tell
-  American from Delta. Fetching them is also **CORS-blocked** in-browser and adds
-  a per-size asset pipeline on the Pi.
-- **Brand colour is the real signal.** On an LED wall the eye reads *colour* first
-  (Southwest gold, United blue, Delta red). A correct colour + a 1-bit emblem
-  out-identifies a muddy full-colour logo.
-- **Decision → procedural pixel marks.** `airlines.js` draws each mark from shape
-  math (fin, widget, globe, heart, ring, roundel) tinted to an **LED-boosted**
-  brand colour, so the identical emblem is crisp at any size with zero assets and
-  zero network. Keyed by **ICAO operator code** (first 3 callsign chars) so SIM and
-  LIVE share one table. See `DESIGN.md` §5.1a.
+- **Where the crisp logos come from → `pics.avs.io`.** The TravelPayouts /
+  Aviasales CDN serves free, **CORS-enabled**, transparent-background PNG wordmark
+  logos keyed by **IATA** code at any requested size
+  (`https://pics.avs.io/<w>/<h>/<IATA>.png`). It returns the horizontal wordmark
+  fitted to the requested width on a transparent canvas — ideal for a 1024-px-wide
+  ribbon. (AirHex 403s without a paid key/hash; TheFlightWall's own
+  `cdn.theflightwall.com` only serves *display names*, not logos — their product
+  logos ship inside proprietary firmware.)
+- **Real logos survive the optics — they don't become mush.** Downscaled with
+  LANCZOS to LED-native height (≈20–26 px) and pushed through gamma 2.2 + round
+  emitters + additive bloom, vector-derived wordmarks stay sharp and instantly
+  legible: Southwest's gradient heart, United's globe, Delta's widget, the BA
+  speedwing all read perfectly. (The thing that *did* turn to mush was hand-rolled
+  procedural geometry — the opposite of what we first assumed.)
+- **Transparent alpha keys cleanly against black.** Corners are `(0,0,0,0)`, so
+  rendering is a straight alpha-over-black composite — no white-box matte to strip.
+- **Decision → fetch once, render local.** `tools/fetch_logos.py` downloads ~64
+  carriers, crops to content, stores 64-px masters in `sim/logos/`, and writes a
+  manifest. The wall runs **fully offline** (no per-frame network, no taint, same
+  pipeline usable on the Pi via Pillow). Mapped **ICAO→IATA** so the ADS-B feed
+  resolves to a logo; brand colour still tints accents (hand-tuned for majors,
+  sampled from the logo otherwise); no-logo carriers fall back to a brand
+  wordmark. See `DESIGN.md` §5.1a.
 
 ---
 

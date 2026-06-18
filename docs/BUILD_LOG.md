@@ -572,6 +572,43 @@ add airline branding.
 - **Next:** mirror `airlines.py` brand table + the carrier-led layout into the Pi's Python
   `display/` render path for Phase-1; consider per-carrier accent on the dashboard zone seams.
 
+### 2026-06-18 — REAL airline logos (procedural marks rejected, replaced)
+- **Why:** owner compared the procedural marks against the actual theflightwall.com product
+  (photos: Southwest gradient heart, United globe, Air France wing-stripe — crisp, full-colour,
+  full panel height) and called them "nowhere close." Direct instruction: *find where the real
+  crisp logos come from and use them; 32 px / full height is fine.* The prior call (procedural
+  because "real logos are CORS-blocked mush") was wrong on both counts — corrected here.
+- **Source found → `pics.avs.io`** (TravelPayouts/Aviasales CDN): free, **CORS-enabled**,
+  transparent-background PNG wordmark logos keyed by **IATA** code, any size. Verified 200s +
+  `access-control-allow-origin: *`. (AirHex 403s w/o paid key; TheFlightWall's own CDN serves
+  only display *names* — their logos live in proprietary firmware. Both ruled out.)
+- **`tools/fetch_logos.py` (new):** ICAO→IATA table → downloads 64 carriers → crops to opaque
+  bbox → scales to a 64-px master → `sim/logos/<IATA>.png` + `manifest.json` (~1 MB total).
+  5 codes 404 (UPS/Republic/PSA/Piedmont/ABX) → handled by wordmark fallback. Re-runnable;
+  wall is then **fully offline** (no per-frame net, no CORS taint, Pi-reusable via Pillow).
+- **`sim/airlines.js` rewritten:** dropped all procedural mark geometry. New pipeline loads a
+  logo PNG → offscreen-canvas downscale to exact LED height → `getImageData` → alpha-composite
+  over black into the framebuffer (`m.set` premultiplies). Read-back **cached per `iata@height`**
+  so the 60 fps takeover rasterises each carrier once. Brand accent colour = hand-tuned for ~30
+  KBOS majors, else **sampled from the logo's own saturated pixels**. No-logo/unknown →
+  brand **wordmark** in brand colour (never a muddy mark). New API: `airlineFor`, `drawLogoH`,
+  `fitLogoBox`, `logoReady`, `logoAspect`.
+- **Call sites updated:** `app.js drawTakeover` PANEL 1 now fits the real logo big into rows
+  3–23 (wordmark fallback) + callsign·type·reg beneath; `scenes.js _drawWide` opens with the
+  logo at h=9; `_drawCompact` (64 px) fits the logo across the panel top. Cache-bust `?v=8`→`?v=9`.
+- **Verified (preview emulator, gamma-corrected pixel readout):** Southwest takeover (blue
+  "Southwest" + gradient heart, crisp, full height) across all 3 panels; United on the 320 px
+  dashboard hero **and** the 64 px Phase-0 panel (wordmark + globe + `SFO→BOS` + `FL185`/radar);
+  18-carrier sweep rendered 17/18 real logos crisply (1 a load-timing miss, not a missing file);
+  wordmark fallback confirmed for Republic (YX, no file) + unknown operators. Buffer-sampled to
+  confirm logo + radar pixels lit in every layout.
+- **Changed from brief:** reversed the earlier procedural-mark decision entirely. Updated
+  `DESIGN.md` §5.1a and `RESEARCH.md` "Airline logos" section to document the real-logo approach
+  and retract the "logos turn to mush / CORS-blocked" claim.
+- **Next:** port the same logo pipeline to the Pi's Python `display/` path (PIL: load
+  `sim/logos/*.png` → resize → blit with gamma) for Phase-1; the manifest + ICAO→IATA map are
+  already shared-ready.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

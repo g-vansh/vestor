@@ -172,12 +172,12 @@ class FlightScene {
       return;
     }
     const A = airlineFor(f.callsign);
-    // carrier line: fin mark + brand-coloured name
-    drawAirlineMark(m, x + 1, y, 7, A, t);
-    const mw = markWidth(7, A);
-    m.text(x + 1 + mw + 2, y + 1, A.name.slice(0, 11), A.color, 1, '3x5');
+    // carrier line: REAL logo fit across the panel top (rows 0–8)
+    const [lw] = A.iata ? fitLogoBox(m, A.iata, x + 1, y, 62, 9, 'left', 'top')
+                        : [0, 0];
+    if (lw === 0) m.text(x + 1, y + 1, A.name.slice(0, 11), A.color, 1, '3x5');
     // route codes
-    m.text(x + 1, y + 8, (f.origin || '???') + '→' + (f.dest || '???'), PAL.cyan, 1, '3x5');
+    m.text(x + 1, y + 9, (f.origin || '???') + '→' + (f.dest || '???'), PAL.cyan, 1, '3x5');
     // mini radar bottom-left
     drawRadar(m, x + 11, y + 22, 9, t, this.blips, PAL.cyan, PAL.cyanDim);
     // stacked stats bottom-right
@@ -201,10 +201,9 @@ class FlightScene {
     if (!f) { m.textCenter(bx + bw / 2, y + 13, 'SCANNING CAMBRIDGE SKY', PAL.amberDim, 1, '3x5'); return; }
     const A = airlineFor(f.callsign);
 
-    // 1 — carrier identity: fin mark + brand-coloured wordmark + flight number
-    drawAirlineMark(m, bx, y, 9, A, t);
-    const mw = markWidth(9, A);
-    m.text(bx + mw + 3, y + 1, A.name, A.color, 1);            // 5x7 brand wordmark
+    // 1 — carrier identity: REAL logo (rows 1–9) + flight number, right-aligned
+    const lw = A.iata ? drawLogoH(m, A.iata, bx, y + 1, 9, 'left') : 0;
+    if (lw === 0) m.text(bx, y + 1, A.name, A.color, 1);      // wordmark fallback
     m.textRight(x + w - 1, y + 1, (f.callsign || '').slice(0, 8), PAL.amberDim, 1, '3x5');
 
     // 2 — the journey: ORIGIN CITY → DEST CITY (human, falls back to codes)

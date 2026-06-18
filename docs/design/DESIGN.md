@@ -135,7 +135,7 @@ All zone boundaries land on **64-px panel seams** so no element straddles a gap.
 |---|---|---|---|
 | **Clock·Date** | 0–127 | system | Big `HH:MM` (2× flap-free), day, month/date, AM/PM, sweeping seconds bar |
 | **Weather** | 128–255 | Open-Meteo | Condition icon + text, **°C and °F both**, hi/lo, humidity, wind vector, feels-like (both units) |
-| **Flights** *(hero)* | 256–575 | ADS-B | **Carrier-led:** airline emblem + brand-coloured wordmark, `ORIG CITY → DEST CITY` journey, type + ARRIVING/DEPARTING, FL/speed/vertical-rate, radar disc, carrier-tinted altitude gauge |
+| **Flights** *(hero)* | 256–575 | ADS-B | **Carrier-led:** real full-colour airline logo, `ORIG CITY → DEST CITY` journey, type + ARRIVING/DEPARTING, FL/speed/vertical-rate, radar disc, carrier-tinted altitude gauge |
 | **Bluebikes** | 576–703 | GBFS | Pacific St: **classic vs e-bike** counts (bike/bolt icons), free-dock bar |
 | **Shuttles** | 704–831 | Passio + TransLoc | 4-line transit board: **Tech** / **Tech NW** / **SafeRide** (MIT) + **BU Hyatt**→GSU; "DUE" flash ≤1 min |
 | **Extras** | 832–959 | mixed | Rotates every 6 s: ISS pass · MBTA Red Line · AQI · Moon phase · Charles tide |
@@ -144,8 +144,8 @@ All zone boundaries land on **64-px panel seams** so no element straddles a gap.
 ### Three wall modes
 - **DASHBOARD** (default) — the zoned layout above; all domains at a glance.
 - **FLIGHT TAKEOVER** — the whole 1024-px ribbon becomes **one cinematic boarding
-  pass**, read left→right as three panels: **IDENTITY** (big airline emblem +
-  2×-scale brand wordmark + callsign·type·reg), **JOURNEY** (split-flap origin/dest
+  pass**, read left→right as three panels: **IDENTITY** (big real full-colour
+  airline logo + callsign·type·reg), **JOURNEY** (split-flap origin/dest
   IATA codes with the full city names flipping beneath, and a carrier-coloured plane
   crossing the route line with a jet-wash trail), and **STATUS** (2×-scale `FL###`
   over `###KT`, a vertical altitude gauge, vertical-speed, an "IN RANGE" mini-board
@@ -163,15 +163,14 @@ under `scenes/` driven by the same data shapes.
 
 ### 5.1 Flight (hero) — `FlightScene`
 The showpiece — **carrier-led**, the way a real gate board identifies a flight by
-*livery colour + emblem* before you read any text. Every layout opens with the
-airline's procedural mark (see §5.1a) and its name in the brand colour, then the
-human journey (cities, not just codes), then telemetry. Two layouts auto-select
-by zone width:
-- **Compact (64px / Phase 0):** carrier line (fin/emblem + brand-coloured name),
-  `ORIG → DEST` codes, bottom-left mini-radar, bottom-right stacked `FL###` /
+the *real logo* before you read any text. Every layout opens with the carrier's
+**genuine full-colour logo** (see §5.1a), then the human journey (cities, not just
+codes), then telemetry. Two layouts auto-select by zone width:
+- **Compact (64px / Phase 0):** real logo fit across the panel top, `ORIG → DEST`
+  codes, bottom-left mini-radar, bottom-right stacked `FL###` /
   `###KT` / climb-descent. Exactly what the single-panel bring-up should show.
-- **Wide (320px / wall):** left radar disc + "N TRK"; carrier emblem + brand
-  wordmark + callsign; `ORIG CITY → DEST CITY` journey; `TYPE ARRIVING/DEPARTING`
+- **Wide (320px / wall):** left radar disc + "N TRK"; real carrier logo +
+  callsign; `ORIG CITY → DEST CITY` journey; `TYPE ARRIVING/DEPARTING`
   + distance; `FL### · ###KT · ↑climb`; and a bottom **altitude gauge tinted to
   the carrier colour**.
 
@@ -186,21 +185,38 @@ Hero selection: nearest contact, weighted toward closer/arriving/international,
 rotating every ~8 s. Radar contacts are mapped from each flight's bearing
 (`track`) and range (`distance`).
 
-### 5.1a Airline branding — `airlines.js`
-Real gate boards read as a carrier *instantly* from brand colour + emblem. The
-`AIRLINE_DB` keys ~27 carriers by their **ICAO operator code** — the first three
-letters of any ADS-B callsign (`DAL1387 → DAL`), so the lookup is identical for
-SIM and LIVE flights. Each entry carries an **LED-boosted brand colour** (bright +
-saturated so it survives gamma 2.2 + bloom), a secondary accent, and a `mark`.
+### 5.1a Airline branding — `airlines.js` (REAL full-colour logos)
+Real gate boards — and the reference product (theflightwall.com) — read as a
+carrier *instantly* from the genuine logo, in full colour, at panel height. We
+render the **real logo**, not a stylised mark.
 
-Marks are drawn **procedurally** (shape math, not bitmaps) so the *same* emblem
-renders crisply at `h=26` on the takeover and `h=7` on the single panel — no
-anti-alias mush, no per-size PNGs, no CORS fetches. Most carriers use the swept
-tail-fin tinted to their livery; the icons get bespoke geometry: **Delta** widget,
-**United** globe (ring + meridians/parallels), **Southwest** heart, **Lufthansa**
-ring + crane, **Air Canada** roundel. Unknown operators fall back to a sodium-amber
-generic fin labelled with the raw code. API: `airlineFor(callsign)`,
-`drawAirlineMark(m, x, y, h, entry, t)`, `markWidth(h, entry)`.
+**Source.** `pics.avs.io` (the TravelPayouts / Aviasales CDN) serves free,
+CORS-enabled, transparent-background PNG wordmark logos keyed by **IATA** code at
+any requested size. `tools/fetch_logos.py` downloads each carrier, crops to the
+opaque bounding box, scales to a fixed **64-px tall** master, and writes
+`sim/logos/<IATA>.png` plus a `manifest.json`. The wall is then fully **offline**
+(no per-frame network, no CORS taint, no rate limits) — 64 carriers, ~1 MB.
+
+**Flow.** ADS-B callsign → ICAO operator (first 3 chars, `DAL1387 → DAL`) →
+**IATA** via the `ICAO_TO_IATA` table → logo PNG. At draw time the master is
+downscaled into an offscreen canvas at the exact LED target height, read back with
+`getImageData`, and alpha-composited over the black substrate straight into the
+framebuffer (`m.set(x,y,[r,g,b],a)` — `set` premultiplies, so this *is* alpha-over-
+black). The downscaled read-back is cached per `iata@height`, so the 60 fps
+takeover only rasterises each carrier once.
+
+**Colour.** `AIRLINE_DB` still carries hand-tuned **LED-boosted livery colours**
+for the ~30 carriers we see most at KBOS (used to tint the route line, plane icon,
+and altitude gauge); every other carrier gets an accent **sampled from its own
+logo pixels** (weighted toward saturated/bright pixels, then normalised to glow).
+
+**Fallback.** A carrier with no logo file (rare regionals/cargo) or an unknown
+operator draws its **brand wordmark in the brand colour** — never a muddy mark.
+
+API: `airlineFor(callsign)` → `{code, iata, name, color, accent}`;
+`drawLogoH(m, iata, x, y, h, align)` → width; `fitLogoBox(m, iata, x, y, maxW,
+maxH, align, valign)` → `[w, h]`; `logoReady(iata)`, `logoAspect(iata)`.
+Re-fetch/refresh logos with `python3 tools/fetch_logos.py`.
 
 ### 5.2 Weather — `WeatherScene`  *(°C **and** °F — hard requirement)*
 Condition icon (sun/moon/cloud/rain/snow by WMO code, day/night aware) + text;
