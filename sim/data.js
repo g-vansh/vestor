@@ -51,7 +51,11 @@ class DataModel {
       humidity: 58, windKph: 14, windDir: 250, feelsC: 21, _live: false,
     };
     this.bikes = { classic: 12, ebikes: 3, docks: 4, capacity: 19, name: 'PACIFIC ST', _live: false };
-    this.shuttle = { tech: [4, 16, 28], techNW: [9, 24], stop: 'GRAD JUNCTION' };
+    // MIT Passio shuttles at the wall: Tech + Tech2 (Grad Junction West),
+    // SafeRide (evening) at W98 @ Vassar St. BU "Hyatt" (TransLoc) departs
+    // Amesbury St @ Vassar and crosses the Charles to BU's GSU.
+    this.shuttle = { tech: [4, 16, 28], techNW: [9, 24], saferide: [7, 22], stop: 'GRAD JUNCTION', _live: false };
+    this.buShuttle = { hyatt: [3, 18], stop: 'AMESBURY @ VASSAR', dest: 'BU · GSU', vehicles: 1, _live: false };
     this.extras = {
       iss: { overhead: false, minutesAway: 38, lat: 12, lon: -40 },
       mbta: { dest0: 'ALEWIFE', eta0: 3, dest1: 'ASHMONT', eta1: 7 },
@@ -164,13 +168,21 @@ class DataModel {
     this._shTimer += dt;
     if (this._shTimer > 1) {
       this._shTimer = 0;
-      for (const k of ['tech', 'techNW']) {
-        const arr = this.shuttle[k];
+      const tick = (arr, gapMin, gapMax) => {
         if (arr.length && Math.random() < 0.5) {
           arr[0] = Math.max(0, arr[0] - 1);
-          if (arr[0] === 0) { arr.shift(); arr.push(arr.length ? arr[arr.length - 1] + ((Math.random() * 10 + 8) | 0) : 12); }
+          if (arr[0] === 0) {
+            arr.shift();
+            arr.push(arr.length ? arr[arr.length - 1] + ((Math.random() * (gapMax - gapMin) + gapMin) | 0) : gapMin);
+          }
         }
+      };
+      if (!this.shuttle._live) {
+        tick(this.shuttle.tech, 8, 18);
+        tick(this.shuttle.techNW, 10, 22);
+        tick(this.shuttle.saferide, 9, 20);
       }
+      if (!this.buShuttle._live) tick(this.buShuttle.hyatt, 12, 24);   // ~15-20 min headway
     }
 
     /* extras: ISS pass, MBTA, etc. (SIM) */
@@ -200,7 +212,7 @@ class DataModel {
   async fetchLive() {
     await Promise.allSettled([
       this._liveWeather(), this._liveBikes(),
-      this._liveFlights(), this._liveShuttle(),
+      this._liveFlights(), this._liveShuttle(), this._liveBuHyatt(),
     ]);
   }
   async _liveWeather() {
@@ -309,6 +321,37 @@ class DataModel {
       const arr = await window.GtfsRt.shuttleArrivals();
       if (arr) { this.shuttle = Object.assign({ stop: 'GRAD JUNCTION' }, arr); this._shuttleLive = true; }
     } catch (e) { /* keep SIM */ }
+  }
+
+  /* ---- live BU "Hyatt" shuttle via TransLoc (CORS-OK JSON relay) --------
+     Unlike the MIT Passio feed (protobuf, no browser decoder), bu.transloc.com
+     sends Access-Control-Allow-Origin:* and plain JSON, so the browser sim can
+     show REAL BU arrivals. Route 5 = "Hyatt"; stop 21 = Amesbury St @ Vassar. */
+  async _liveBuHyatt() {
+    try {
+      const base = 'https://bu.transloc.com/Services/JSONPRelay.svc';
+      const key = '8882812681', ROUTE = 5, STOP = 21;
+      const [veh, rows] = await Promise.all([
+        fetch(base + '/GetMapVehiclePoints?APIKey=' + key + '&routeIDs=' + ROUTE).then(r => r.json()).catch(() => []),
+        fetch(base + '/GetStopArrivalTimes?APIKey=' + key + '&routeIDs=' + ROUTE).then(r => r.json()),
+      ]);
+      const vehicles = (veh || []).filter(v => v.RouteID === ROUTE).length;
+      const mins = [];
+      for (const row of (rows || [])) {
+        if (row.StopId !== STOP) continue;
+        for (const tm of (row.Times || [])) {
+          if (!tm.EstimateTime || tm.IsDeparted) continue;     // real-time only
+          const m = Math.round((tm.Seconds != null ? tm.Seconds : 0) / 60);
+          if (m >= 0) mins.push(m);
+        }
+      }
+      mins.sort((a, b) => a - b);
+      this.buShuttle = {
+        hyatt: [...new Set(mins)], stop: 'AMESBURY @ VASSAR', dest: 'BU · GSU',
+        vehicles, _live: true,
+      };
+      this._buHyattLive = true;
+    } catch (e) { /* keep SIM (e.g. offline) */ }
   }
 }
 

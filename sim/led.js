@@ -39,6 +39,8 @@ const PAL = {
   redDim:  rgb(120, 24, 20),
   blue:    rgb(90, 150, 255),
   purple:  rgb(170, 120, 255),
+  scarlet: rgb(255, 70, 60),     // BU brand scarlet (#CC0000-ish, LED-boosted)
+  scarletDim: rgb(120, 28, 24),
   ink:     rgb(8, 8, 12),
 };
 

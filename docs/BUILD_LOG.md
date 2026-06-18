@@ -474,6 +474,62 @@ canvas) and fixed by arithmetic, then re-verified at high zoom.
   (180113); the NW line was simply not running that late evening (correctly shows `--`).
 - Next: wire the Python clients into the real `display/` render path (Phase-1).
 
+## 2026-06-18 — Multi-agency transit: + MIT SafeRide + BU "Hyatt" shuttle (live tracking)
+User asked to add **MIT SafeRide** and the **BU shuttle from the Hyatt to BU**, using the
+live-tracking features. Deep-researched both, found they need *two different* integrations,
+and built both the Pi (Python) and the in-browser (sim) live paths.
+
+- **Research — SafeRide is the *same* MIT Passio feed, not a new system.** Every MIT shuttle
+  (Tech, Tech 2, SafeRide, Boston Daytime, Grocery) shares ONE GTFS-realtime TripUpdates
+  feed (`passio3.com/mit/passioTransit/gtfs/realtime/tripUpdates`). Discovered the SafeRide
+  trips live on `route_id 56140` "Saferide Campus" serving **`stop_id 3813` = "W98 @ Vassar
+  St"** — at **~43 m this is the closest stop of all to the wall**. SafeRide is an
+  **evening/overnight service (~6 pm–3 am)**, so by day the feed has no SafeRide trips and
+  the field is correctly empty (the inverse of the daytime-only Tech lines).
+- **Research — the BU "Hyatt" shuttle runs on TransLoc, not Passio.** Boston University's
+  fleet ("the BUS") is on **TransLoc**; the named **"Hyatt"** route (`RouteID 5`) boards at
+  **Amesbury St @ Vassar St** (`StopId 21`) — *right by the wall, beside the Hyatt Regency* —
+  and crosses the Charles to BU's GSU. The TransLoc3 JSONPRelay backend
+  (`bu.transloc.com/Services/JSONPRelay.svc`, public map key `8882812681`) returns plain
+  **JSON with `Access-Control-Allow-Origin: *`** → the **simulator can fetch it live in the
+  browser** (unlike the protobuf MIT feed). Endpoints: `GetRoutesForMapWithScheduleWithEncodedLine`,
+  `GetStopArrivalTimes?routeIDs=5`, `GetMapVehiclePoints?routeIDs=5`. Live ETAs come from
+  `Times[].Seconds` where `EstimateTime` is non-null (tracked vehicle vs schedule-only).
+- **Did (Pi clients):**
+  - `tools/clients/mit_shuttle.py` — extended to classify each trip into `tech`/`tech_nw`/
+    `saferide` by **route name** (`route_long_name` starts "Saferide") rather than hard-coded
+    ids, pull SafeRide from stop `3813`, and expose `shuttle.saferide[]`. `discover()` now
+    reports `saferide_routes_live` + `w98_vassar_present`.
+  - `tools/clients/bu_shuttle.py` — **new** TransLoc client: `fetch()` → `BuShuttleArrivals`
+    (`hyatt[]` minutes ascending, `live_vehicles`), `.NET /Date()/` parser, `discover()`.
+  - `tools/clients/test_live.py` — added `bu_hyatt` to the smoke test + EMPTY checks +
+    summary lines for SafeRide and BU.
+- **Did (simulator):**
+  - `sim/led.js` — added `scarlet`/`scarletDim` to PAL (BU brand colour).
+  - `sim/data.js` — `shuttle` now carries `saferide[]`; new `buShuttle{hyatt[],vehicles,…}`;
+    synth ticker drives all four lines; **new `_liveBuHyatt()`** does the real CORS fetch to
+    bu.transloc.com (same fields as the Python client) and is wired into `fetchLive()`.
+  - `sim/scenes.js` — `ShuttleScene` redesigned from a 2-line MIT board into a **4-line
+    multi-agency departures board**: header "SHUTTLES" + live dot, then TECH (green) / NW
+    (cyan) / SAFE (purple) / BU (scarlet), each lead-bright + next-up-dim, "DUE" flash ≤1 min,
+    "—" when idle.
+  - `sim/app.js` — zone renamed "SHUTTLES" (src "Passio + TransLoc"); marquee now lists
+    SafeRide + BU; added a **BU HYATT SHUTTLE** source card and corrected the MIT card.
+  - `sim/index.html` — hero lede now says "MIT & BU shuttles"; cache-bust `?v=3` → `?v=5`.
+- **Verified:** `python3 -m tools.clients.test_live` → **5/5 PASS**; BU live path proven on an
+  active route (returns real `Seconds`→minutes ETAs; route 5 itself idle on a summer
+  afternoon → correctly empty, same pattern as SafeRide-by-day / Tech-overnight). In the sim,
+  reloaded at `?v=5` (no console errors), and re-ran the crisp debug-readout on the shuttle
+  zone (x=704, w=128, scale 4–5): all four rows render cleanly — `TECH 16·4M / NW 24·9M /
+  SAFE DUE / BU 18·3M` — no label↔ETA overlap and no row-31 clip (BU row at y+26 → rows
+  26–30). Marquee segment renders "TECH … NW … SAFERIDE … BU HYATT …" with no exception.
+- **Changed from brief:** SafeRide turned out to need *no* new integration (same Passio feed)
+  — the work was discovery + name-based classification. BU needed a genuinely new vendor
+  (TransLoc), but its CORS-open JSON means the *simulator* shows it **live**, while MIT
+  shuttles stay synthetic in-browser (protobuf) and live on the Pi.
+- **Next:** wire all Python clients (incl. `bu_shuttle.py`) into the real `display/` render
+  path for Phase-1; SafeRide will populate the board after dusk on the Pi.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

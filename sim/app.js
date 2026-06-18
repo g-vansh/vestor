@@ -40,7 +40,7 @@ const ZONES = [
   { id: 'weather', x: 128,  w: 128, name: 'WEATHER °C/°F',   src: 'Open-Meteo',color: '#5a96ff', desc: 'Condition, dual-unit temp, hi/lo, humidity, wind vector.' },
   { id: 'flight',  x: 256,  w: 320, name: 'FLIGHTS · RADAR', src: 'ADS-B',     color: '#00e5ff', desc: 'Live radar sweep, split-flap callsign, route arc, alt/spd gauges.' },
   { id: 'bikes',   x: 576,  w: 128, name: 'BLUEBIKES',       src: 'GBFS',      color: '#00e5ff', desc: 'Pacific St: classic vs e-bikes vs free docks.' },
-  { id: 'shuttle', x: 704,  w: 128, name: 'MIT SHUTTLE',     src: 'Passio',    color: '#ffb000', desc: 'Tech + Tech NW arrivals at Grad Junction.' },
+  { id: 'shuttle', x: 704,  w: 128, name: 'SHUTTLES',         src: 'Passio + TransLoc', color: '#ffb000', desc: 'MIT Tech · Tech NW · SafeRide + BU Hyatt→GSU, live arrivals.' },
   { id: 'extras',  x: 832,  w: 128, name: 'EXTRAS',          src: 'mixed',     color: '#aa78ff', desc: 'Rotates: ISS pass · MBTA Red · AQI · Moon · Charles tide.' },
   { id: 'status',  x: 960,  w: 64,  name: 'STATUS',          src: 'system',    color: '#ff3c32', desc: 'Live heartbeat, wordmark, data-freshness sparkline.' },
 ];
@@ -169,12 +169,15 @@ function drawMarquee(t, dt) {
   wallM.vline(62, 2, 29, PAL.amberDim, 80);
 
   const wx = data.weather, b = data.bikes, s = data.shuttle, f = data.heroFlight;
+  const bu = data.buShuttle || { hyatt: [] };
   const tc = Math.round(wx.tempC), tf = Math.round(wx.tempC * 9 / 5 + 32);
+  const eta = a => (a && a[0] != null ? a[0] + 'M' : '--');
   const txt =
     tc + '°C / ' + tf + '°F ' + S.WMO_TEXT(wx.code) + '    ' +
     (f ? (f.callsign + ' ' + f.origin + '>' + f.dest + ' FL' + Math.round(f.alt / 100)) : 'NO TRAFFIC') + '    ' +
     'BIKES ' + b.classic + ' CLASSIC +' + b.ebikes + 'E   ' +
-    'TECH ' + (s.tech[0] != null ? s.tech[0] + 'M' : '--') + '  TECH NW ' + (s.techNW[0] != null ? s.techNW[0] + 'M' : '--') + '    ' +
+    'TECH ' + eta(s.tech) + '  NW ' + eta(s.techNW) + '  SAFERIDE ' + eta(s.saferide) +
+    '  BU HYATT ' + eta(bu.hyatt) + '    ' +
     'ISS ' + (data.extras.iss.overhead ? 'OVERHEAD' : data.extras.iss.minutesAway + 'M') + '    ' +
     'RED LN ' + data.extras.mbta.eta0 + 'M     +++     ';
   marquee.draw(wallM, 66, 0, WALL_W - 66, 12, txt, PAL.amber, 2, dt);
@@ -267,7 +270,8 @@ function buildSources() {
     { t: 'ADS-B FLIGHTS', s: 'adsb.lol · hexdb.io · adsbdb', d: 'Live aircraft within 25 nm of 540 Memorial Dr; enriched with route + type. No key.', e: 'api.adsb.lol/v2/point/42.354/-71.107/25' },
     { t: 'WEATHER °C/°F', s: 'Open-Meteo', d: 'Current temp, apparent, humidity, wind, daily hi/lo, WMO code. Free, no key, CORS-OK.', e: 'api.open-meteo.com/v1/forecast' },
     { t: 'BLUEBIKES', s: 'GBFS 2.3 (Lyft)', d: 'Pacific St @ Purrington — classic vs e-bike counts, free docks. 60s TTL.', e: 'gbfs.lyft.com/gbfs/2.3/bos/en/station_status.json' },
-    { t: 'MIT SHUTTLE', s: 'Passio GTFS-realtime', d: 'Tech + Tech NW (routes 56642/71674) TripUpdates at Grad Junction West (180113).', e: 'passio3.com/mit/passioTransit/gtfs/realtime/tripUpdates' },
+    { t: 'MIT SHUTTLE', s: 'Passio GTFS-realtime', d: 'Tech + Tech NW at Grad Junction (180113); SafeRide Campus at W98 @ Vassar (3813), one shared protobuf feed.', e: 'passio3.com/mit/passioTransit/gtfs/realtime/tripUpdates' },
+    { t: 'BU HYATT SHUTTLE', s: 'TransLoc3 (CORS-OK)', d: 'BU "Hyatt" route 5: Amesbury @ Vassar (stop 21, by the wall) → BU GSU. Live vehicle ETAs, fetched in-browser.', e: 'bu.transloc.com/Services/JSONPRelay.svc/GetStopArrivalTimes' },
     { t: 'MBTA RED LINE', s: 'MBTA v3 API', d: 'Predicted arrivals at Kendall/MIT (place-knncl) toward Alewife / Ashmont.', e: 'api-v3.mbta.com/predictions?stop=place-knncl' },
     { t: 'ISS OVERHEAD', s: 'wheretheiss.at', d: 'Sub-satellite point + pass timing relative to Cambridge for "look up!" alerts.', e: 'api.wheretheiss.at/v1/satellites/25544' },
     { t: 'AIR QUALITY', s: 'Open-Meteo AQ', d: 'US AQI / PM2.5 for the Cambridge grid cell, color-coded GOOD→HAZARD.', e: 'air-quality-api.open-meteo.com/v1/air-quality' },

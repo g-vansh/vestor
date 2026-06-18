@@ -81,37 +81,74 @@ Purrington St** (nearest to 540 Memorial Dr).
 
 ---
 
-## 4. MIT Tech Shuttle — Passio GTFS-realtime  *(no key · server-side · verified 2026-06-15)*
-MIT's shuttles run on **Passio GO** (agency `mit`). The per-stop ETA REST
-endpoint is disabled, so use **GTFS-realtime TripUpdates** (protobuf).
+## 4. MIT Shuttles — Passio GTFS-realtime  *(no key · server-side · verified 2026-06-18)*
+**All** MIT shuttles (Tech, Tech 2, SafeRide, Boston Daytime, Grocery…) ride on
+**ONE** Passio GO feed (agency `mit`). The per-stop ETA REST endpoint is
+disabled, so use **GTFS-realtime TripUpdates** (protobuf). Classification is by
+**route name** (resolved from the static GTFS), not hard-coded ids — future-proof
+against the agency renumbering routes.
 
 - **TripUpdates:** `https://passio3.com/mit/passioTransit/gtfs/realtime/tripUpdates`
 - **VehiclePositions:** `https://passio3.com/mit/passioTransit/gtfs/realtime/vehiclePositions`
 - **Static GTFS:** `https://passio3.com/mit/passioTransit/gtfs/google_transit.zip`
   (route/stop names, schedules — 9 files, ~50 KB).
-- **Routes serving Grad Junction West** (verified against the live static GTFS):
+- **Tech lines @ Grad Junction West** (`stop_id 180113`; Grad Junction East = `179825`):
   - `63220` **"Tech Shuttle"** → line A (`tech`)
-  - `56642` **"Tech Shuttle2"** + `71674` **"Tech Shuttle2 copy"** → line B
-    (`tech_nw`; the two ids are the same line / second vehicle)
+  - `56642` **"Tech Shuttle2"** + `71674` **"Tech Shuttle2 copy"** → line B (`tech_nw`)
   > ⚠️ **Correction:** earlier research listed *Tech Shuttle NW = `63319`* — that
   > route **does not exist** in the current feed. There is **no separately-named
   > "NW" route**; the closest match is the **"Tech Shuttle 2"** line above, which
   > is what the `tech_nw` field now carries.
-- **Stop:** Grad Junction West = **`180113`** ✓ (Grad Junction East = `179825`).
+- **SafeRide @ W98 (Vassar St)** = `stop_id 3813` — this is the **closest stop of
+  all to the wall (~43 m)**, on the *Saferide Campus* line (`route_id 56140`
+  observed live; classified by `route_long_name` starting "Saferide"). SafeRide is
+  an **evening/overnight service (~6 pm–3 am)**: by day the feed carries **no**
+  SafeRide trips, so `shuttle.saferide` is correctly empty (display "—"), and it
+  lights up after dusk. This is the inverse of the Tech lines (daytime-only).
 - **How to read arrivals:** parse the protobuf `FeedMessage`; for each `entity`
   with a `trip_update`, resolve the route (`trip.route_id` **or**, when absent,
-  `trip.trip_id` → static `trips.txt`), keep the Tech routes, find the
-  `stop_time_update` whose `stop_id == 180113`, read `arrival.time` (epoch),
-  subtract `now` → minutes. Decode with `gtfs-realtime-bindings`
+  `trip.trip_id` → static `trips.txt`); classify into `tech`/`tech_nw`/`saferide`;
+  pick the stop (`180113` for Tech, `3813` for SafeRide); read `arrival.time`
+  (epoch) − `now` → minutes. Decode with `gtfs-realtime-bindings`
   (`pip install gtfs-realtime-bindings protobuf`).
-- **Notes:** RT shares the static `stop_id` namespace, so `180113` matches
-  directly. The Tech lines are **daytime services** — overnight the TripUpdates
-  feed is an empty 15-byte header (only Saferide runs), so `fetch()` correctly
-  returns empty lists (display shows "—"). The browser sim keeps **synthetic**
-  shuttle data (decoding protobuf in-browser would break the zero-dependency
-  design); the Pi's `tools/clients/mit_shuttle.py` reads the real feed.
+- **Notes:** RT shares the static `stop_id` namespace, so ids match directly. The
+  browser sim keeps **synthetic** MIT-shuttle data (decoding protobuf in-browser
+  would break the zero-dependency design); the Pi's
+  `tools/clients/mit_shuttle.py` reads the real feed for all three lines.
 
-Scene fields consumed: `shuttle.tech[]`, `shuttle.techNW[]` (minutes, ascending).
+Scene fields consumed: `shuttle.tech[]`, `shuttle.techNW[]`, `shuttle.saferide[]`
+(minutes, ascending).
+
+---
+
+## 4b. BU "Hyatt" Shuttle — TransLoc3  *(no key¹ · **CORS-OK** · verified 2026-06-18)*
+Boston University runs **the BUS** fleet on **TransLoc**. The relevant line is the
+**"Hyatt"** route, which boards at **Amesbury St @ Vassar St** — *right next to the
+wall, beside the Hyatt Regency Cambridge* — and crosses the Charles to BU's George
+Sherman Union (GSU). Unlike the MIT protobuf feed, TransLoc returns **plain JSON
+with `Access-Control-Allow-Origin: *`**, so the **simulator fetches it live, in the
+browser**.
+
+- **Base:** `https://bu.transloc.com/Services/JSONPRelay.svc`  (the same backend
+  the public `bu.transloc.com` map calls)
+- **Routes + encoded lines:** `…/GetRoutesForMapWithScheduleWithEncodedLine?APIKey=8882812681`
+- **Stop arrivals:** `…/GetStopArrivalTimes?APIKey=8882812681&routeIDs=5`
+- **Live vehicles:** `…/GetMapVehiclePoints?APIKey=8882812681&routeIDs=5`
+- **Route / stop ids:** `RouteID 5` = **"Hyatt"**, boarding `StopId 21` =
+  **Amesbury St @ Vassar St**.
+- **How to read arrivals:** for the row whose `StopId == 21`, iterate `Times`; keep
+  only entries with a non-null **`EstimateTime`** (a real tracked vehicle, vs.
+  schedule-only) that are not `IsDeparted`; use the `Seconds` countdown → minutes,
+  ascending. Timestamps are .NET `"/Date(ms)/"` strings (parse the ms).
+- **Notes:** the route runs ~7 am–7 pm weekdays (reduced in summer); when no vehicle
+  is assigned the arrivals list is empty and `fetch()` returns `[]` (display "—").
+  Same shape on both sides: `tools/clients/bu_shuttle.py` (Pi) and `data.js`
+  `_liveBuHyatt()` (sim) read identical fields.
+
+¹ `8882812681` is the **public relay key the bu.transloc.com map itself ships
+with** — no key of our own, no scraping.
+
+Scene fields consumed: `buShuttle.hyatt[]` (minutes, ascending), `buShuttle.vehicles`.
 
 ---
 
@@ -150,12 +187,16 @@ Kendall/MIT is the closest T stop.
 | Weather | Open-Meteo | no | **yes** | sim + Pi | ✅ live |
 | Air Quality | Open-Meteo AQ | no | **yes** | sim + Pi | ready |
 | Bluebikes | GBFS 2.3 (Lyft) | no | **yes** | sim + Pi | ✅ live |
-| MIT Shuttle | Passio GTFS-rt | no | no (protobuf) | Pi (server) | ✅ live¹ |
+| MIT Tech/SafeRide | Passio GTFS-rt | no | no (protobuf) | Pi (server) | ✅ live¹ |
+| BU Hyatt | TransLoc3 | no² | **yes** | sim + Pi | ✅ live |
 | MBTA Red | MBTA v3 | optional | yes | Pi | ready |
 | ISS | wheretheiss.at | no | **yes** | sim + Pi | ready |
 | Tide | NOAA CO-OPS | no | yes | Pi | ready |
 
-¹ Verified end-to-end; arrival lists empty overnight (Tech is daytime-only).
+¹ Verified end-to-end; Tech lists empty overnight (daytime-only), SafeRide empty
+  by day (evening/overnight-only).
+² Public relay key shipped by the BU map itself; CORS-open, so the sim reads it
+  live in-browser.
 
 The simulator's **LIVE** toggle uses the CORS-OK rows directly (weather, bikes,
 **airplanes.live** flights); the Python clients in `tools/clients/` cover every

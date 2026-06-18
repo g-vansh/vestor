@@ -15,7 +15,7 @@ import json
 import sys
 import time
 
-from . import weather, bluebikes, mit_shuttle, flights
+from . import weather, bluebikes, mit_shuttle, bu_shuttle, flights
 
 
 def _run(name, fn):
@@ -32,6 +32,7 @@ def snapshot() -> dict:
         _run("weather", weather.fetch),
         _run("bluebikes", bluebikes.fetch),
         _run("shuttle", mit_shuttle.fetch),
+        _run("bu_hyatt", bu_shuttle.fetch),
         _run("flights", flights.fetch),
     ]
     out = {"ts": int(time.time()), "sources": {}}
@@ -53,8 +54,10 @@ def main() -> int:
         data, status = s["data"], s["status"]
         empty = ""
         if status == "OK":
-            if name == "shuttle" and not (data["tech"] or data["tech_nw"]):
+            if name == "shuttle" and not (data["tech"] or data["tech_nw"] or data["saferide"]):
                 empty = "  (EMPTY — no service now)"
+            if name == "bu_hyatt" and not data["hyatt"]:
+                empty = f"  (EMPTY — {data['live_vehicles']} vehicles on route)"
             if name == "flights" and not data["hero"]:
                 empty = "  (EMPTY — no aircraft)"
         flag = "PASS" if status == "OK" else "FAIL"
@@ -72,6 +75,14 @@ def main() -> int:
     if src["bluebikes"]["status"] == "OK":
         b = src["bluebikes"]["data"]
         print(f"   bikes    : {b['classic']} classic + {b['ebikes']} e-bike, {b['docks']} docks")
+    if src["shuttle"]["status"] == "OK":
+        s = src["shuttle"]["data"]
+        print(f"   shuttle  : TECH {s['tech'] or '--'}  NW {s['tech_nw'] or '--'}  "
+              f"SAFERIDE {s['saferide'] or '--'} (min)")
+    if src["bu_hyatt"]["status"] == "OK":
+        h = src["bu_hyatt"]["data"]
+        print(f"   bu hyatt : {h['hyatt'] or '--'} min @ {h['stop_name']} "
+              f"({h['live_vehicles']} live veh)")
     if src["flights"]["status"] == "OK" and src["flights"]["data"]["hero"]:
         h = src["flights"]["data"]["hero"]
         print(f"   flight   : {h['callsign']} {h['origin'] or '?'}->{h['dest'] or '?'} "

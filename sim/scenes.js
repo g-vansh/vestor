@@ -353,15 +353,19 @@ class BluebikesScene {
  * ========================================================================== */
 class ShuttleScene {
   draw(m, x, y, w, h, data, t, dt) {
-    const s = data.shuttle;
+    const s = data.shuttle, bu = data.buShuttle || { hyatt: [] };
+    // single-line header frees four data rows in the 32px zone
     m.icon(x + 1, y, 'bus', PAL.amber);
-    m.text(x + 13, y + 1, 'MIT SHUTTLE', PAL.amber, 1, '3x5');
-    m.text(x + 1, y + 7, 'GRAD JUNCTION', PAL.amberDim, 1, '3x5');
+    m.text(x + 13, y + 1, 'SHUTTLES', PAL.amber, 1, '3x5');
+    // tiny live tick if any shuttle feed is live (BU is genuinely live in-browser)
+    if (bu._live || s._live) { m.add(x + w - 2, y + 1, PAL.green, 230); m.add(x + w - 3, y + 2, PAL.green, 110); }
 
-    // route 1: TECH
-    this._row(m, x, y + 13, w, 'TECH', s.tech, PAL.green, t);
-    // route 2: TECH NW
-    this._row(m, x, y + 22, w, 'TECH NW', s.techNW, PAL.cyan, t);
+    // 4 lines @ 6px pitch. MIT (Passio): TECH/NW @ Grad Junction, SAFE @ W98.
+    // BU (TransLoc): Hyatt route, Amesbury/Vassar -> Charles -> BU GSU.
+    this._row(m, x, y + 8,  w, 'TECH', s.tech,     PAL.green,   t);
+    this._row(m, x, y + 14, w, 'NW',   s.techNW,   PAL.cyan,    t);
+    this._row(m, x, y + 20, w, 'SAFE', s.saferide, PAL.purple,  t);
+    this._row(m, x, y + 26, w, 'BU',   bu.hyatt,   PAL.scarlet, t);
   }
   _row(m, x, y, w, label, etas, color, t) {
     m.text(x + 1, y, label, color, 1, '3x5');
@@ -372,11 +376,9 @@ class ShuttleScene {
       const p = (Math.sin(t * 8) * 0.5 + 0.5);
       m.textRight(x + w - 1, y, 'DUE', mix(color, PAL.white, p), 1, '3x5');
     } else {
-      const txt = lead + 'M';
-      m.textRight(x + w - 1, y, txt, color, 1, '3x5');
-      // next two ETAs as small ticks
-      const nxt = etas.slice(1, 3).join(' ');
-      if (nxt) m.text(x + 38, y, nxt, scale(color, 0.55), 1, '3x5');
+      // departures-board style: soonest bright at the right, next-up dim to its left
+      m.textRight(x + w - 1, y, lead + 'M', color, 1, '3x5');
+      if (etas[1] != null) m.textRight(x + w - 16, y, etas[1] + '', scale(color, 0.5), 1, '3x5');
     }
   }
 }

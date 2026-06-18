@@ -126,8 +126,8 @@ All zone boundaries land on **64-px panel seams** so no element straddles a gap.
 
 ```
  px:  0      128     256                 576     704     832     960  1024
-      |CLOCK |WEATHER|  FLIGHTS · RADAR  |BIKES  |SHUTTLE|EXTRAS |STAT|
-      | DATE | °C/°F |  (hero, 5 panels) |       | MIT   |rotate |cap |
+      |CLOCK |WEATHER|  FLIGHTS · RADAR  |BIKES  |SHUTTLS|EXTRAS |STAT|
+      | DATE | °C/°F |  (hero, 5 panels) |       |MIT·BU |rotate |cap |
       |2 pnl |2 pnl  |                   |2 pnl  |2 pnl  |2 pnl  |1pnl|
 ```
 
@@ -137,7 +137,7 @@ All zone boundaries land on **64-px panel seams** so no element straddles a gap.
 | **Weather** | 128–255 | Open-Meteo | Condition icon + text, **°C and °F both**, hi/lo, humidity, wind vector, feels-like (both units) |
 | **Flights** *(hero)* | 256–575 | ADS-B | Radar disc (live sweep + contacts), split-flap callsign, type chip, route codes + arc, origin/dest cities, FL/speed/vertical-rate, alt/spd gauges |
 | **Bluebikes** | 576–703 | GBFS | Pacific St: **classic vs e-bike** counts (bike/bolt icons), free-dock bar |
-| **MIT Shuttle** | 704–831 | Passio GTFS-rt | **Tech** + **Tech NW** arrivals at Grad Junction; "DUE" flash ≤1 min |
+| **Shuttles** | 704–831 | Passio + TransLoc | 4-line transit board: **Tech** / **Tech NW** / **SafeRide** (MIT) + **BU Hyatt**→GSU; "DUE" flash ≤1 min |
 | **Extras** | 832–959 | mixed | Rotates every 6 s: ISS pass · MBTA Red Line · AQI · Moon phase · Charles tide |
 | **Status** | 960–1023 | system | LIVE heartbeat, vertical `VESTOR` wordmark, data-freshness sparkline |
 
@@ -183,10 +183,19 @@ Header + "PACIFIC ST"; a **classic** row (bike icon, white, count) and an
 separately per the brief; a bottom **free-dock bar** + count. Low-availability
 (≤2 bikes) pulses the count red.
 
-### 5.4 MIT Shuttle — `ShuttleScene`
-Bus icon + "MIT SHUTTLE / GRAD JUNCTION"; two right-aligned ETA rows —
-**TECH** (green) and **TECH NW** (cyan) — each showing the lead arrival in
-minutes with the next two as faint ticks; **"DUE"** flashes when ≤1 min.
+### 5.4 Shuttles — `ShuttleScene`
+A multi-agency **departures board**. Bus icon + "SHUTTLES" header (with a green
+live-feed dot when real data is flowing), then four right-aligned ETA rows at a
+6-px pitch, each colour-coded:
+- **TECH** (green) and **NW** (cyan) — MIT Tech lines at Grad Junction
+- **SAFE** (purple) — MIT SafeRide at W98 @ Vassar (evening service)
+- **BU** (scarlet) — BU "Hyatt" shuttle → GSU, boarding beside the wall
+
+Each row shows the **lead** arrival bright + right-aligned with the **next-up**
+dim to its left; **"DUE"** flashes when ≤1 min; **"—"** when the line is idle
+(Tech overnight, SafeRide by day, BU outside service hours). BU is genuinely
+live in-browser (CORS-OK TransLoc JSON); the MIT lines are synthetic in the sim
+and live on the Pi.
 
 ### 5.5 Clock·Date — `ClockScene`
 2×-scale `HH:MM` (amber), sub-minute **seconds bar**, day-of-week (cyan),
