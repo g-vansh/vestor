@@ -530,6 +530,48 @@ and built both the Pi (Python) and the in-browser (sim) live paths.
 - **Next:** wire all Python clients (incl. `bu_shuttle.py`) into the real `display/` render
   path for Phase-1; SafeRide will populate the board after dusk on the Pi.
 
+## 2026-06-18 — Carrier-led flight redesign + airline branding (sim)
+
+**Prompt:** referenced `AxisNimble/TheFlightWall_OSS` — *"look how clean their airplane
+tracking is… we have so much space to play around with… this also shows airline logos we
+should do that too."* Goal: make the flight display dramatically cleaner/more spacious and
+add airline branding.
+
+- **Why the reference reads clean (diagnosis):** it identifies a flight by **brand colour +
+  emblem + human "From: City"** in a single framed card — one flight, spacious, branded. Ours
+  led with a cryptic callsign + cluttered radar/gauges. Fix = lead with the *carrier*, show
+  *cities* not just codes, and spend the 1024 px on breathing room.
+- **New `sim/airlines.js`:** `AIRLINE_DB` of ~27 carriers keyed by **ICAO operator code**
+  (first 3 callsign chars → works for SIM *and* LIVE). LED-boosted brand colour + accent +
+  `mark`. **Procedural** marks (shape math, no bitmaps/PNGs/CORS) so one emblem renders crisp
+  at h=26 (takeover) and h=7 (panel): swept tail-fin (default, livery-tinted) + bespoke Delta
+  widget / United globe / Southwest heart / Lufthansa ring / Air Canada roundel. Generic
+  sodium-amber fin fallback for unknown operators. API `airlineFor` / `drawAirlineMark` /
+  `markWidth`.
+- **`sim/scenes.js` `FlightScene` rebuilt** — both `_drawCompact` (64 px Phase-0) and
+  `_drawWide` (320 px dashboard hero) now open with the emblem + brand-coloured wordmark, show
+  `ORIG CITY → DEST CITY`, then telemetry; wide adds a carrier-tinted altitude gauge.
+- **`sim/app.js` `drawTakeover` rebuilt** as a **3-panel cinematic boarding pass**:
+  IDENTITY (big emblem + 2× brand wordmark + callsign·type·reg) · JOURNEY (split-flap IATA
+  codes + full city names that clack over on hero rotation, plane crossing the route on a
+  `distance`/`_arriving`-derived track with a jet-wash trail) · STATUS (2× `FL###`/`###KT`,
+  vertical alt gauge, V/S, "IN RANGE" traffic mini-board, corner radar scope).
+- **`sim/led.js`:** added a `·` (middot) glyph to **both** FONT3x5 and FONT5x7 — the takeover
+  separator was rendering as `?` (unknown-glyph fallback).
+- **Verified (preview emulator, crisp gamma-corrected pixel readout @ scale 3–8):**
+  takeover panel-by-panel across **two carriers** — *Southwest* (heart + gold "SOUTHWEST" +
+  `SWA2299·B737·N8642E`, BWI/BALTIMORE→BOS/BOSTON, gold plane mid-route) and *United* (globe +
+  blue "UNITED", SFO/SAN FRAN→BOS/BOSTON, blue plane, `ARRIVING · 12.0 MI`). Also confirmed
+  the 320 px dashboard hero and 64 px Phase-0 panel render carrier-led and clean. No overlap,
+  no row-31 clip; fixed one tight spacing on the IN-RANGE rows (`21 + i*6`). Cache-bust
+  `?v=5` → `?v=8`.
+- **Changed from brief:** chose **procedural pixel marks + brand colours baked into JS** over
+  fetching AirHex/airline PNGs — at 7–26 px tall, real logos turn to anti-alias mush and the
+  fetches are CORS-blocked; the *brand colour* is the strongest identifier on an LED wall
+  anyway. Bespoke geometry only for the few truly iconic marks.
+- **Next:** mirror `airlines.py` brand table + the carrier-led layout into the Pi's Python
+  `display/` render path for Phase-1; consider per-carrier accent on the dashboard zone seams.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

@@ -13,6 +13,7 @@ What the hobbyist + maker community has built on exactly this hardware
 | Project / pattern | Steal-worthy idea |
 |---|---|
 | **its-a-plane-python** (our upstream, ColinWaddell) | Per-scene keyframe animation; FlightRadar24 nearest-plane focus; clean clock/date/weather rotation on a 64×32. Our flight scene extends its "one hero plane" idea with a **radar** + **split-flap**. |
+| **TheFlightWall** (AxisNimble OSS + theflightwall.com) | The *cleanest* flight card we found: one flight, **framed**, three centered lines — **airline name in the brand colour + logo**, `From: <City>`, aircraft type. The wow is *legibility + branding*, not density. Drove our **carrier-led** rewrite: lead with the airline emblem + brand-coloured wordmark and show **city names** before codes. (OSS note "airline logo lookup added soon" — not in their OSS yet; we built it.) |
 | **Flightradar / "planes overhead" matrix builds** | A live **radar/compass sweep** with the home location at center reads instantly as "aircraft." We made it the flight zone's left anchor. |
 | **MTA/transit countdown clocks & subway-sign clones** | Right-aligned **minutes-to-arrival** rows with a route **bullet**; the real signage flips between "now/2 min/4 min." Drives our shuttle + MBTA rows and the **split-flap** motion. |
 | **Solari / split-flap board recreations** | The flip *is* the brand. Even a faked flip (cycling glyphs to target) sells "departure board." Implemented as `SplitFlap`. |
@@ -26,6 +27,25 @@ What the hobbyist + maker community has built on exactly this hardware
 motion-with-meaning*. The wow factor on a 201" ribbon comes from **one
 unbroken narrative strip** + **diegetic motion** (flips, sweep), not from
 cramming effects.
+
+### Airline logos on a 32-px LED wall (resolved approach)
+
+The reference product shows airline **logos**, and we wanted them too. How to put
+~30 carrier marks on a phosphor ribbon, legibly, at 7–26 px tall:
+
+- **Bitmap/PNG logos lose.** Real airline logos (AirHex, brand kits, SVGs) are
+  designed for hundreds of px. Downscaled to 7–26 px tall and pushed through the
+  sim's gamma 2.2 + additive bloom they become anti-alias mush; you can't tell
+  American from Delta. Fetching them is also **CORS-blocked** in-browser and adds
+  a per-size asset pipeline on the Pi.
+- **Brand colour is the real signal.** On an LED wall the eye reads *colour* first
+  (Southwest gold, United blue, Delta red). A correct colour + a 1-bit emblem
+  out-identifies a muddy full-colour logo.
+- **Decision → procedural pixel marks.** `airlines.js` draws each mark from shape
+  math (fin, widget, globe, heart, ring, roundel) tinted to an **LED-boosted**
+  brand colour, so the identical emblem is crisp at any size with zero assets and
+  zero network. Keyed by **ICAO operator code** (first 3 callsign chars) so SIM and
+  LIVE share one table. See `DESIGN.md` §5.1a.
 
 ---
 

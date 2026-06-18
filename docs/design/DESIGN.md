@@ -135,7 +135,7 @@ All zone boundaries land on **64-px panel seams** so no element straddles a gap.
 |---|---|---|---|
 | **Clock·Date** | 0–127 | system | Big `HH:MM` (2× flap-free), day, month/date, AM/PM, sweeping seconds bar |
 | **Weather** | 128–255 | Open-Meteo | Condition icon + text, **°C and °F both**, hi/lo, humidity, wind vector, feels-like (both units) |
-| **Flights** *(hero)* | 256–575 | ADS-B | Radar disc (live sweep + contacts), split-flap callsign, type chip, route codes + arc, origin/dest cities, FL/speed/vertical-rate, alt/spd gauges |
+| **Flights** *(hero)* | 256–575 | ADS-B | **Carrier-led:** airline emblem + brand-coloured wordmark, `ORIG CITY → DEST CITY` journey, type + ARRIVING/DEPARTING, FL/speed/vertical-rate, radar disc, carrier-tinted altitude gauge |
 | **Bluebikes** | 576–703 | GBFS | Pacific St: **classic vs e-bike** counts (bike/bolt icons), free-dock bar |
 | **Shuttles** | 704–831 | Passio + TransLoc | 4-line transit board: **Tech** / **Tech NW** / **SafeRide** (MIT) + **BU Hyatt**→GSU; "DUE" flash ≤1 min |
 | **Extras** | 832–959 | mixed | Rotates every 6 s: ISS pass · MBTA Red Line · AQI · Moon phase · Charles tide |
@@ -143,9 +143,13 @@ All zone boundaries land on **64-px panel seams** so no element straddles a gap.
 
 ### Three wall modes
 - **DASHBOARD** (default) — the zoned layout above; all domains at a glance.
-- **FLIGHT TAKEOVER** — the whole ribbon becomes one giant flight strip: large
-  radar, 2×-scale split-flap callsign, live stats, **plus a right-hand
-  "departures board"** of the other contacts (airport-board aesthetic).
+- **FLIGHT TAKEOVER** — the whole 1024-px ribbon becomes **one cinematic boarding
+  pass**, read left→right as three panels: **IDENTITY** (big airline emblem +
+  2×-scale brand wordmark + callsign·type·reg), **JOURNEY** (split-flap origin/dest
+  IATA codes with the full city names flipping beneath, and a carrier-coloured plane
+  crossing the route line with a jet-wash trail), and **STATUS** (2×-scale `FL###`
+  over `###KT`, a vertical altitude gauge, vertical-speed, an "IN RANGE" mini-board
+  of nearby traffic, and a radar scope in the far corner).
 - **MARQUEE** — a static LIVE/VESTOR end-block + one 2×-scale scrolling ticker
   combining every domain; for glanceable, low-attention moments.
 
@@ -158,18 +162,45 @@ Each scene is a stateful class in `sim/scenes.js` with
 under `scenes/` driven by the same data shapes.
 
 ### 5.1 Flight (hero) — `FlightScene`
-The showpiece. Two layouts auto-selected by zone width:
-- **Compact (64px / Phase 0):** full-width split-flap callsign banner, centered
-  route, bottom-left mini-radar, bottom-right stacked `FL###` / `###KT` /
-  climb-descent. This is exactly what the single-panel bring-up should show.
-- **Wide (320px / wall):** left radar disc with "RADAR / N TRK" labels; split-flap
-  callsign + type chip; `ORIG → DEST` with a pulsing **route arc**; origin/dest
-  city subtitles; bottom data row `FL### · ###KT · ↑climb · ##.#MI` over two
-  unlabeled progress **gauges** (altitude, ground speed).
+The showpiece — **carrier-led**, the way a real gate board identifies a flight by
+*livery colour + emblem* before you read any text. Every layout opens with the
+airline's procedural mark (see §5.1a) and its name in the brand colour, then the
+human journey (cities, not just codes), then telemetry. Two layouts auto-select
+by zone width:
+- **Compact (64px / Phase 0):** carrier line (fin/emblem + brand-coloured name),
+  `ORIG → DEST` codes, bottom-left mini-radar, bottom-right stacked `FL###` /
+  `###KT` / climb-descent. Exactly what the single-panel bring-up should show.
+- **Wide (320px / wall):** left radar disc + "N TRK"; carrier emblem + brand
+  wordmark + callsign; `ORIG CITY → DEST CITY` journey; `TYPE ARRIVING/DEPARTING`
+  + distance; `FL### · ###KT · ↑climb`; and a bottom **altitude gauge tinted to
+  the carrier colour**.
+
+**Full-wall TAKEOVER** (`drawTakeover` in `app.js`) is the same vocabulary blown
+across all 1024 px as a three-panel boarding pass — see *Three wall modes* above.
+The origin/dest IATA codes and full city names are **split-flaps** that physically
+clack over each time the hero rotates; the plane's position along the route line
+is derived from `distance` + the `_arriving` flag (arriving flights converge on
+the destination dot, departing ones pull away from the origin).
 
 Hero selection: nearest contact, weighted toward closer/arriving/international,
 rotating every ~8 s. Radar contacts are mapped from each flight's bearing
 (`track`) and range (`distance`).
+
+### 5.1a Airline branding — `airlines.js`
+Real gate boards read as a carrier *instantly* from brand colour + emblem. The
+`AIRLINE_DB` keys ~27 carriers by their **ICAO operator code** — the first three
+letters of any ADS-B callsign (`DAL1387 → DAL`), so the lookup is identical for
+SIM and LIVE flights. Each entry carries an **LED-boosted brand colour** (bright +
+saturated so it survives gamma 2.2 + bloom), a secondary accent, and a `mark`.
+
+Marks are drawn **procedurally** (shape math, not bitmaps) so the *same* emblem
+renders crisply at `h=26` on the takeover and `h=7` on the single panel — no
+anti-alias mush, no per-size PNGs, no CORS fetches. Most carriers use the swept
+tail-fin tinted to their livery; the icons get bespoke geometry: **Delta** widget,
+**United** globe (ring + meridians/parallels), **Southwest** heart, **Lufthansa**
+ring + crane, **Air Canada** roundel. Unknown operators fall back to a sodium-amber
+generic fin labelled with the raw code. API: `airlineFor(callsign)`,
+`drawAirlineMark(m, x, y, h, entry, t)`, `markWidth(h, entry)`.
 
 ### 5.2 Weather — `WeatherScene`  *(°C **and** °F — hard requirement)*
 Condition icon (sun/moon/cloud/rain/snow by WMO code, day/night aware) + text;

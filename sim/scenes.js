@@ -147,10 +147,6 @@ function gauge(m, x, y, w, val, color, label) {
  * ========================================================================== */
 class FlightScene {
   constructor() {
-    this.call = new SplitFlap(8, 20);
-    this.route = new SplitFlap(9, 16);
-    this.curHex = null;
-    this.marq = new Marquee(12);
     this.blips = [];
   }
   _ensureBlips(flights, r) {
@@ -163,97 +159,75 @@ class FlightScene {
   }
   draw(m, x, y, w, h, data, t, dt) {
     const f = data.heroFlight;
-    if (f && f.hex !== this.curHex) {
-      this.curHex = f.hex;
-      this.call.set(f.callsign || f.reg || '—');
-      this.route.set(((f.origin || '???') + '-' + (f.dest || '???')));
-    }
-    this.call.update(dt); this.route.update(dt);
-
     if (w >= 200) this._drawWide(m, x, y, w, h, data, t, dt, f);
     else this._drawCompact(m, x, y, w, h, data, t, dt, f);
   }
 
-  /* ---- 64px single-panel layout (Phase-0 hero) ---- */
+  /* ---- 64px single-panel layout (Phase-0 hero) — carrier-led ---- */
   _drawCompact(m, x, y, w, h, data, t, dt, f) {
-    const r = 9;
-    this._ensureBlips(data.flights, r);
+    this._ensureBlips(data.flights, 9);
     if (!f) {
       drawRadar(m, x + (w >> 1), y + 18, 11, t, this.blips, PAL.cyan, PAL.cyanDim);
       m.textCenter(x + w / 2, y + 1, 'NO CONTACT', PAL.amberDim, 1, '3x5');
       return;
     }
-    // callsign banner — full-width, centered, split-flap
-    const fw = this.call.len * 6;
-    this.call.draw(m, x + Math.max(0, (w - fw) >> 1), y, PAL.amber, 1);
-    // route centered just below
-    m.textCenter(x + w / 2, y + 8, (f.origin || '???') + '→' + (f.dest || '???'), PAL.cyan, 1, '3x5');
-    // bottom-left mini radar
-    drawRadar(m, x + 12, y + 22, r, t, this.blips, PAL.cyan, PAL.cyanDim);
-    // bottom-right stacked stats
-    const rx = x + 28;
+    const A = airlineFor(f.callsign);
+    // carrier line: fin mark + brand-coloured name
+    drawAirlineMark(m, x + 1, y, 7, A, t);
+    const mw = markWidth(7, A);
+    m.text(x + 1 + mw + 2, y + 1, A.name.slice(0, 11), A.color, 1, '3x5');
+    // route codes
+    m.text(x + 1, y + 8, (f.origin || '???') + '→' + (f.dest || '???'), PAL.cyan, 1, '3x5');
+    // mini radar bottom-left
+    drawRadar(m, x + 11, y + 22, 9, t, this.blips, PAL.cyan, PAL.cyanDim);
+    // stacked stats bottom-right
+    const rx = x + 26;
     m.text(rx, y + 15, (f.alt ? 'FL' + Math.round(f.alt / 100) : 'FL--'), PAL.green, 1, '3x5');
     m.text(rx, y + 21, (f.gs ? Math.round(f.gs) : '--') + 'KT', PAL.warm, 1, '3x5');
     const climbing = f.vspeed > 64, descending = f.vspeed < -64;
     const vc = climbing ? PAL.green : descending ? PAL.red : PAL.amberDim;
-    m.text(rx, y + 27, climbing ? '↑' + Math.round(f.vspeed)
-      : descending ? '↓' + Math.abs(Math.round(f.vspeed)) : 'LEVEL', vc, 1, '3x5');
+    m.text(rx, y + 27, climbing ? '↑CLB' : descending ? '↓DSC' : 'LVL', vc, 1, '3x5');
   }
 
-  /* ---- 320px wall hero layout ---- */
+  /* ---- 320px wall hero layout — carrier-led "gate strip" ---- */
   _drawWide(m, x, y, w, h, data, t, dt, f) {
-    // Left radar disc — true circle, centered in the left 34px gutter
-    const r = 12, cx = x + 16, cy = y + 14;
+    // Left radar disc in the 33px gutter
+    const r = 11, cx = x + 15, cy = y + 13;
     this._ensureBlips(data.flights, r);
     drawRadar(m, cx, cy, r, t, this.blips, PAL.cyan, PAL.cyanDim);
     m.textCenter(cx, y + 27, data.flights.length + ' TRK', PAL.cyanDim, 1, '3x5');
 
-    const bx = x + 38;            // board start
-    const bw = w - 40;
-    if (!f) {
-      m.textCenter(bx + bw / 2, y + 13, 'SCANNING CAMBRIDGE SKY', PAL.amberDim, 1, '3x5');
-      return;
-    }
-    // Header: big split-flap callsign
-    this.call.draw(m, bx, y + 1, PAL.amber, 1);
-    // airline/type chip to the right of callsign
-    m.text(bx + 56, y + 1, (f.type || ''), PAL.purple, 1, '3x5');
+    const bx = x + 33, bw = w - 35;
+    if (!f) { m.textCenter(bx + bw / 2, y + 13, 'SCANNING CAMBRIDGE SKY', PAL.amberDim, 1, '3x5'); return; }
+    const A = airlineFor(f.callsign);
 
-    // Route line: ORIGIN  →  DEST  with city names
-    const oy = y + 9;
-    m.text(bx, oy, (f.origin || '???'), PAL.cyan, 1);
-    m.text(bx + 22, oy, '→', PAL.white, 1);
-    m.text(bx + 30, oy, (f.dest || '???'), PAL.cyan, 1);
-    // route arc visual between codes
-    this._routeArc(m, bx + 2, y + 7, bx + 28, y + 7, t);
-    // city subtitle (marquee if long)
-    const cities = ((f.originCity || '') + '  ' + (f.destCity || '')).trim();
-    m.text(bx, y + 18, (f.originCity || '').slice(0, 9), PAL.cyanDim, 1, '3x5');
-    m.textRight(x + w - 1, y + 18, (f.destCity || '').slice(0, 9), PAL.cyanDim, 1, '3x5');
+    // 1 — carrier identity: fin mark + brand-coloured wordmark + flight number
+    drawAirlineMark(m, bx, y, 9, A, t);
+    const mw = markWidth(9, A);
+    m.text(bx + mw + 3, y + 1, A.name, A.color, 1);            // 5x7 brand wordmark
+    m.textRight(x + w - 1, y + 1, (f.callsign || '').slice(0, 8), PAL.amberDim, 1, '3x5');
 
-    // bottom data row — compact, no comma glyphs, no overlapping gauge labels
-    const dy = y + 24;
-    m.text(bx, dy, (f.alt ? 'FL' + Math.round(f.alt / 100) : 'FL--'), PAL.green, 1, '3x5');
-    m.text(bx + 30, dy, (f.gs ? Math.round(f.gs) : '--') + 'KT', PAL.warm, 1, '3x5');
+    // 2 — the journey: ORIGIN CITY → DEST CITY (human, falls back to codes)
+    const oc = (f.originCity || f.origin || '???').slice(0, 12);
+    const dc = (f.destCity || f.dest || '???').slice(0, 12);
+    let jx = m.text(bx, y + 10, oc, PAL.cyan, 1, '3x5');
+    jx = m.text(jx + 1, y + 10, '→', PAL.white, 1, '3x5');
+    m.text(jx + 1, y + 10, dc, PAL.cyan, 1, '3x5');
+
+    // 3 — aircraft + direction (left) and distance (right)
+    m.text(bx, y + 16, (f.type || '') + (f._arriving ? ' ARRIVING' : ' DEPARTING'), PAL.purple, 1, '3x5');
+    m.textRight(x + w - 1, y + 16, (f.distance ? f.distance.toFixed(1) : '--') + ' MI', PAL.white, 1, '3x5');
+
+    // 4 — telemetry: flight level · ground speed · vertical trend
     const climbing = f.vspeed > 64, descending = f.vspeed < -64;
     const vc = climbing ? PAL.green : descending ? PAL.red : PAL.amberDim;
-    m.text(bx + 62, dy, climbing ? '↑' + Math.round(f.vspeed)
-      : descending ? '↓' + Math.abs(Math.round(f.vspeed)) : 'LVL', vc, 1, '3x5');
-    m.textRight(x + w - 1, dy, (f.distance ? f.distance.toFixed(1) : '--') + 'MI', PAL.white, 1, '3x5');
-    // thin unlabeled gauges underneath
-    const gy = y + 30, halfW = Math.floor((w - 42) / 2) - 4;
-    gauge(m, bx, gy, halfW, (f.alt || 0) / 40000, PAL.green);
-    gauge(m, bx + halfW + 8, gy, halfW, (f.gs || 0) / 600, PAL.warm);
-  }
-  _routeArc(m, x0, y0, x1, y1, t) {
-    const steps = 16;
-    for (let i = 0; i <= steps; i++) {
-      const p = i / steps;
-      const xx = x0 + (x1 - x0) * p;
-      const yy = y0 - Math.sin(p * Math.PI) * 4;
-      const pulse = (Math.sin(t * 3 - p * 6) * 0.5 + 0.5);
-      m.add(Math.round(xx), Math.round(yy), PAL.cyan, 40 + pulse * 90);
-    }
+    m.text(bx, y + 22, (f.alt ? 'FL' + Math.round(f.alt / 100) : 'FL--'), PAL.green, 1, '3x5');
+    m.text(bx + 28, y + 22, (f.gs ? Math.round(f.gs) : '--') + 'KT', PAL.warm, 1, '3x5');
+    m.text(bx + 64, y + 22, climbing ? '↑' + Math.round(f.vspeed)
+      : descending ? '↓' + Math.abs(Math.round(f.vspeed)) : 'LEVEL', vc, 1, '3x5');
+
+    // subtle altitude gauge on the bottom edge, tinted to the carrier
+    gauge(m, bx, y + 30, bw, clamp((f.alt || 0) / 40000, 0, 1), scale(A.color, 0.85));
   }
 }
 

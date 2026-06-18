@@ -29,8 +29,12 @@ const sc = {
   status: new S.StatusEndcap(),
 };
 const panelFlight = new S.FlightScene();        // dedicated for single panel
-const takeoverCall = new S.SplitFlap(8, 18);
-const takeoverRoute = new S.SplitFlap(9, 14);
+/* takeover departure-board split-flaps — IATA codes + full city names flip
+ * dramatically each time the hero flight rotates (the gate-board "clack"). */
+const tkOrigCode = new S.SplitFlap(3, 20);
+const tkDestCode = new S.SplitFlap(3, 20);
+const tkOrigCity = new S.SplitFlap(11, 16);
+const tkDestCity = new S.SplitFlap(11, 16);
 const marquee = new S.Marquee(26);
 let takeoverHex = null;
 
@@ -103,59 +107,101 @@ function drawDashboard(t, dt) {
 }
 
 /* ============================ FLIGHT TAKEOVER ========================== */
-/* Whole 1024px ribbon becomes one giant flight strip + a live departures
- * board of the other contacts on the right (airport-board aesthetic). */
+/* The whole 1024px ribbon becomes one cinematic boarding pass, read L→R:
+ *   IDENTITY (who)  ·  JOURNEY (where)  ·  STATUS (how)
+ * Big airline emblem + brand wordmark, a split-flap origin→dest with a plane
+ * crossing the route, then telemetry + radar + nearby traffic on the right.   */
 function drawTakeover(t, dt) {
   const f = data.heroFlight;
-  // left radar — true circle, centered in the left gutter
-  S.drawRadar(wallM, 24, 14, 12,
-    t, data.flights.slice(0, 8).map(x => ({
+  const rjust = (s, n) => { s = String(s).slice(0, n); return ' '.repeat(n - s.length) + s; };
+
+  /* ----- graceful "no contact" state ----- */
+  if (!f) {
+    S.drawRadar(wallM, 512, 15, 13, t, data.flights.slice(0, 8).map(x => ({
       a: (x.track || 0) * Math.PI / 180 - Math.PI / 2,
-      d: clamp((x.distance || 5) / 25, 0.12, 0.95),
-      color: x._hero ? PAL.amber : PAL.green,
+      d: clamp((x.distance || 5) / 25, 0.12, 0.95), color: PAL.green,
     })), PAL.cyan, PAL.cyanDim);
-  wallM.textCenter(24, 27, data.flights.length + ' TRK', PAL.cyanDim, 1, '3x5');
+    wallM.textCenter(512, 26, 'SCANNING THE CAMBRIDGE SKY', PAL.amberDim, 1, '3x5');
+    return;
+  }
 
-  if (f && f.hex !== takeoverHex) {
+  const A = airlineFor(f.callsign);
+  // hero changed → reload the split-flaps so the whole board "clacks" over
+  if (f.hex !== takeoverHex) {
     takeoverHex = f.hex;
-    takeoverCall.set(f.callsign || f.reg);
-    takeoverRoute.set((f.origin || '???') + '-' + (f.dest || '???'));
+    tkOrigCode.set(f.origin || '???'); tkDestCode.set(f.dest || '???');
+    tkOrigCity.set(f.originCity || f.origin || '');
+    tkDestCity.set(rjust(f.destCity || f.dest || '', 11));   // right-justified field
   }
-  takeoverCall.update(dt); takeoverRoute.update(dt);
+  tkOrigCode.update(dt); tkDestCode.update(dt);
+  tkOrigCity.update(dt); tkDestCity.update(dt);
 
-  // center hero: BIG callsign (scale 2) + route + cities
-  if (f) {
-    takeoverCall.draw(wallM, 70, 0, PAL.amber, 2);          // 10x14 glyphs, rows 0-13
-    wallM.text(70, 16, f.type + '  ' + (f._arriving ? 'ARRIVING' : 'DEPARTING'), PAL.purple, 1, '3x5'); // rows 16-20
-    takeoverRoute.draw(wallM, 70, 23, PAL.cyan, 1);         // rows 23-29
-    // mid stats column ~ x300
-    wallM.text(300, 1, 'ALT', PAL.green, 1, '3x5');
-    wallM.text(300, 8, (f.alt ? Math.round(f.alt).toLocaleString() : '--') + ' FT', PAL.green, 1);
-    wallM.text(300, 17, 'SPD', PAL.warm, 1, '3x5');
-    wallM.text(300, 24, (f.gs ? Math.round(f.gs) : '--') + ' KT', PAL.warm, 1);
-    const climbing = f.vspeed > 64, descending = f.vspeed < -64;
-    const vc = climbing ? PAL.green : descending ? PAL.red : PAL.amberDim;
-    wallM.text(372, 8, climbing ? '↑CLIMB' : descending ? '↓DESC' : '–LEVEL', vc, 1, '3x5');
-    wallM.text(372, 24, f.distance.toFixed(1) + ' MI', PAL.white, 1, '3x5');
-  } else {
-    wallM.text(120, 12, 'SCANNING THE CAMBRIDGE SKY...', PAL.amberDim, 1);
-  }
+  /* ============ PANEL 1 · CARRIER IDENTITY (x 10…330) ============ */
+  drawAirlineMark(wallM, 10, 3, 26, A, t);                 // big emblem, rows 3–28
+  const mw = markWidth(26, A);
+  const nx = 16 + mw;
+  wallM.text(nx, 4, A.name, A.color, 2);                   // brand wordmark, scale 2
+  // sub-line: callsign (white) · type (brand-tinted) · registration (dim)
+  let sx = wallM.text(nx, 22, f.callsign || f.reg || '', PAL.white, 1, '5x7');
+  sx = wallM.text(sx + 6, 23, f.type || '', scale(A.color, 0.9), 1, '3x5');
+  if (f.reg && f.callsign) wallM.text(sx + 6, 23, f.reg, PAL.cyanDim, 1, '3x5');
 
-  // right: departures board
-  const bx = 470, bw = WALL_W - bx;
-  wallM.vline(bx - 8, 2, 29, PAL.cyanDim, 70);
-  wallM.text(bx, 1, 'FLIGHT', PAL.cyanDim, 1, '3x5');
-  wallM.text(bx + 70, 1, 'ROUTE', PAL.cyanDim, 1, '3x5');
-  wallM.text(bx + 150, 1, 'TYPE', PAL.cyanDim, 1, '3x5');
-  wallM.textRight(WALL_W - 2, 1, 'ALT', PAL.cyanDim, 1, '3x5');
-  const others = data.flights.filter(x => x !== f).slice(0, 4);
-  others.forEach((x, i) => {
-    const y = 8 + i * 6;
-    wallM.text(bx, y, (x.callsign || x.reg).slice(0, 8), PAL.amber, 1, '3x5');
-    wallM.text(bx + 70, y, x.origin + '-' + x.dest, PAL.cyan, 1, '3x5');
-    wallM.text(bx + 150, y, x.type, PAL.purple, 1, '3x5');
-    wallM.textRight(WALL_W - 2, y, (x.alt ? Math.round(x.alt / 100) : '--') + '', PAL.green, 1, '3x5');
+  wallM.vline(338, 3, 28, PAL.cyanDim, 55);                // divider
+
+  /* ============ PANEL 2 · THE JOURNEY (x 356…752) ============ */
+  const jx0 = 356, jx1 = 752, jcx = (jx0 + jx1) / 2;
+  const dir = f._arriving ? 'ARRIVING' : 'DEPARTING';
+  const dirCol = f._arriving ? PAL.green : PAL.warm;
+  wallM.textCenter(jcx, 2, dir + '  ·  ' + (f.distance ? f.distance.toFixed(1) : '--') + ' MI',
+    dirCol, 1, '3x5');
+
+  // big IATA codes flanking (split-flap, scale 2)
+  tkOrigCode.draw(wallM, jx0, 9, PAL.cyan, 2);            // rows 9–22
+  tkDestCode.draw(wallM, jx1 - 34, 9, PAL.cyan, 2);
+  // route line with travelling plane between the codes
+  const rlx0 = jx0 + 42, rlx1 = jx1 - 42, rly = 15;
+  wallM.hline(rlx0, rlx1, rly, scale(PAL.cyan, 0.32), 100);
+  wallM.fillCircle(rlx0, rly, 1, PAL.cyan);
+  wallM.fillCircle(rlx1, rly, 1, scale(PAL.cyan, 0.55));
+  const frac = clamp((f.distance || 0) / 25, 0, 1);
+  const prog = f._arriving ? (1 - frac) : frac;
+  const px = Math.round(rlx0 + (rlx1 - rlx0) * prog);
+  for (let k = 1; k <= 6; k++)                            // jet-wash trail behind nose
+    wallM.add(px - 3 - k * 3, rly, A.color, 90 * (1 - k / 7));
+  wallM.icon(px - 3, rly - 3, 'plane', A.color);         // 7×7, nose toward dest
+  // full city names beneath (split-flap), left- and right-justified
+  tkOrigCity.draw(wallM, jx0, 25, scale(PAL.cyan, 0.85), 1, '3x5');
+  tkDestCity.draw(wallM, jx1 - 43, 25, scale(PAL.cyan, 0.85), 1, '3x5');
+
+  wallM.vline(760, 3, 28, PAL.cyanDim, 55);                // divider
+
+  /* ============ PANEL 3 · STATUS (x 768…1023) ============ */
+  // vertical altitude gauge, tinted to the carrier
+  const af = clamp((f.alt || 0) / 42000, 0, 1);
+  wallM.vline(768, 3, 29, scale(PAL.green, 0.18), 90);
+  wallM.vline(768, 29 - Math.round(af * 26), 29, scale(A.color, 0.95), 255);
+  // big telemetry: flight level over ground speed
+  wallM.text(776, 3, 'FL' + (f.alt ? Math.round(f.alt / 100) : '--'), PAL.green, 2);  // rows 3–16
+  wallM.text(776, 17, (f.gs ? Math.round(f.gs) : '--') + 'KT', PAL.warm, 2);          // rows 17–30
+  // vertical trend + nearby traffic column
+  const climbing = f.vspeed > 64, descending = f.vspeed < -64;
+  const vc = climbing ? PAL.green : descending ? PAL.red : PAL.amberDim;
+  wallM.text(858, 2, 'V/S', PAL.cyanDim, 1, '3x5');
+  wallM.text(858, 8, climbing ? '↑' + Math.round(f.vspeed)
+    : descending ? '↓' + Math.abs(Math.round(f.vspeed)) : 'LEVEL', vc, 1, '3x5');
+  wallM.text(858, 16, 'IN RANGE', PAL.cyanDim, 1, '3x5');
+  data.flights.filter(x => x !== f).slice(0, 2).forEach((x, i) => {
+    const yy = 21 + i * 6;
+    wallM.text(858, yy, (x.callsign || x.reg || '').slice(0, 7), scale(airlineFor(x.callsign).color, 0.95), 1, '3x5');
+    wallM.textRight(980, yy, (x.alt ? 'FL' + Math.round(x.alt / 100) : '--'), PAL.green, 1, '3x5');
   });
+  // radar scope in the far-right corner
+  S.drawRadar(wallM, 1000, 13, 12, t, data.flights.slice(0, 8).map(x => ({
+    a: (x.track || 0) * Math.PI / 180 - Math.PI / 2,
+    d: clamp((x.distance || 5) / 25, 0.12, 0.95),
+    color: x._hero ? A.color : PAL.green,
+  })), PAL.cyan, PAL.cyanDim);
+  wallM.textCenter(1000, 28, data.flights.length + ' TRK', PAL.cyanDim, 1, '3x5');
 }
 
 /* ============================ MARQUEE ================================== */
