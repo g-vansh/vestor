@@ -65,6 +65,35 @@ spec mismatches. Three hardening actions added → `docs/INVENTORY.md` §7:
 
 - Changed: `docs/INVENTORY.md` (+§7, updated §2 trunk/fuse rows). No code touched.
 
+## 2026-06-21 — Software audit vs. locked plan (post-topology / post-QC)
+
+**Context:** owner asked "anything on software that needs to change?" after the
+topology + review/QC research. Audited the live code against the locked decisions.
+
+**Found + FIXED (`display/__init__.py`):** the code still hard-coded the **rejected
+6+5+5 wall plan** in its comments — told a future session to set `parallel=3,
+chain=6` and to "build a mapper for the uneven 6+5+5 chains." That contradicts the
+LOCKED 2×8 center-feed decision and would cause the wrong wiring/config. Rewrote the
+comments to the 2×8 center-feed plan: `parallel=2, chain=8`, compose 1024×32 →
+512×64 canvas with the LEFT half rotated 180° **in our code, not pixel_mapper_config**.
+Also lowered the `except`-fallback `BRIGHTNESS` default **100 → 50** (+ slowdown
+1→4, HAT_PWM True→False) so a missing config can't over-draw the 120 A PSU budget.
+
+**Confirmed already-correct (no change):** `config.py` `BRIGHTNESS=50`,
+`GPIO_SLOWDOWN=4`, `panel_type=""`, `row_address_type=0` all match the verified
+panel spec + power budget.
+
+**Big note written down:** the on-Pi app is STILL the upstream single-panel (64×32)
+flight tracker. The full multi-zone 1024×32 design (weather + planes + Bluebikes +
+shuttle, dual °C/°F) lives **only in `sim/`** — porting it (the 512×64 snake
+composition layer + new data sources) is the real Phase-1 software build. Captured
+as the ⭐ prerequisite at the top of `ROADMAP.md`. Also added TROUBLESHOOTING rows
+for voltage-drop redshift, shade variation, and dead-IC/row signatures.
+
+- Changed: `display/__init__.py` (comments + brightness fallback), `docs/ROADMAP.md`
+  (wall-composition layer), `docs/TROUBLESHOOTING.md` (+3 rows). No behavior change
+  to the running single-panel app.
+
 ## 2026-06-14 — Dry session plan (no hardware)
 
 **Goal of this session:** every software/repo/config/script task achievable with NO LED

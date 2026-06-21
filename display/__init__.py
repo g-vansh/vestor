@@ -35,10 +35,13 @@ try:
     )
 
 except (ModuleNotFoundError, NameError):
-    # If there's no config data
-    BRIGHTNESS = 100
-    GPIO_SLOWDOWN = 1
-    HAT_PWM_ENABLED = True
+    # If there's no config data. NOTE: BRIGHTNESS fallback is 50 (NOT 100) on
+    # purpose — the full wall's power budget (2x LRS-350-5 = 120 A) is only safe
+    # with brightness capped; an all-white panel at 100 would push ~128 A. Keep
+    # this conservative so a missing config can't over-draw the supplies.
+    BRIGHTNESS = 50
+    GPIO_SLOWDOWN = 4
+    HAT_PWM_ENABLED = False
 
 try:
     # Attempt to load experimental config data
@@ -64,14 +67,18 @@ class Display(
         # Setup Display
         # Vestor: Adafruit Triple RGB Matrix Bonnet (6358), "active3" pinout.
         # Configured below for the Phase 0 SINGLE-PANEL test. For the full 16-panel
-        # wall (3 chains of 6+5+5) switch chain_length->6, parallel->3, and drop
-        # pwm_bits to 7-9. See the inline "(wall: ...)" notes on each line.
+        # wall (LOCKED 2026-06-21: one continuous row, fed from the CENTER as
+        # 2 chains of 8) switch chain_length->8, parallel->2, drop pwm_bits to 7-9.
+        # The 1024x32 logical render is composed into a 512x64 hardware canvas with
+        # the LEFT half rotated 180deg (the "snake") IN OUR OWN CODE — NOT via
+        # pixel_mapper_config. See HARDWARE.md + INVENTORY.md §5. (Superseded the
+        # earlier 6+5+5 plan, which needed >50cm jump cables.)
         options = RGBMatrixOptions()
         options.hardware_mapping = "regular"      # Triple Bonnet active3 — NOT adafruit-hat/-pwm
         options.rows = 32
         options.cols = 64
-        options.chain_length = 1                  # single-panel test (wall: 6 = longest chain)
-        options.parallel = 1                      # single-panel test (wall: 3 chains)
+        options.chain_length = 1                  # single-panel test (wall: 8 — center-fed chain)
+        options.parallel = 1                      # single-panel test (wall: 2 chains, center-fed)
         options.row_address_type = 0              # 1/16 scan ABCD; try 3 or 5 if rows scramble on hw
         options.panel_type = ""                   # FM6124D is a STANDARD driver (no init). Fallback #1 if
                                                   # panel stays BLACK: set "FM6126A" (then "FM6127"), then
@@ -81,7 +88,8 @@ class Display(
         options.brightness = BRIGHTNESS
         options.pwm_lsb_nanoseconds = 130
         options.led_rgb_sequence = "RGB"          # try RBG/BGR/GRB if colors come out swapped on hw
-        options.pixel_mapper_config = ""          # wall: set a mapper for the uneven 6+5+5 chains
+        options.pixel_mapper_config = ""          # wall: leave EMPTY — the 2x8 snake is handled by our
+                                                  # 512x64 canvas composition (left half rotated 180), NOT a mapper
         options.show_refresh_rate = 0
         options.gpio_slowdown = GPIO_SLOWDOWN     # config.py = 4 for Pi 4 (try 5 if garbage on hw)
         options.disable_hardware_pulsing = False  # active3/regular supports hardware PWM natively
