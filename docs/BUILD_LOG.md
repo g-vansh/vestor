@@ -94,6 +94,32 @@ for voltage-drop redshift, shade variation, and dead-IC/row signatures.
   (wall-composition layer), `docs/TROUBLESHOOTING.md` (+3 rows). No behavior change
   to the running single-panel app.
 
+## 2026-06-21 — Mounting & frame research (3 agents)
+
+**Context:** owner asked where the "magnets/screws" claim comes from, whether the
+wall free-stands, and how to buy/build a frame. Ran 3 research agents (panel mount
+hardware, DIY frame/sag, free-standing physics + commercial options). New
+`docs/INVENTORY.md` §8.
+
+- **Provenance:** "magnet screws" traces to the **MUEN listing's "Free Parts" image**
+  (owner-supplied), not a datasheet. Generic P5 modules usually ship 4 M3 magnet
+  screws but it's vendor-dependent (Adafruit-brand ships none since 2020). Panel
+  backs have **M3-threaded corner holes** regardless → screw-mount always works.
+  Flagged "confirm on unboxing."
+- **Free-stand: NO.** 32:1 aspect ratio, ~6.3" base → tips/bows/twists. Wall-mount
+  (above the window, as planned) is the right fit.
+- **Buy vs build: BUILD.** No off-the-shelf 1-tall × 16-wide frame; cabinets are
+  640×480 / 960×960 (too tall), custom 1-row = OEM, truss stands ≈ $2000. DIY ≈ $200.
+- **Physics:** `sag=5WL³/384EI`; unsupported 5.1 m sags badly (4040 ≈ 32 mm) but
+  **intermediate support every ~3–4 ft makes any profile flat**. **Magnets need a
+  FERROUS surface** (won't stick to alu/wood) → either screw panels via M3 corners
+  (recommended) or add a steel sheet.
+- **Recommended:** 80/20 1530 backbone, panels bolted via T-nuts, lag-screwed to
+  studs (~$210). **Renter variant:** plywood/2040 backbone on French cleats +
+  TOGGLER SNAPTOGGLE toggle bolts (~$190, ~6 fillable holes). Depth budget ~30–35 mm;
+  total weight ~12–15 kg; build/carry in 2–3 sections (floppy until mounted).
+- Changed: `docs/INVENTORY.md` (+§8 mounting/frame, §2 🟡 row + §7.3 caveat). Docs only.
+
 ## 2026-06-14 — Dry session plan (no hardware)
 
 **Goal of this session:** every software/repo/config/script task achievable with NO LED

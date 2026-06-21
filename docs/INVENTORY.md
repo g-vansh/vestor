@@ -60,7 +60,7 @@ in parallel at every panel/pair (never daisy-chain panel power through HUB75).
 ### 🟡 BUY BEFORE THE FULL WALL — mounting / structure
 | Need | Notes |
 |---|---|
-| Rigid frame/backing | **Layout LOCKED: one continuous 16-wide row ≈ 5120 × 160 mm** (16.8 ft). Panels mount via magnets + 4 corner standoffs onto a flat steel/rigid substrate — needs a stiff backbone (aluminium extrusion / unistrut / t-slot) to resist sag over that span. Mount **Pi + bonnet at the center-back**; **PSU1 behind the left half, PSU2 behind the right half**. |
+| Rigid frame/backing | **Layout LOCKED: one continuous 16-wide row ≈ 5120 × 160 mm** (16.8 ft). **WON'T free-stand — wall-mount above the window** (full buildout + parts list + cost in **§8**). TL;DR: **80/20 1530 backbone** ≈ $210, panels **screwed** via M3 corner holes (magnets need a ferrous sheet — see §8.2), supported every 3–4 ft so it stays flat. Mount **Pi + bonnet at center-back**; **PSU1 behind the left half, PSU2 behind the right half**. |
 | ~~HUB75 ribbon extensions~~ | **Not needed** — the center-mount 2×8 topology (§5) keeps every ribbon short (bonnet→center panel, then panel-to-panel). The included short data cables suffice. |
 
 ---
@@ -203,4 +203,66 @@ sudo ./demo --led-cols=64 --led-rows=32 --led-chain=1 --led-parallel=1 \
 
 - **Log panels 1–16** (pass / which fault). **Keep 2–3 as spares** (~10–15%).
 - **RMA defects with video** inside the AliExpress Buyer-Protection window — push for **partial refund without return** (shipping a panel back rarely worth it).
-- Verify included counts on unboxing: **8 power cables** (1-for-2) + **~15 data ribbons** (15 inter-panel links for 16 panels) + magnet screws.
+- Verify included counts on unboxing: **8 power cables** (1-for-2) + **~15 data ribbons** (15 inter-panel links for 16 panels) + magnet screws *(claimed in the listing's "Free Parts" image — see §8; **confirm on unboxing**, generic P5 modules usually include 4/panel but it's vendor-dependent — Adafruit-brand ships none since 2020)*.
+
+---
+
+## 8. MOUNTING & FRAME — how the wall physically hangs  (researched 2026-06-21)
+
+> **Provenance note:** the "magnets + screws" claim above and in §1/§5 traces to the
+> **MUEN listing's "Free Parts" image** (owner-supplied), **not** an independent
+> datasheet. Generic P5 320×160 modules *commonly* ship **4 magnetic screws (M3)**
+> in the corner bosses, but it's vendor-dependent. Either way the panel back has
+> **M3-threaded corner holes**, so the screw-mount path always works even with no
+> magnets in the box.
+
+### 8.1 It will NOT free-stand — wall-mount it
+A rigid strip **5120 × 160 mm (16.8 ft × 6.3 in)** has a ~**32:1 aspect ratio** and a
+paper-thin base. It **tips sideways**, **bows/sags** under its own ~7 kg, and
+**twists** (near-zero torsional stiffness). Free-standing would need a heavy wide
+base + A-frame supports every 2–3 ft + a truss spine — far more than just hanging
+it. **Wall-mounting (above the window, as planned) is dramatically the right fit:**
+the wall is the spine, the anti-tip, and the anti-sag, for free.
+
+### 8.2 No off-the-shelf frame fits — build it (~$200)
+Commercial LED cabinets are **640×480** (4×3) or **960×960** — *too tall*, waste
+rows. A 1-row cabinet = OEM/custom; truss ground-support stands ≈ **$2000** (wrong
+proportions). So we build a backbone.
+
+**Governing physics** (`sag = 5WL³/384EI`): an *unsupported* 5.1 m span sags badly
+(metric 4040 ≈ 32 mm in the middle). **The decisive lever is intermediate support,
+not beam size** — anchor the rail every **~3–4 ft** and *any* reasonable profile
+goes dead flat (<0.2 mm).
+
+**CRITICAL — magnets need FERROUS metal.** They will **NOT** stick to aluminum
+extrusion, wood, or MDF. Two paths:
+- **(A) Screw-mount (simplest):** bolt panels' **M3 corner holes** to the frame with
+  T-nuts — **skip magnets entirely.** Recommended for a permanent install.
+- **(B) Magnet-mount:** add a **steel sheet** (e.g., 26-ga galvanized on plywood) as
+  the substrate, then panels snap on.
+
+| Build | What | Anchoring | ~Cost |
+|---|---|---|---|
+| **Recommended (stud-mount)** | continuous **80/20 1530** alu extrusion backbone; panels bolt via T-nuts (path A) | lag screws into wall studs every 16–32" (≤1.7 m bays → dead flat) | **~$210** |
+| **Renter-friendly** | lightweight backbone (2040 alu or ½" plywood); 26-ga steel sheet if using magnets (path B) | **French cleats + TOGGLER SNAPTOGGLE** toggle bolts (~238 lb each in ½" drywall; wall ≈ 15 kg = 10× margin); ~6 spackle-fillable holes, no stud-hunting | **~$190** |
+
+### 8.3 Budget for
+- **Depth:** ~**30–35 mm** behind the LED face (panel ~15 mm + magnet studs 16.6 mm +
+  IDC/power connectors). Leave frame clearance.
+- **Weight:** ~0.45 kg/panel → **~7 kg panels** + ~1.5 kg PSUs + frame ≈ **12–15 kg**
+  total. Trivial for studs; fine for the toggle-bolt variant's 10× margin.
+- **Handling:** the strip is **floppy out-of-plane until mounted** — build & carry in
+  **2–3 sections**, join on the wall. Laser-level the ledger/rail before final tighten.
+
+### 8.4 Shopping (frame) — buy before the full wall
+| Item | Spec | Why |
+|---|---|---|
+| **80/20 1530** profile (or 2040 for renter variant) | ~17 ft, cut to ~5.1 m + splice plates | the backbone |
+| **T-nuts + M3 bolts** | ~80 pc (4 corners × 16 panels + frame) | screw-mount panels (path A) |
+| **Lag screws ⅜"×3"** *(stud)* **or TOGGLER SNAPTOGGLE** *(renter)* | ~10 anchors | wall attachment |
+| *(magnet path only)* **26-ga steel sheet** | laminate to ½" ply | ferrous substrate |
+| **Leveling shims / end brackets** | — | flat & level over 5 m |
+
+**Sources:** Adafruit DIY LED Video Wall (frame), 80/20 deflection calculator
+(1530 Ix=1.80 / 1545 Ix=5.69 in⁴), Unistrut P1000 load tables, TOGGLER SNAPTOGGLE
+rating, Adafruit #2277 (453 g, 318×158×15 mm, M3) / #4631 mini magnet feet.
