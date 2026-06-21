@@ -120,6 +120,30 @@ hardware, DIY frame/sag, free-standing physics + commercial options). New
   total weight ~12–15 kg; build/carry in 2–3 sections (floppy until mounted).
 - Changed: `docs/INVENTORY.md` (+§8 mounting/frame, §2 🟡 row + §7.3 caveat). Docs only.
 
+## 2026-06-21 — Vetted Hanson "hanpaneldistro" fused power-distribution board
+
+**Context:** owner found the Hanson Electronics "Panel Power Distribution" board
+(wiredwatts.com, $14.50) and asked if it's useful/compatible. Vetted via research
+agent. **Verdict: YES — buy 4.** It's the recommended concrete part for the §7.1
+injection points.
+
+- **What it is:** passive **5 V-in → 4× fused (7 A) 5 V-out** PCB, bolts to a panel
+  back (144 mm M3 holes), 30 A board rating. = bus-bar + fuses + mount in one.
+- **Compatible:** fully — touches only power rails, never HUB75 data, so identical
+  behavior on Pi 4 + Triple Bonnet + hzeller. Falcon/xLights heritage irrelevant.
+- **Derate:** the "8 panels" claim is a low-current **P10** figure. Our P5 pulls
+  ~4 A (bright) to ~8 A (white) → **1 panel per 7 A fuse = 4 panels/board = 4 boards**
+  for 16 panels (2 per PSU = the 4 injection points). Keep BRIGHTNESS≤50.
+- **Better than 1× 40 A PSU fuse:** per-panel fusing isolates a shorted panel; panel-
+  back mount shortens high-current runs (helps §7.1 voltage drop).
+- **Doesn't replace:** PSUs, AC cords, copper trunk PSU→board (~16 A → AWG10+), or the
+  common-ground bond. Nothing for data.
+- **Sourcing:** US-stocked (Alpharetta GA, ~2–4 days). "Origin: Australia" = mfg only.
+- **Bench-verify before buying 4:** (1) measure panel rear M3 hole spacing ≈144 mm;
+  (2) clamp-meter one all-white panel vs 7 A fuse; (3) board-vs-frame-bracket M3 hole
+  contention. US alts: Falcon3DParts, QuinLED Dig-Octa, CZH-Labs, or bus bars + ATO.
+- Changed: `docs/INVENTORY.md` §7.1 (+distro recommendation) + §2 🟠 row. Docs only.
+
 ## 2026-06-21 — MIT on-campus build resources (3 agents)
 
 **Context:** owner is an MIT grad student; asked whether they can build/source/3D-print

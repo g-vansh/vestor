@@ -50,7 +50,7 @@ in parallel at every panel/pair (never daisy-chain panel power through HUB75).
 
 | Need | Spec | Notes |
 |---|---|---|
-| **Bus bars** ×2 (one 5 V + GND pair per PSU) | screw-down distribution blocks, ≥60 A | Split the wall: **PSU1 → 8 panels, PSU2 → 8 panels** (don't force two LRS to current-share one rail). |
+| **Fused distro / bus bars** | **4× Hanson "hanpaneldistro" fused boards (~$14.50 ea, ~$58)** — *recommended*, see §7.1 — OR 2× ≥60 A screw-down bus bars + inline fuses | Split the wall: **PSU1 → 8 panels, PSU2 → 8 panels** (don't force two LRS to current-share one rail). The distro boards give per-panel 7 A fusing + panel-back mount; **4 panels/board** (P5 derate). Bench-verify 144 mm hole fit first. |
 | **Trunk wire** | **pure-copper AWG 6** (red + black) PSU→bus bar; AWG 8/10 taps bus→panels | **Buy copper, not the included CCA pigtails** (see §7.1). Inject 5 V at **≥2 points per 8-panel half (4 total)**; center each PSU behind its half. |
 | **Crimp lugs / ferrules** + crimp tool | fork lugs (PSU), ring/spade (bus bars) | **Crimp, never solder** — included CCA won't tin. Use CCA only for the final short bus→panel hop. |
 | **Common-ground bond** | AWG 14 | Tie PSU1 ⏚ ↔ PSU2 ⏚ ↔ Pi/bonnet ⏚ — **mandatory** for clean HUB75 signals (signal reference, *not* a 5 V-rail parallel). |
@@ -168,6 +168,29 @@ under-fed panel tints **red**. Don't chase it in software. Fix is geometry + cop
 - **Keep the two PSU 5 V positives ISOLATED** — don't parallel two LRS-350-5 onto one rail (they won't current-share; one hogs, the other coasts). Split is already PSU1→left 8, PSU2→right 8.
 - **Common-ground bond still mandatory** (PSU1 ⏚ ↔ PSU2 ⏚ ↔ Pi/bonnet ⏚) — that's a *signal-reference* tie, not a power-rail parallel.
 - **~40 A fuse per PSU 5 V output.** **Crimp, never solder, the CCA** (won't tin). Use included CCA pigtails only for the final short bus→panel hop; trunks = pure-copper **AWG6**, taps **AWG8/10**.
+
+**Recommended part for the injection points: Hanson "hanpaneldistro" fused distro
+boards** (wiredwatts.com, ~$14.50, **US-stocked Alpharetta GA**, vetted 2026-06-21).
+Each is a passive **5 V-in → 4× fused (7 A) 5 V-out** PCB that bolts to a panel back
+(144 mm M3 holes). It IS a bus-bar + fuses + mount in one part — controller-agnostic
+(power only; never touches HUB75), so it works identically with the Pi + Triple
+Bonnet + hzeller. **Better than one 40 A PSU fuse:** per-panel fusing isolates a
+shorted panel to its own 7 A fuse; panel-back mount shortens the high-current runs.
+- **Derate for P5: 1 panel per 7 A fuse → 4 panels/board → buy 4 boards** (2 per PSU
+  = the 4 injection points above). The listing's "up to 8 panels" is a **P10**
+  (low-current) figure; our P5 pulls ~4 A (bright) to ~8 A (all-white), so a single
+  white panel would pop a 7 A fuse and 8×4 A > the 30 A board. **Keep BRIGHTNESS≤50.**
+- **Still need:** 2× LRS-350-5, AC cords, **copper trunk PSU→board input** (~16 A/board
+  → AWG10+ Cu), and the common-ground bond. The board only does the *last leg* +
+  fusing; it is **not** a PSU and does nothing for data.
+- **Land** the panel pigtail's fork lug or bare wire on the screw terminals (no adapter).
+- **Bench-verify before buying 4:** (1) measure two panels' rear M3 hole spacing ≈
+  144 mm (back-hole patterns aren't standardized across vendors); (2) clamp-meter one
+  panel all-white vs the 7 A fuse; (3) **hole contention** — the board wants the same
+  M3 back-holes the frame bracket (§8) may want → plan different hole pairs or standoffs.
+- **US alternatives if it doesn't fit:** Falcon3DParts distro, QuinLED Dig-Octa
+  powerboard (12–16 fused outs), CZH-Labs panel-mount fuse blocks (~$15), or plain
+  copper bus bars + inline ATO fuse holders (cheapest, most flexible injection points).
 
 ### 7.2 Panel-to-panel shade variation is real — and hzeller can't fully fix it
 "Different shades between panels" reviews are accurate. **Every hzeller color/brightness
