@@ -41,6 +41,30 @@ then move to 2×8.
   `pixel_mapper_config` TODO from the 2026-06-14 geometry note.
 - Next: Phase 0 still gated on ≥1 LRS-350-5 + AC cord (see INVENTORY §2).
 
+## 2026-06-21 — AliExpress review/QC pass (3 research agents)
+
+**Context:** owner shared the listing's reviews + seller back-photos. Question:
+"anything that needs to change?" Ran 3 parallel research agents (power/voltage-drop,
+hzeller color uniformity, incoming-QC). **Bottom line: compatibility (§6) and the
+2×8 center-feed topology (§5) are UNCHANGED.** Reviews are sourcing/QC issues, not
+spec mismatches. Three hardening actions added → `docs/INVENTORY.md` §7:
+
+1. **CCA wire / voltage drop (§7.1).** Included pigtails are likely copper-clad
+   aluminum (~1.55–1.6× Cu resistance, won't solder). AWG10 Cu @32 A/2.5 m = 0.52 V
+   drop → far panels redshift (blue sags first; *looks* like a driver bug). Fix is
+   geometry+copper: center each PSU behind its half, inject 5 V at ≥2 points/half
+   (4 total), keep the two PSU positives ISOLATED, ~40 A fuse each, crimp-not-solder,
+   AWG6 Cu trunks. Updated §2 harness rows accordingly.
+2. **Shade variation (§7.2).** All hzeller knobs are GLOBAL — no per-panel LUT, no
+   NovaStar `.cal` ingestion. Per-panel = DIY `MapColors()` patch (issues #222/#193).
+   Mitigate: same batch, low brightness, dark/sparse content (our aesthetic), warm-up.
+3. **Incoming QC (§7.3).** Test all 16 individually with `demo` -D3/-D4/-D5/-D11/-D0
+   before mounting; dead FM6124 = 16-px dead column, dead row = horizontal line.
+   Log 1–16, keep 2–3 spares, RMA with video for partial refund. If dark/garbled,
+   try `--led-panel-type=FM6126A` before condemning.
+
+- Changed: `docs/INVENTORY.md` (+§7, updated §2 trunk/fuse rows). No code touched.
+
 ## 2026-06-14 — Dry session plan (no hardware)
 
 **Goal of this session:** every software/repo/config/script task achievable with NO LED
