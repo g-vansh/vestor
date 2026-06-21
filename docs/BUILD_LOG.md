@@ -120,6 +120,28 @@ hardware, DIY frame/sag, free-standing physics + commercial options). New
   total weight ~12–15 kg; build/carry in 2–3 sections (floppy until mounted).
 - Changed: `docs/INVENTORY.md` (+§8 mounting/frame, §2 🟡 row + §7.3 caveat). Docs only.
 
+## 2026-06-21 — MIT on-campus build resources (3 agents)
+
+**Context:** owner is an MIT grad student; asked whether they can build/source/3D-print
+the frame on campus cheap/free. Ran 3 research agents (makerspaces+access, materials+
+funding, 3D printing+printable parts). New `docs/MIT_RESOURCES.md`.
+
+- **Build (free for grads):** **Hobby Shop (N51-120)** = one-stop metal shop (waterjet,
+  MIG/TIG, lathes/mills, bandsaws, 3D printers; free, 1-hr orientation via hayami@mit.edu).
+  **MITERS (N52-115)** = free, 24/7, no paperwork (mill/lathe/MIG/3D). **Project Manus
+  Metropolis 6C-006B / The Deep 37-072** = FDM/SLA via free M1T training. None stock
+  80/20 — bring your own metal.
+- **Materials (free→cheap):** **#1 = `reuse@mit.edu` + `reuse-ask@mit.edu`** (post a
+  request now). Swapfest (3rd Sun Apr-Oct), Edgerton Project Lab 4-409 (free ply/screws),
+  FX shelving, MITERS scrap. Off-campus: Home Depot/ReStore.
+- **Funding:** Project Manus **Design-to-Making mini-grant up to $500** (best fit) +
+  $100 MakerBucks after training. Sandbox ($1K-25K) is venture-oriented.
+- **3D print** the interface parts (corner T-slot brackets ×60, cable raceways, Pi/bonnet
+  tray, PSU brackets, end caps) in **ABS/PETG/ASA — not PLA**; buy the structural metal.
+  Free FDM at Metropolis/MITERS. Reusable designs on Printables.
+- Caveat noted in-doc: access rules/fees change yearly — verify on arrival.
+- Changed: new `docs/MIT_RESOURCES.md`; `docs/INVENTORY.md` §8 cross-link. Docs only.
+
 ## 2026-06-14 — Dry session plan (no hardware)
 
 **Goal of this session:** every software/repo/config/script task achievable with NO LED

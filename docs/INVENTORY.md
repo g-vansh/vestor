@@ -209,6 +209,11 @@ sudo ./demo --led-cols=64 --led-rows=32 --led-chain=1 --led-parallel=1 \
 
 ## 8. MOUNTING & FRAME — how the wall physically hangs  (researched 2026-06-21)
 
+> 🏗️ **Build it at MIT for free/cheap:** the owner is an MIT grad student — see
+> **`docs/MIT_RESOURCES.md`** for where to cut/weld/3D-print on campus (Hobby Shop,
+> MITERS, Project Manus), free materials (`reuse@mit.edu`, Swapfest), and a $500
+> Design-to-Making grant. Print the corner brackets/clips, buy only the metal.
+
 > **Provenance note:** the "magnets + screws" claim above and in §1/§5 traces to the
 > **MUEN listing's "Free Parts" image** (owner-supplied), **not** an independent
 > datasheet. Generic P5 320×160 modules *commonly* ship **4 magnetic screws (M3)**
