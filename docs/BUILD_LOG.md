@@ -120,6 +120,31 @@ hardware, DIY frame/sag, free-standing physics + commercial options). New
   total weight ~12–15 kg; build/carry in 2–3 sections (floppy until mounted).
 - Changed: `docs/INVENTORY.md` (+§8 mounting/frame, §2 🟡 row + §7.3 caveat). Docs only.
 
+## 2026-06-21 — Ecosystem gear scout (5 agents) → docs/GEAR.md
+
+**Context:** owner asked to scour wiredwatts.com + adjacent vendor/community sites for
+any tech that makes the build easier. Ran 5 domain agents (power, HUB75 cabling,
+mounting, front-face/diffusion, reliability/remote-ops). New `docs/GEAR.md` (ranked,
+with honest SKIP flags). Highlights folded into existing docs:
+
+- **CCA fix:** ferrule kit + ratchet crimper (AWG6–10, ~$45) = gas-tight no-solder
+  connection. **DC clamp meter** (UNI-T UT210E, ~$35) to verify the power plan
+  (cheap meters read AC only). → noted in INVENTORY §7.1.
+- **PSU-side distro:** Hanson **PDist1** (~$15 ×2) bolts onto LRS-350-5 terminals
+  (4×15A+1×10A fused). **PSU has no remote-sense → trim output to ~5.1–5.2 V** to
+  pre-compensate run drop. → INVENTORY §7.1.
+- **Front face = dark TINT, not white diffuser** (white smears 5 mm text). Smoke-Gray
+  #2064 acrylic deepens blacks + hides shade variation (§7.2). → ROADMAP finishing.
+- **Reliability (all FREE, work with Tailscale/systemd):** systemd hardware watchdog,
+  overlayfs read-only root, remote logging; **smart plug** (Shelly/Kasa) to remote-
+  power-cycle the PSUs. → ROADMAP "always-on hardening". **Hard constraint logged:**
+  Triple Bonnet eats the full 40-pin header → no GPIO UPS HATs / fan SHIMs.
+- **Honest skips:** included ribbons cover 14/16 data links (only make 2 feed cables);
+  Electrodragon board = the bonnet's active-3 (no gain); die-cast cabinets, 230V inrush
+  units, Pi UPS HATs — overkill/wrong-spec.
+- Changed: new `docs/GEAR.md`; INVENTORY §7.1 (PDist1 + PSU trim + clamp meter);
+  ROADMAP (+hardening +finishing). Docs only.
+
 ## 2026-06-21 — Vetted Hanson "hanpaneldistro" fused power-distribution board
 
 **Context:** owner found the Hanson Electronics "Panel Power Distribution" board

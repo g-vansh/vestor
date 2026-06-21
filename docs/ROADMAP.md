@@ -1,5 +1,23 @@
 # ROADMAP — future scenes
 
+## 🛡️ Always-on hardening (free software wins — see `docs/GEAR.md` §5)
+For a wall-mounted, hard-to-reach Pi appliance. All zero-cost, work with our
+Tailscale + systemd setup:
+- **systemd hardware watchdog** — `RuntimeWatchdogSec=14s` in `/etc/systemd/system.conf`
+  + `WatchdogSec=` on `vestor.service`. Auto-reboots a hung Pi / restarts a wedged loop.
+  **Highest-leverage "dark wall" fix.**
+- **Read-only root filesystem (overlayfs)** — `raspi-config` → Performance → Overlay FS.
+  Brownout/power-loss tolerant SD (writes → RAM). Makes a Pi UPS HAT redundant (and the
+  Triple Bonnet blocks GPIO HATs anyway).
+- **Remote logging** (systemd-journal-remote over Tailscale) — debug a crash without
+  SSHing into a wedged Pi once rootfs is read-only.
+- **Remote power-cycle** — a Shelly/Kasa smart plug on the PSUs' AC, scripted over
+  Tailscale, to reboot the whole wall remotely.
+
+## ✨ Finishing — front face (see `docs/GEAR.md` §4)
+Smoke-Gray #2064 tinted acrylic front (NOT a white diffuser): deepens blacks, cuts
+daylight wash, hides panel shade variation. Prototype with one 2'×4' test sheet first.
+
 ## ⭐ Phase-1 prerequisite — the WALL COMPOSITION LAYER (biggest software task)
 The on-Pi Python app is still the **upstream single-panel (64×32) flight tracker**.
 The full multi-zone 1024×32 design (weather + planes + Bluebikes + shuttle, dual

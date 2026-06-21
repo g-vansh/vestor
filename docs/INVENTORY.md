@@ -191,6 +191,12 @@ shorted panel to its own 7 A fuse; panel-back mount shortens the high-current ru
 - **US alternatives if it doesn't fit:** Falcon3DParts distro, QuinLED Dig-Octa
   powerboard (12–16 fused outs), CZH-Labs panel-mount fuse blocks (~$15), or plain
   copper bus bars + inline ATO fuse holders (cheapest, most flexible injection points).
+- **Split at the PSU too:** the Hanson **PDist1** (~$15) bolts onto the LRS-350-5 screw
+  terminals (4×15A+1×10A fused) — clean injection split *at the supply*, feeding the
+  panel-side boards. See `docs/GEAR.md` §1.
+- **🔧 No remote-sense on the LRS-350-5 → trim its output to ~5.1–5.2 V** (front trim
+  pot) to pre-compensate the run drop; target far-panel ≥4.8 V, don't exceed ~5.3 V.
+  **Verify with a DC clamp meter** (most cheap meters read AC only — get a UNI-T UT210E).
 
 ### 7.2 Panel-to-panel shade variation is real — and hzeller can't fully fix it
 "Different shades between panels" reviews are accurate. **Every hzeller color/brightness
