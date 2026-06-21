@@ -4,6 +4,43 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-06-21 — Panel-spec compatibility check + single-row data-routing decision
+
+**Context:** owner shared the actual MUEN P5 listing + module-back photos (driver
+marked `FM6124(Z)D`, connector `HUB75-D`) and locked the physical layout to **one
+long 16-wide row**. Deep-researched whether every spec is compatible end-to-end.
+
+**Compatibility — all PASS (4 web-research passes, primary sources):**
+- 64×32 / 1/16 scan / **A–D address (no E)** / HUB75-D pinout (R1 G1 / B1 GND /
+  R2 G2 / B2 GND / A B / C D / CLK LAT / OE GND) = the standard HUB75 the Adafruit
+  bonnet drives. Plug-compatible.
+- **FM6124(Z)D ≈ ICN2037/ICN2038S** — basic constant-current driver, **no init**.
+  Confirms `panel_type=""`; `FM6126A`→`FM6127` stays a black-screen-only fallback.
+  The alarming `--led-row-addr-type=3` / forced-`FM6126A` GitHub threads are all
+  **128×64 1/32-scan "ABC"** panels — NOT our 64×32 1/16 A–D panel.
+- Likely live tweaks: **R/B swap** (`--led-rgb-sequence RBG/BGR`, common on FM6124),
+  slowdown 4→5 if flicker. "Epstar" = LED emitter die brand, not the driver.
+- Power re-confirmed: 16 × ~4 A design ≈ 64 A @ BRIGHTNESS=50 on 2× LRS-350-5
+  (120 A). All-white-full = 128 A > 120 A → keep brightness capped (already do).
+
+**Decision — single-row data routing → 2 chains of 8, fed from CENTER.**
+HUB75 ribbons must stay <50 cm; a 16-panel row is ~5 m and all 3 bonnet ports are
+co-located, so the old **6+5+5** plan would need **1.9 m + 3.5 m** jump cables to
+the starts of chains 2 & 3 → corruption/flicker. **New plan:** Pi+bonnet
+center-mounted, `--led-parallel=2 --led-chain=8`; chain 0 → left (panels 8→1),
+chain 1 → right (panels 9→16). Every ribbon short (included cables suffice, no
+extensions). 16 = 2×8 exactly (no wasted slots vs 3×6's 18-slot canvas). Refresh
+stays in the hundreds of Hz on a Pi 4. **Cost:** left 8 panels mount **180°** and
+that half is flipped in software (`display/__init__.py`, hardware canvas 512×64) —
+the classic snake. Bring up first-light with the trivial `parallel=1 chain=16`,
+then move to 2×8.
+
+- Changed: `docs/HARDWARE.md` wall topology line (6+5+5 → 2×8 center-feed);
+  `docs/INVENTORY.md` §5 (layout LOCKED) + §6 (panel-spec compat table) + §2
+  (ribbon extensions struck — not needed). Supersedes the 6+5+5
+  `pixel_mapper_config` TODO from the 2026-06-14 geometry note.
+- Next: Phase 0 still gated on ≥1 LRS-350-5 + AC cord (see INVENTORY §2).
+
 ## 2026-06-14 — Dry session plan (no hardware)
 
 **Goal of this session:** every software/repo/config/script task achievable with NO LED

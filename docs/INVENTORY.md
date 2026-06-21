@@ -60,8 +60,8 @@ in parallel at every panel/pair (never daisy-chain panel power through HUB75).
 ### 🟡 BUY BEFORE THE FULL WALL — mounting / structure
 | Need | Notes |
 |---|---|
-| Rigid frame/backing | Panels mount via magnets + 4 corner standoffs but need a flat rigid substrate. Single 16-wide row ≈ **5120 × 160 mm**; if stacked 6+5+5 it's wider-but-shorter. **Layout not locked — see §5.** Aluminium extrusion / unistrut / plywood + steel strip for the magnets. |
-| *(maybe)* HUB75 ribbon extensions | Only if one long row — chains 2 & 3 start mid-row, far from the bonnet ports. Decide after §5. |
+| Rigid frame/backing | **Layout LOCKED: one continuous 16-wide row ≈ 5120 × 160 mm** (16.8 ft). Panels mount via magnets + 4 corner standoffs onto a flat steel/rigid substrate — needs a stiff backbone (aluminium extrusion / unistrut / t-slot) to resist sag over that span. Mount **Pi + bonnet at the center-back**; **PSU1 behind the left half, PSU2 behind the right half**. |
+| ~~HUB75 ribbon extensions~~ | **Not needed** — the center-mount 2×8 topology (§5) keeps every ribbon short (bonnet→center panel, then panel-to-panel). The included short data cables suffice. |
 
 ---
 
@@ -91,9 +91,51 @@ connector, role, and capacity. Refund ≈ $14.95.
 
 ---
 
-## 5. OPEN — physical layout not yet locked
-The renderer treats the wall as one **1024×32** ribbon (16 wide × 1 tall =
-5120 × 160 mm); electrically the bonnet drives **3 chains of 6+5+5**. Whether
-that's **one long row** or **three stacked rows** changes ribbon routing, frame
-size, and the `pixel_mapper_config` in `display/__init__.py` (flagged TODO in
-`BUILD_LOG`). Lock this before buying the frame + any ribbon extensions.
+## 5. LAYOUT — LOCKED: one long 16-wide row, fed from the center  (2026-06-21)
+
+**Decision: one continuous 1024×32 row (5120 × 160 mm), Pi+bonnet center-mounted,
+2 chains of 8 daisy-chaining outward** (`--led-parallel=2 --led-chain=8`).
+
+**Why not 3 chains of 6+5+5?** HUB75 ribbons must stay **< 50 cm** (raw parallel
+TTL @ ~15–20 MHz, no differential signaling). All three bonnet ports sit at one
+physical point; splitting 6+5+5 from one end forces **1.9 m / 3.5 m jump cables**
+to the starts of chains 2 & 3 → corruption + flicker. Center-feeding two 8-panel
+chains keeps **every** ribbon short.
+
+| Item | 2×8 center-feed (chosen) | 3×6 from end | 1×16 single chain |
+|---|---|---|---|
+| Long jump cables | **none** ✅ | 1.9 m + 3.5 m ❌ | none ✅ |
+| Wasted panel slots | **0** (16=2×8) ✅ | 2 (needs 18) | 0 ✅ |
+| Refresh on Pi 4 | hundreds of Hz ✅ | highest | marginal/flicker ⚠️ |
+| Assembly wrinkle | left 8 mounted **180°** + SW flip | rotation/long cable | none (simplest) |
+
+**Bring-up plan:** validate first-light with the dead-simple `parallel=1 chain=16`
+(no rotation), then switch to the 2×8 center-feed for the real install.
+
+**Software:** we own `display/__init__.py`, so the hardware canvas is **512×64**
+(chain 0 = left half, chain 1 = right half); compose the 1024×32 render into it
+with the **left half rotated 180°** (snake). Replaces the earlier 6+5+5
+`pixel_mapper_config` TODO in `BUILD_LOG`.
+
+**Confirm on the bench:** which HUB75-D connector is IN vs OUT (sets the daisy
+direction and which half needs the 180° flip).
+
+---
+
+## 6. PANEL-SPEC COMPATIBILITY — verified 2026-06-21
+Against the actual MUEN P5 listing + module-back photos (chip marked `FM6124(Z)D`).
+
+| Spec | Verdict | Note |
+|---|---|---|
+| 64×32, 320×160 mm, P5 | ✅ | 16 wide = 1024 px ribbon (matches sim/design). |
+| 1/16 scan, **A–D** address (no E) | ✅ | `row_addr_type=0`. No E line is correct for 64×32. |
+| HUB75-D pinout (R1 G1 / B1 GND / R2 G2 / B2 GND / A B / C D / CLK LAT / OE GND) | ✅ | Standard HUB75 — plug-compatible with the bonnet. |
+| Driver **FM6124(Z)D** | ✅ start standard | FM6124 ≈ ICN2037/2038S, **no init**. `panel_type` empty. Fallback `FM6126A`→`FM6127` only if black. |
+| Chip "Epstar" | ✅ | LED *emitter* die brand, not the driver. Nothing to set. |
+| 2 HUB75 connectors / module | ✅ | IN + OUT loop-through (daisy). |
+| 5 V, SMD2121, "1-for-2" power cable | ✅ | 8 power cables / 16 panels, fed from LRS-350-5. |
+
+**Likely bring-up tweaks (not blockers):** (1) **R/B swap** is common on FM6124 →
+set `--led-rgb-sequence` (`RBG`/`BGR`); (2) raise `--led-slowdown-gpio` 4→5 if
+flicker. The scary `row-addr-type=3` / forced-`FM6126A` GitHub cases are all
+**128×64 1/32-scan "ABC"** panels — **not** this 64×32 1/16-scan A–D panel.
