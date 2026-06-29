@@ -371,7 +371,7 @@ Supersedes the per-part recommendations above where they conflict.
 (now spare) · 100× Panel Magnets.
 **🛒 ORDERED — power consumables (2026-06-29):** 2× AC mains cord · **4× 6-way fuse block**
 · 7.5 A blade fuses · 10 AWG red+black wire (offcut → 14 AWG ground bond) · cable ties +
-self-adhesive tie mounts.
+self-adhesive tie mounts · yellow #8/#10 ring terminals.
 **✅ ON HAND:** Pi 4 · Triple Bonnet · 45 W USB-C · microSD · 16 panels w/ data ribbons +
 fork-terminated power pigtails.
 
@@ -381,11 +381,10 @@ fork-terminated power pigtails.
 | **2 ferrous rails** (steel — light flat bar/angle **or** Unistrut, ~17 ft ea; magnets need STEEL, not aluminum) | 2 | **FREE** at MIT, else ~$40–70 | `reuse@mit.edu` / Hobby Shop → else Home Depot |
 | **Wall anchors / toggle bolts + rail brackets** (or French cleat) | ~8 | $20 | hardware store |
 | **3D-printed alignment aids** (end-stops + registration combs — see §9.7) | ~6–10 | **FREE** | print at MIT |
-| *(recommended)* **ring terminals**: insulated **YELLOW (10–12 AWG)**, assorted stud holes **#8 (M4) + #10 (M5)** — **~8 needed** (4× +input #10, 4× V− #8); **crimper FREE at MIT** | 1 kit | $8 | Amazon "yellow ring terminal assortment 10-12 AWG #8 #10" |
 | *(recommended)* **DC clamp meter** UT210E (QC current checks) | 1 | $35 | Amazon |
 
 **Total still-to-buy ≈ $20 essential** (rails + prints free at MIT; only wall anchors)
-**+ ~$50 recommended** (crimper + meter). If buying steel rails too, add ~$40–70.
+**+ ~$35 recommended** (clamp meter). If buying steel rails too, add ~$40–70.
 *(Power layout LOCKED — pigtail = 55 cm → 4 fuse blocks, PSUs SPLIT one per half. See §9.5.)*
 
 ### 9.3 CUT / already covered (do NOT buy)
