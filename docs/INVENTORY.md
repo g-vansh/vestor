@@ -433,3 +433,16 @@ near panel-center, **55 cm reaches ~±1.7 panels → one fuse block serves ~4 pa
 - **No redesign:** topology, control, magnetic mount unchanged; vs the prior note only the
   PSU placement moved (center-stack → split). *(Still confirm a data ribbon reaches
   bonnet→panel 8 and bonnet→panel 9 — adjacent to center, so it should.)*
+
+### 9.6 TOOLS (build is solder-free — borrow most free at MIT)
+**Essential:** screwdriver set (Phillips+flat; M3 magnet screws), wire stripper/cutter
+(10–22 AWG), small wrench/nut driver ~7–8 mm (fuse-block M4/M5 stud nuts), **power drill
++ bits** (wall anchors + driving 96 magnet screws), **level — 4 ft or laser** ⭐ (the most
+important tool — 2 rails dead level/coplanar over 5 m), tape measure + pencil. Hacksaw
+*only if* cutting rails at home — better: cut free at the **MIT Hobby Shop**.
+**Recommended:** wire crimper + **#10 ring terminals** (~$15) for the 10 AWG trunk → fuse-
+block M5 stud (proper 16 A/24-7 connection; bare-hook works but ring lug is safer); DC
+clamp meter (UT210E ~$35); basic multimeter.
+**NOT needed:** soldering iron (nothing is soldered), heavy lug crimpers.
+**At the apartment (must have on-hand for wall-mount):** drill, level, tape measure,
+screwdriver, pencil. Everything else can be done/borrowed at MITERS/Hobby Shop.
