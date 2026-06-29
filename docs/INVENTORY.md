@@ -369,7 +369,7 @@ Supersedes the per-part recommendations above where they conflict.
 | Item | Qty | ~$ | Source |
 |---|---|---|---|
 | **AC mains cord** (3-cond, US plug → bare ends) for the PSUs | 2 | $16 | buy (Amazon/hardware) ⚠️ urgent |
-| 8-way/12-way ATC fuse block w/ negative bus (Nilight 50056L) | 2 | $34 | [Amazon](https://www.amazon.com/Nilight-Circuits-Indicator-Waterproof-Automotive/dp/B089T3R4H9) |
+| **6-way ATC fuse block** w/ negative bus (one per 4-panel group — see §9.5) | **4** | $52 | [Nilight 6-way](https://www.amazon.com/Nilight-Circuits-Indicator-Waterproof-Automotive/dp/B089T3R4H9) |
 | 7.5 A ATC blade fuses (10 A if bright) | ~30pk | $8 | buy |
 | 10 AWG wire red+black (PSU→block; **full 32 A**) + a bit of 14 AWG (ground bond) | spool | $15 | buy |
 | **2 ferrous rails** (Unistrut steel strut, or steel flat bar/angle) ~17 ft ea | — | ~$30–60 **or FREE** | Home Depot / `reuse@mit.edu` |
@@ -377,8 +377,8 @@ Supersedes the per-part recommendations above where they conflict.
 | *(optional)* DC clamp meter UT210E | 1 | $35 | buy |
 
 **Magnets, PSUs, stack kit, data + power cables = already on hand/ordered.**
-**Total still-to-order ≈ $95–125** (less if rails are free at MIT; +$35 optional meter).
-*(One unknown that sets the power layout: measure the panel power-pigtail length — see §9.5.)*
+**Total still-to-order ≈ $115–145** (less if rails are free at MIT; +$35 optional meter).
+*(Power layout LOCKED — pigtail = 55 cm → 4 fuse blocks, center-stacked PSUs. See §9.5.)*
 
 ### 9.3 CUT / already covered (do NOT buy)
 Hanson distro boards · copper AWG6 trunks · ferrule/crimp tool · fork-lug kit · bus
@@ -394,11 +394,24 @@ panel power cables · 3rd PSU · NovaStar/ESP32.
 3. **Data:** daisy the included ribbons panel→panel, 2 chains of 8, bonnet at center.
 4. **Power on** with the PSU switch set to **115 V**.
 
-### 9.5 ⚠️ Measure to finalize the power layout
-The panel power **pigtails are short**, so the fuse block must sit near the panels it
-feeds. **Measure the pigtail length (plug → fork).** If a block centered on its 8-panel
-half can't reach the end panels, either (a) split into 2 blocks per half (4 panels
-each), or (b) add cheap 2-conductor **extension leads** (fork-to-fork, no solder). Also
-measure the **data-ribbon length** to confirm the bonnet→first-panel feeds work. *(The
-Double Stack Mount Kit puts both PSUs together — if mounted at center, plan the 5 V runs
-to reach both ends; if split one-per-half, runs stay short.)*
+### 9.5 ✅ PHYSICAL LAYOUT — RESOLVED (pigtail measured = 55 cm, 2026-06-29)
+Power pigtail = **55 cm** (white 4-pin plug → 2 blue fork terminals, +5 V / GND). Panels
+do NOT pass power through — each needs its own feed. At 320 mm panel pitch with the tap
+near panel-center, **55 cm reaches ~±1.7 panels → one fuse block serves ~4 panels.**
+
+**LOCKED layout (back of wall):**
+- **Center "brain box"** (behind panels 8–9): Pi + Triple Bonnet **+ both PSUs stacked**
+  (uses the Double Stack Mount Kit) + AC entry. One service point / one wall plug-in.
+- **Data:** 2 chains of 8 from center — chain 0 → panels 8→1 (left), chain 1 → 9→16
+  (right). Unchanged.
+- **Power:** **4× 6-way fuse blocks**, one centered on each 4-panel group (1–4 / 5–8 /
+  9–12 / 13–16). 10 AWG trunk from the center PSUs to each block (PSU1→left 2 blocks,
+  PSU2→right 2). Each panel's 55 cm pigtail reaches its group's block. (4 blocks, not 2
+  — a single block can't reach 8 panels; this also avoids extension leads.)
+- **Mounting:** magnets → 2 horizontal ferrous rails (top-/bottom-hole heights); brain
+  box + blocks mount to the wall behind the panels.
+- **No redesign:** the 2×8 data, control, and magnetic mount are unchanged; only the
+  fuse-block count/spacing changed (2→4). *(Still confirm the data-ribbon reaches
+  bonnet→panel 8 and bonnet→panel 9; panels are adjacent to center so it should.)*
+- *Pending: a background agent is validating injection spacing / voltage-drop / grounding
+  against real long-row builds — fold in any refinements.*

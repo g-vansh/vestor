@@ -4,6 +4,24 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-06-29 — Physical layout LOCKED (power pigtail = 55 cm)
+
+Owner measured the panel power pigtail = **55 cm** (white 4-pin plug → 2 blue forks).
+This sets the power distribution. Worked the full back-of-wall layout (`INVENTORY.md`
+§9.5; diagram shown to owner):
+- 55 cm reach ÷ 320 mm pitch ≈ **±1.7 panels → one fuse block serves ~4 panels.**
+- **→ 4× 6-way fuse blocks** (not 2× 12-way), one per 4-panel group (1–4/5–8/9–12/13–16),
+  fed by 10 AWG trunk from the center PSUs. Each panel's 55 cm pigtail reaches its block;
+  no extension leads needed.
+- **PSUs center-stacked** (uses the Double Stack Mount Kit) in a center "brain box" with
+  the Pi + Triple Bonnet + AC entry — single service point. Data 2×8 center-feed
+  unchanged; magnetic mount unchanged.
+- **No redesign** — only the fuse-block count/spacing changed (2→4, +~$18). BOM total
+  still-to-order ~$115–145.
+- Launched a background agent to validate injection spacing / voltage drop / grounding /
+  cable mgmt against real long-row HUB75 builds; fold in refinements.
+- Changed: `INVENTORY.md` §9.2 (4× 6-way blocks) + §9.5 (layout resolved).
+
 ## 2026-06-29 — PSUs + magnets ordered; mounting revised to MAGNETIC
 
 Owner placed Wired Watts order #225740 ($90.60): **2× LRS-350-5** ($29.50 ea — the
