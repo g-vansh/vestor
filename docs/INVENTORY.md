@@ -140,12 +140,13 @@ set `--led-rgb-sequence` (`RBG`/`BGR`); (2) raise `--led-slowdown-gpio` 4→5 if
 flicker. The scary `row-addr-type=3` / forced-`FM6126A` GitHub cases are all
 **128×64 1/32-scan "ABC"** panels — **not** this 64×32 1/16-scan A–D panel.
 
-> ⚠️ **MOUNTING CHANGED — these are FRAMED panels, not bare PCBs.** Each CnGear panel
-> has an **integrated black plastic rear frame** (X-braced, brass corner screws) and
-> **NO magnets were included.** This invalidates the earlier "6 M3 holes on a flat PCB
-> back" assumption and may affect whether the Hanson distro can bolt flat (§7.1). §8
-> mounting + the distro fit are **PENDING**: need the frame's rear mounting provisions,
-> overall depth, panel-to-panel joining, and the full accessory inventory from the owner.
+> ✅ **MOUNTING RESOLVED (2026-06-29) — framed panels with 6 brass M3 holes.** Each
+> CnGear panel has an **integrated plastic rear frame** with **6 M3-threaded brass
+> holes** (4 corners + 2 mid-edge, ~144 mm vertical pitch) = the magnet-mount points.
+> **No magnets shipped**, but the holes take screws/brackets. Depth ~15 mm; panels
+> don't interlock. Full mounting plan + recommendation in **§8.0**. Power/data cabling
+> fully included (§7.3) — the distro now mounts on the **backbone**, not a panel, so the
+> 144 mm-on-panel fit is **moot**.
 
 ---
 
@@ -191,10 +192,10 @@ shorted panel to its own 7 A fuse; panel-back mount shortens the high-current ru
   → AWG10+ Cu), and the common-ground bond. The board only does the *last leg* +
   fusing; it is **not** a PSU and does nothing for data.
 - **Land** the panel pigtail's fork lug or bare wire on the screw terminals (no adapter).
-- **Bench-verify before buying 4:** (1) measure two panels' rear M3 hole spacing ≈
-  144 mm (back-hole patterns aren't standardized across vendors); (2) clamp-meter one
-  panel all-white vs the 7 A fuse; (3) **hole contention** — the board wants the same
-  M3 back-holes the frame bracket (§8) may want → plan different hole pairs or standoffs.
+- **✅ Update (2026-06-29):** each panel ships its own **fork-terminated power pigtail**,
+  so **mount the distro on the BACKBONE, not a panel** — the 144 mm-on-panel fit concern
+  is **moot**. Just land the blue forks (4 per board). Still worth a clamp-meter check of
+  one all-white panel vs the 7 A fuse before buying 4. Bus bars + inline fuses also fine.
 - **US alternatives if it doesn't fit:** Falcon3DParts distro, QuinLED Dig-Octa
   powerboard (12–16 fused outs), CZH-Labs panel-mount fuse blocks (~$15), or plain
   copper bus bars + inline ATO fuse holders (cheapest, most flexible injection points).
@@ -239,7 +240,7 @@ sudo ./demo --led-cols=64 --led-rows=32 --led-chain=1 --led-parallel=1 \
 
 - **Log panels 1–16** (pass / which fault). **Keep 2–3 as spares** (~10–15%).
 - **RMA defects with video** inside the AliExpress Buyer-Protection window — push for **partial refund without return** (shipping a panel back rarely worth it).
-- Verify included counts on unboxing: **8 power cables** (1-for-2) + **~15 data ribbons** (15 inter-panel links for 16 panels) + magnet screws *(claimed in the listing's "Free Parts" image — see §8; **confirm on unboxing**, generic P5 modules usually include 4/panel but it's vendor-dependent — Adafruit-brand ships none since 2020)*.
+- ✅ **CONFIRMED on unboxing (2026-06-29):** **16 data ribbons** (short 16-pin 2×8 keyed IDC, `UL2651 28AWG`) + **16 power pigtails** (1-per-panel: white 4-pin plug → **blue fork/spade** terminal at the PSU end) + **ZERO magnets**. Data + panel-power cabling is fully covered by the box — buy neither. The forks land directly on distro/bus-bar screw terminals.
 
 ---
 
@@ -250,12 +251,28 @@ sudo ./demo --led-cols=64 --led-rows=32 --led-chain=1 --led-parallel=1 \
 > MITERS, Project Manus), free materials (`reuse@mit.edu`, Swapfest), and a $500
 > Design-to-Making grant. Print the corner brackets/clips, buy only the metal.
 
-> **Provenance note:** the "magnets + screws" claim above and in §1/§5 traces to the
-> **MUEN listing's "Free Parts" image** (owner-supplied), **not** an independent
-> datasheet. Generic P5 320×160 modules *commonly* ship **4 magnetic screws (M3)**
-> in the corner bosses, but it's vendor-dependent. Either way the panel back has
-> **M3-threaded corner holes**, so the screw-mount path always works even with no
-> magnets in the box.
+### 8.0 ✅ MOUNTING INTERFACE CONFIRMED (2026-06-29, from the real panels)
+The CnGear panels have an **integrated plastic rear frame** with **6 brass M3-threaded
+holes** = **4 corners + 2 mid-long-edge** (a 3-col × 2-row grid; vertical pair ≈144 mm).
+**These 6 holes ARE the magnet-mount points** — the (missing) magnet feet screw into
+them. With no magnets, the holes are free for screws/brackets. Panel = 320 × 158 ×
+**~15 mm** deep; panels **do NOT interlock** (each mounts independently → the backbone
+must set alignment/coplanarity).
+
+**RECOMMENDED MOUNT (best for a 16-wide row): 80/20 backbone + 3D-printed brackets**
+(free at MIT) that screw into the 6 brass holes and bolt into the T-slot, *locating*
+each panel so the row stays coplanar + evenly gapped. No magnets, no steel backing,
+and serviceable (unbolt a panel's brackets to pull it). Print designs: Printables
+1294572 / 578204 (HUB75 joiners), adapt for the 144 mm hole pitch.
+
+**Native alternative (tool-free swaps):** buy ~64 magnet feet (~$8–40, screw into the
+6 holes) + face the backbone with **two steel strips** at the top-/bottom-row hole
+heights; panels snap on, butt edges to align. More serviceable, but +magnets +ferrous
+strip and alignment isn't positively located.
+
+> **Provenance note (resolved):** the earlier "magnets + screws" claim came from the
+> listing's "Free Parts" image. **Reality: zero magnets shipped**, but the frame's 6
+> M3 brass holes mean screw/bracket mounting works regardless.
 
 ### 8.1 It will NOT free-stand — wall-mount it
 A rigid strip **5120 × 160 mm (16.8 ft × 6.3 in)** has a ~**32:1 aspect ratio** and a

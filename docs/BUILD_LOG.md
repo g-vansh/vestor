@@ -33,6 +33,22 @@ cable type + count, data ribbon count + **length**, screws/clips, confirm zero m
 - Changed: `docs/INVENTORY.md` §6 (verified table + mounting-changed flag),
   `docs/HARDWARE.md` (FM6124HJ/CnGear/JHT2.0/framed). Docs only.
 
+**Update (same day) — mounting + cabling RESOLVED from frame/cable photos (IMG_3783-85):**
+- Owner confirmed **16 individual panels**, each its own CnGear frame; **320 × 158 ×
+  ~15 mm**; panels **do NOT interlock**.
+- **Mounting interface:** frame has **6 brass M3-threaded holes** (4 corners + 2 mid-
+  long-edge, 3×2 grid, ~144 mm vertical pitch) = the magnet-mount points. **Zero
+  magnets** shipped → holes free for screws/brackets.
+- **RECOMMENDED:** 80/20 backbone + **3D-printed brackets** (free at MIT) into the 6
+  holes, locating panels coplanar; no magnets/steel needed; serviceable. Alt: buy ~64
+  magnet feet + 2 steel strips on the rail. → `INVENTORY.md` §8.0.
+- **Cabling fully included:** 16 short 16-pin IDC data ribbons (`UL2651 28AWG`) + 16
+  power pigtails (white 4-pin plug → **blue fork** PSU end). **Buy neither.** Forks land
+  on distro/bus-bar screw terminals → distro mounts on the **backbone** (144 mm-on-panel
+  fit moot). → §6, §7.1, §7.3.
+- Net buy-list shrinkage: no data cables, no panel power cables, no magnets (if bracket
+  route). Real blocker still just 1× LRS-350-5 + AC cord.
+
 ## 2026-06-21 — Panel-spec compatibility check + single-row data-routing decision
 
 **Context:** owner shared the actual MUEN P5 listing + module-back photos (driver
