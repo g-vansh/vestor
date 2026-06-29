@@ -399,19 +399,33 @@ Power pigtail = **55 cm** (white 4-pin plug → 2 blue fork terminals, +5 V / GN
 do NOT pass power through — each needs its own feed. At 320 mm panel pitch with the tap
 near panel-center, **55 cm reaches ~±1.7 panels → one fuse block serves ~4 panels.**
 
-**LOCKED layout (back of wall):**
-- **Center "brain box"** (behind panels 8–9): Pi + Triple Bonnet **+ both PSUs stacked**
-  (uses the Double Stack Mount Kit) + AC entry. One service point / one wall plug-in.
+**LOCKED layout (back of wall) — validated 2026-06-29 against real long-row builds:**
+- **Center:** Pi + Triple Bonnet only (data origin).
 - **Data:** 2 chains of 8 from center — chain 0 → panels 8→1 (left), chain 1 → 9→16
-  (right). Unchanged.
+  (right). ✅ Validated: 8/chain is the sweet spot (ghosting/tearing starts at **12+/
+  chain**); center-feed halves the worst-case run.
 - **Power:** **4× 6-way fuse blocks**, one centered on each 4-panel group (1–4 / 5–8 /
-  9–12 / 13–16). 10 AWG trunk from the center PSUs to each block (PSU1→left 2 blocks,
-  PSU2→right 2). Each panel's 55 cm pigtail reaches its group's block. (4 blocks, not 2
-  — a single block can't reach 8 panels; this also avoids extension leads.)
-- **Mounting:** magnets → 2 horizontal ferrous rails (top-/bottom-hole heights); brain
-  box + blocks mount to the wall behind the panels.
-- **No redesign:** the 2×8 data, control, and magnetic mount are unchanged; only the
-  fuse-block count/spacing changed (2→4). *(Still confirm the data-ribbon reaches
-  bonnet→panel 8 and bonnet→panel 9; panels are adjacent to center so it should.)*
-- *Pending: a background agent is validating injection spacing / voltage-drop / grounding
-  against real long-row builds — fold in any refinements.*
+  9–12 / 13–16). Each panel's 55 cm pigtail reaches its group's block. ✅ Validated:
+  per-panel feeding is best practice; fuse the **positive only**, common all negatives.
+- **🔧 PSUs SPLIT — one behind each half (NOT stacked at center).** PSU1 ≈ behind panel
+  4–5 → blocks 1–2; PSU2 ≈ behind panel 12–13 → blocks 3–4; short 10 AWG trunk each.
+  **3 reasons:** (a) **voltage drop** — splitting halves trunk current+length → ~4× less
+  drop (far panel ~4.95 V); (b) **thermal** — the LRS-350-5 has a **built-in fan**, don't
+  stack tightly/block airflow (Mean Well wants ~10–15 cm clearance); (c) **inrush** —
+  ~20 A cold-start each @115 V → put on **separate outlets** so a 15 A breaker won't trip.
+  *(The Double Stack Mount Kit goes unused — keep as a spare.)*
+- **⚡ Grounding (critical):** bond **PSU1 V− ↔ PSU2 V− ↔ Pi GND** at one star point — the
+  PSU2 panels need a defined ground reference for the Pi's data lines or you get garbage
+  pixels. **NEVER** tie the two V+ rails together.
+- **Mounting:** magnets → 2 horizontal ferrous rails (top-/bottom-hole heights). *(Magnet
+  hold over a 5 m vertical row is anecdotal — bench-test a few panels on the rail before
+  committing all 16.)*
+- **Real draw is light:** measured **1.7–2.4 A/panel** full white (not 4 A) → 7.5 A fuses
+  + the power budget are very comfortable.
+- **Software tuning (Pi):** `--led-pwm-bits=7`, `--led-pwm-lsb-nanoseconds≈100` (→300 if
+  bright text ghosts), `--led-pwm-dither-bits=1`, dedicate a core (`isolcpus`), and
+  **disable onboard audio** (`dtparam=audio=off` + blacklist `snd_bcm2835`, mandatory —
+  it steals the LED timing). 400–500 Hz achievable; keep `--led-slowdown-gpio` 2–4.
+- **No redesign:** topology, control, magnetic mount unchanged; vs the prior note only the
+  PSU placement moved (center-stack → split). *(Still confirm a data ribbon reaches
+  bonnet→panel 8 and bonnet→panel 9 — adjacent to center, so it should.)*

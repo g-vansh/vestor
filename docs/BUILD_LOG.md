@@ -4,6 +4,31 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-06-29 — Layout VALIDATED (research agents) → PSUs split + config notes
+
+Validation research (data-integrity / power-injection+voltage-drop / grounding+thermal
+sub-agents) against real long-row HUB75 builds. Layout sound; one change + notes
+(`INVENTORY.md` §9.5):
+
+- ✅ **2×8 center-feed confirmed** — 8/chain is the sweet spot; ghosting/tearing starts
+  at 12+/chain (hzeller README + issue #1370). Center-feed halves worst-case run.
+- ✅ **Per-panel power + 4 fuse blocks confirmed best practice** (HUB75 can't pass power;
+  AusChristmasLighting consensus: fuse +only, common −, never tie the 2 V+ together).
+- ✅ **Real draw lower than assumed:** 1.7–2.4 A/panel full white (WiredWatts measured),
+  not 4 A → 7.5 A fuses + budget very comfortable.
+- 🔧 **CHANGE: split the PSUs (one behind each half), do NOT center-stack.** (a) voltage
+  drop ~4× less (far panel ~4.95 V; hzeller targets <50 mV); (b) **LRS-350-5 has a
+  built-in fan** (verified — not convection) → don't block airflow, ~10–15 cm clearance;
+  (c) inrush ~20 A cold-start each @115 V → separate outlets vs a 15 A breaker. **Double
+  Stack Mount Kit now unused** (keep as spare).
+- ⚡ **Grounding:** star-point bond PSU1 V− ↔ PSU2 V− ↔ Pi GND (data ground reference);
+  never parallel V+.
+- 📝 **Pi config notes** banked: pwm-bits=7, lsb-ns≈100→300, dither=1, isolcpus a core,
+  **audio off + blacklist snd_bcm2835** (mandatory), slowdown 2–4. ~400–500 Hz.
+- 📝 Magnet hold over 5 m is anecdotal → bench-test a few panels on the rail first.
+- Changed: `INVENTORY.md` §9.5 (PSU split + grounding + config + draw). Diagram's center
+  box → Pi+bonnet only; PSUs move behind each half.
+
 ## 2026-06-29 — Physical layout LOCKED (power pigtail = 55 cm)
 
 Owner measured the panel power pigtail = **55 cm** (white 4-pin plug → 2 blue forks).
