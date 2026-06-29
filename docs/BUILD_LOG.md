@@ -4,6 +4,35 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-06-29 — Panels arrived: specs verified off the boards + framed-panel discovery
+
+**Context:** the 16 panels landed. Owner photographed the backs (IMG_3780-82, HEIC →
+converted + zoomed). Read exact specs directly off the PCBs.
+
+**Verified on-board (supersedes listing-image assumptions):**
+- Marking **`P5(2121)64×32-16S-JHT2.0`** → P5 pitch, SMD2121 LEDs, 64×32, **1/16 scan**.
+- Pinout table on the board: **R1 G1 / B1 GND / R2 G2 / B2 GND / A B / C D / CLK LAT /
+  OE GND** — standard HUB75, **A–D only (no E)**. Connector labeled **HUB75-D**, 16-pin 2×8.
+- Driver **FM6124HJ** (chip UB2). `HJ` = package/grade variant of the standard FM6124;
+  no init needed. (Listing image had said `FM6124ZD` — same family, no impact.)
+- Power: **4-pin keyed plug** labeled `POWER` (NOT screw terminals).
+- Brand **CnGear**; 220 µF/10 V decoupling caps.
+- **Electrical verdict: 100% compatible, zero config changes** to the locked plan.
+
+**Key new finding — FRAMED panels, not bare PCBs:**
+- Each panel has an **integrated black plastic rear frame** (X-braced, brass corner
+  screws). **No magnets included** (owner confirmed). This invalidates the prior
+  "6 M3 magnet holes on a flat PCB back" mounting assumption and may affect whether the
+  Hanson distro bolts flat. **§8 mounting + distro fit now PENDING owner detail.**
+
+**Asked owner for (can't get from photos):** confirm 16 individual panels; panel
+W×H×**depth** (incl. frame); straight-down photo of the frame's rear mounting
+provisions; whether frames join/align panel-to-panel; full accessory inventory (power
+cable type + count, data ribbon count + **length**, screws/clips, confirm zero magnets).
+
+- Changed: `docs/INVENTORY.md` §6 (verified table + mounting-changed flag),
+  `docs/HARDWARE.md` (FM6124HJ/CnGear/JHT2.0/framed). Docs only.
+
 ## 2026-06-21 — Panel-spec compatibility check + single-row data-routing decision
 
 **Context:** owner shared the actual MUEN P5 listing + module-back photos (driver

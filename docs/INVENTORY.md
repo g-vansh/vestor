@@ -122,23 +122,30 @@ direction and which half needs the 180° flip).
 
 ---
 
-## 6. PANEL-SPEC COMPATIBILITY — verified 2026-06-21
-Against the actual MUEN P5 listing + module-back photos (chip marked `FM6124(Z)D`).
+## 6. PANEL-SPEC COMPATIBILITY — ✅ VERIFIED FROM PHYSICAL PANELS 2026-06-29
+The 16 panels arrived. Specs read directly off the boards (photos IMG_3780-82).
+**Brand: CnGear. Board rev: JHT2.0. Marking: `P5(2121)64×32-16S-JHT2.0`.**
 
-| Spec | Verdict | Note |
+| Spec | Verdict | Note (verified on-board) |
 |---|---|---|
-| 64×32, 320×160 mm, P5 | ✅ | 16 wide = 1024 px ribbon (matches sim/design). |
-| 1/16 scan, **A–D** address (no E) | ✅ | `row_addr_type=0`. No E line is correct for 64×32. |
-| HUB75-D pinout (R1 G1 / B1 GND / R2 G2 / B2 GND / A B / C D / CLK LAT / OE GND) | ✅ | Standard HUB75 — plug-compatible with the bonnet. |
-| Driver **FM6124(Z)D** | ✅ start standard | FM6124 ≈ ICN2037/2038S, **no init**. `panel_type` empty. Fallback `FM6126A`→`FM6127` only if black. |
-| Chip "Epstar" | ✅ | LED *emitter* die brand, not the driver. Nothing to set. |
-| 2 HUB75 connectors / module | ✅ | IN + OUT loop-through (daisy). |
-| 5 V, SMD2121, "1-for-2" power cable | ✅ | 8 power cables / 16 panels, fed from LRS-350-5. |
+| 64×32, P5, **SMD2121** | ✅ | silkscreen `P5(2121)64×32`. 16 wide = 1024 px (matches sim/design). |
+| 1/16 scan (`16S`), **A–D** address (no E) | ✅ | `row_addr_type=0`. Pinout table shows only A B C D — confirms standard 1/16. |
+| HUB75-D pinout (R1 G1 / B1 GND / R2 G2 / B2 GND / A B / C D / CLK LAT / OE GND) | ✅ | Read off the board's own pinout table. Standard HUB75 — plug-compatible with the bonnet. |
+| Driver **FM6124HJ** | ✅ start standard | `HJ` is a package/grade variant of the standard FM6124 (≈ICN2037/2038S), **no init**. `panel_type` empty. Fallback `FM6126A`→`FM6127` only if black. (Listing image said `FM6124ZD` — same family, no impact.) |
+| **HUB75-D connector**, 16-pin 2×8 | ✅ | IN + OUT per module (daisy). |
+| 5 V power — **4-pin keyed plug** (`POWER`), NOT screw terminals | ✅ | Panel power cable plugs into this; PSU-side end TBD (confirm on unboxing). |
 
 **Likely bring-up tweaks (not blockers):** (1) **R/B swap** is common on FM6124 →
 set `--led-rgb-sequence` (`RBG`/`BGR`); (2) raise `--led-slowdown-gpio` 4→5 if
 flicker. The scary `row-addr-type=3` / forced-`FM6126A` GitHub cases are all
 **128×64 1/32-scan "ABC"** panels — **not** this 64×32 1/16-scan A–D panel.
+
+> ⚠️ **MOUNTING CHANGED — these are FRAMED panels, not bare PCBs.** Each CnGear panel
+> has an **integrated black plastic rear frame** (X-braced, brass corner screws) and
+> **NO magnets were included.** This invalidates the earlier "6 M3 holes on a flat PCB
+> back" assumption and may affect whether the Hanson distro can bolt flat (§7.1). §8
+> mounting + the distro fit are **PENDING**: need the frame's rear mounting provisions,
+> overall depth, panel-to-panel joining, and the full accessory inventory from the owner.
 
 ---
 
