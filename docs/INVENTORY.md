@@ -365,20 +365,27 @@ Supersedes the per-part recommendations above where they conflict.
   steel: 2020 aluminum extrusion + 3D-printed brackets bolted to the 6 holes (free at
   MIT), keep the magnets as spares.*
 
-### 9.2 STILL-TO-ORDER for the full build (beyond what's on order)
+### 9.2 ORDER STATUS
+
+**🛒 ORDERED — Wired Watts #225740 (2026-06-29):** 2× LRS-350-5 · Double Stack Mount Kit
+(now spare) · 100× Panel Magnets.
+**🛒 ORDERED — power consumables (2026-06-29):** 2× AC mains cord · **4× 6-way fuse block**
+· 7.5 A blade fuses · 10 AWG red+black wire (offcut → 14 AWG ground bond).
+**✅ ON HAND:** Pi 4 · Triple Bonnet · 45 W USB-C · microSD · 16 panels w/ data ribbons +
+fork-terminated power pigtails.
+
+**STILL TO BUY:**
 | Item | Qty | ~$ | Source |
 |---|---|---|---|
-| **AC mains cord** (3-cond, US plug → bare ends) for the PSUs | 2 | $16 | buy (Amazon/hardware) ⚠️ urgent |
-| **6-way ATC fuse block** w/ negative bus (one per 4-panel group — see §9.5) | **4** | $40 | **tatida 6-way [B096Z1WNLW](https://www.amazon.com/dp/B096Z1WNLW)** ($9.99, M4 outputs/M5 input, 100A/30A — works at 5V despite "12V" label) or Nilight 6-way |
-| **7.5 A ATC blade fuses** (per-panel; included block fuses are wrong sizes — keep as spare) | 1 pk | $7 | Amazon / auto store |
-| 10 AWG wire red+black (PSU→block trunks, ~16 A each) + a bit of 14 AWG (ground bond) | spool | $15 | buy |
-| **2 ferrous rails** (Unistrut steel strut, or steel flat bar/angle) ~17 ft ea | — | ~$30–60 **or FREE** | Home Depot / `reuse@mit.edu` |
-| Wall anchors / toggle bolts + rail brackets | ~8 | $20 | hardware |
-| *(optional)* DC clamp meter UT210E | 1 | $35 | buy |
+| **2 ferrous rails** (steel — Unistrut/Superstrut strut **or** steel flat bar/angle, ~17 ft ea; magnets need STEEL, not aluminum) | 2 | **FREE** at MIT, else ~$70 | `reuse@mit.edu` / Hobby Shop → else Home Depot |
+| **Wall anchors / toggle bolts + rail brackets** (or French cleat) | ~8 | $20 | hardware store |
+| **Cable ties + adhesive tie mounts** (route 16 pigtails + 15 ribbons) | 1 pk | $10 | Amazon / hardware |
+| *(recommended)* **wire crimper + #10 ring terminals** (10 AWG → fuse-block M5 stud) | 1 | $15 | Amazon / hardware |
+| *(recommended)* **DC clamp meter** UT210E (QC current checks) | 1 | $35 | Amazon |
 
-**Magnets, PSUs, stack kit, data + power cables = already on hand/ordered.**
-**Total still-to-order ≈ $115–145** (less if rails are free at MIT; +$35 optional meter).
-*(Power layout LOCKED — pigtail = 55 cm → 4 fuse blocks, center-stacked PSUs. See §9.5.)*
+**Total still-to-buy ≈ $30 essential** (rails free at MIT) **+ ~$50 recommended** (crimper +
+meter). If buying steel rails too, add ~$70.
+*(Power layout LOCKED — pigtail = 55 cm → 4 fuse blocks, PSUs SPLIT one per half. See §9.5.)*
 
 ### 9.3 CUT / already covered (do NOT buy)
 Hanson distro boards · copper AWG6 trunks · ferrule/crimp tool · fork-lug kit · bus
