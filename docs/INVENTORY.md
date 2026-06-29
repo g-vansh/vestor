@@ -369,9 +369,9 @@ Supersedes the per-part recommendations above where they conflict.
 | Item | Qty | ~$ | Source |
 |---|---|---|---|
 | **AC mains cord** (3-cond, US plug → bare ends) for the PSUs | 2 | $16 | buy (Amazon/hardware) ⚠️ urgent |
-| **6-way ATC fuse block** w/ negative bus (one per 4-panel group — see §9.5) | **4** | $52 | [Nilight 6-way](https://www.amazon.com/Nilight-Circuits-Indicator-Waterproof-Automotive/dp/B089T3R4H9) |
-| 7.5 A ATC blade fuses (10 A if bright) | ~30pk | $8 | buy |
-| 10 AWG wire red+black (PSU→block; **full 32 A**) + a bit of 14 AWG (ground bond) | spool | $15 | buy |
+| **6-way ATC fuse block** w/ negative bus (one per 4-panel group — see §9.5) | **4** | $40 | **tatida 6-way [B096Z1WNLW](https://www.amazon.com/dp/B096Z1WNLW)** ($9.99, M4 outputs/M5 input, 100A/30A — works at 5V despite "12V" label) or Nilight 6-way |
+| **7.5 A ATC blade fuses** (per-panel; included block fuses are wrong sizes — keep as spare) | 1 pk | $7 | Amazon / auto store |
+| 10 AWG wire red+black (PSU→block trunks, ~16 A each) + a bit of 14 AWG (ground bond) | spool | $15 | buy |
 | **2 ferrous rails** (Unistrut steel strut, or steel flat bar/angle) ~17 ft ea | — | ~$30–60 **or FREE** | Home Depot / `reuse@mit.edu` |
 | Wall anchors / toggle bolts + rail brackets | ~8 | $20 | hardware |
 | *(optional)* DC clamp meter UT210E | 1 | $35 | buy |
