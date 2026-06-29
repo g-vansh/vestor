@@ -4,6 +4,24 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-06-29 — PSU sizing confirmed: keep 2× LRS-350-5 (not downsizing)
+
+Owner asked whether the lower-than-budgeted draw means a smaller/cheaper supply
+would suffice (and whether to cancel the order). Worked the math:
+- Per 64×32 P5 panel: **~4 A** full-white-full-bright conservative max (Adafruit); 2.4 A
+  measured (WiredWatts). 16 panels = **64 A (max) / 38 A (measured)**; per-PSU (8) =
+  32 A / 19 A. **Real use (BRIGHTNESS≤50 + dark content) ≈ 5–16 A total** (~10–20 %/PSU).
+- **One PSU? No** — 64 A max > a single 60 A unit, and central feed reintroduces the
+  voltage-drop the split avoids. **Keep two.**
+- **2× LRS-350-5 (60 A): correctly sized** — 53 % at conservative peak, ~10–20 % typical.
+- **Alternative considered: 2× LRS-200-5 (40 A, FANLESS).** Would suffice (32 A peak =
+  80 %); main upside is fanless (silent/fewer failure modes) for a living-space wall.
+- **DECISION: keep the LRS-350-5s.** Overspecced = cooler/longer life; the fan is
+  thermostatic and won't run at ~10–20 % load (so fanless benefit is moot in practice);
+  ~$15 savings not worth the cancel/reorder. Switch to 200s only if guaranteed-fanless
+  is a personal priority — it's a preference, not a fix.
+- No doc/BOM change (order stands). Recorded in `INVENTORY.md` §9.5.
+
 ## 2026-06-29 — Layout VALIDATED (research agents) → PSUs split + config notes
 
 Validation research (data-integrity / power-injection+voltage-drop / grounding+thermal

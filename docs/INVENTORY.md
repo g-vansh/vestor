@@ -420,8 +420,12 @@ near panel-center, **55 cm reaches ~±1.7 panels → one fuse block serves ~4 pa
 - **Mounting:** magnets → 2 horizontal ferrous rails (top-/bottom-hole heights). *(Magnet
   hold over a 5 m vertical row is anecdotal — bench-test a few panels on the rail before
   committing all 16.)*
-- **Real draw is light:** measured **1.7–2.4 A/panel** full white (not 4 A) → 7.5 A fuses
-  + the power budget are very comfortable.
+- **Real draw is light:** ~4 A/panel full-white-full-bright conservative max (2.4 A
+  measured); 16 panels = 64 A max / ~5–16 A in real capped/dark use → 7.5 A fuses +
+  budget very comfortable. **PSU sizing confirmed: keep 2× LRS-350-5** (53 % at peak,
+  ~10–20 % typical). One 60 A unit is too tight (64 A max) + worsens distribution; 2×
+  fanless LRS-200-5 (40 A) would also work (80 % peak) — a fanless *preference*, not a
+  fix. See BUILD_LOG.
 - **Software tuning (Pi):** `--led-pwm-bits=7`, `--led-pwm-lsb-nanoseconds≈100` (→300 if
   bright text ghosts), `--led-pwm-dither-bits=1`, dedicate a core (`isolcpus`), and
   **disable onboard audio** (`dtparam=audio=off` + blacklist `snd_bcm2835`, mandatory —
