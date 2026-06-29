@@ -370,21 +370,22 @@ Supersedes the per-part recommendations above where they conflict.
 **🛒 ORDERED — Wired Watts #225740 (2026-06-29):** 2× LRS-350-5 · Double Stack Mount Kit
 (now spare) · 100× Panel Magnets.
 **🛒 ORDERED — power consumables (2026-06-29):** 2× AC mains cord · **4× 6-way fuse block**
-· 7.5 A blade fuses · 10 AWG red+black wire (offcut → 14 AWG ground bond).
+· 7.5 A blade fuses · 10 AWG red+black wire (offcut → 14 AWG ground bond) · cable ties +
+self-adhesive tie mounts.
 **✅ ON HAND:** Pi 4 · Triple Bonnet · 45 W USB-C · microSD · 16 panels w/ data ribbons +
 fork-terminated power pigtails.
 
 **STILL TO BUY:**
 | Item | Qty | ~$ | Source |
 |---|---|---|---|
-| **2 ferrous rails** (steel — Unistrut/Superstrut strut **or** steel flat bar/angle, ~17 ft ea; magnets need STEEL, not aluminum) | 2 | **FREE** at MIT, else ~$70 | `reuse@mit.edu` / Hobby Shop → else Home Depot |
+| **2 ferrous rails** (steel — light flat bar/angle **or** Unistrut, ~17 ft ea; magnets need STEEL, not aluminum) | 2 | **FREE** at MIT, else ~$40–70 | `reuse@mit.edu` / Hobby Shop → else Home Depot |
 | **Wall anchors / toggle bolts + rail brackets** (or French cleat) | ~8 | $20 | hardware store |
-| **Cable ties + adhesive tie mounts** (route 16 pigtails + 15 ribbons) | 1 pk | $10 | Amazon / hardware |
+| **3D-printed alignment aids** (end-stops + registration combs — see §9.7) | ~6–10 | **FREE** | print at MIT |
 | *(recommended)* **wire crimper + #10 ring terminals** (10 AWG → fuse-block M5 stud) | 1 | $15 | Amazon / hardware |
 | *(recommended)* **DC clamp meter** UT210E (QC current checks) | 1 | $35 | Amazon |
 
-**Total still-to-buy ≈ $30 essential** (rails free at MIT) **+ ~$50 recommended** (crimper +
-meter). If buying steel rails too, add ~$70.
+**Total still-to-buy ≈ $20 essential** (rails + prints free at MIT; only wall anchors)
+**+ ~$50 recommended** (crimper + meter). If buying steel rails too, add ~$40–70.
 *(Power layout LOCKED — pigtail = 55 cm → 4 fuse blocks, PSUs SPLIT one per half. See §9.5.)*
 
 ### 9.3 CUT / already covered (do NOT buy)
@@ -440,6 +441,27 @@ near panel-center, **55 cm reaches ~±1.7 panels → one fuse block serves ~4 pa
 - **No redesign:** topology, control, magnetic mount unchanged; vs the prior note only the
   PSU placement moved (center-stack → split). *(Still confirm a data ribbon reaches
   bonnet→panel 8 and bonnet→panel 9 — adjacent to center, so it should.)*
+
+### 9.7 MOUNTING TECHNIQUE — LIGHT HYBRID (steel rails + magnets + a few prints)
+Mounting = two problems, each solved by a different material → use both:
+- **HOLD = magnets** (tool-free, already owned); **LOCATE = 3D-printed parts** (positive registration).
+- Pure-magnetic doesn't locate (drift); pure-bracket (bolt to aluminum extrusion) locates
+  but = 96 screws + no tool-free service. Hybrid keeps the best of each.
+
+**Recommended build:**
+1. **Backbone — 2 steel rails** at the top-row & bottom-row magnet heights (~144 mm apart).
+   Steel (ferrous) so magnets stick. **Light ~1/8" flat bar** (cheap/light, anchor every
+   2–3 ft) or Unistrut (pre-slotted, heavier). *Thicker steel = stronger magnet grip —
+   test a magnet on a sample.* **Level both rails coplanar = the whole wall's flatness.**
+2. **Attach — magnetic.** Magnet into each panel's 6 M3 holes (96 of 100) → snap on.
+   Tool-free QC/service. Shear hold ≈ 6× the 0.45 kg panel weight (secure on a vertical wall).
+3. **Locate — 3D-printed (free at MIT, PETG/ABS):**
+   - **End-stops** (2–4) at rail ends → row can't slide sideways (the key anti-drift part).
+   - **Registration combs/spacers** *(optional, ~every 4 panels)* → even gaps, stop drift.
+- **Why best here:** uses the magnets, uses free printing, no bolting 16 panels, **tool-free
+  panel swaps** (big for QC + dead-panel replacement). Printed end-stops fix magnetic
+  mounting's one weakness (lateral drift) for ~free. *(Fallback: pure 3D-bracket-to-2020-
+  extrusion if you skip steel — but loses tool-free service.)*
 
 ### 9.6 TOOLS (build is solder-free — borrow most free at MIT)
 **Essential:** screwdriver set (Phillips+flat; M3 magnet screws), wire stripper/cutter
