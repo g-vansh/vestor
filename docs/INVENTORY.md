@@ -43,19 +43,18 @@ Pi 45 W is ideal).
 > land: wire PSU → the panel's power cable, panel ribbon → bonnet **Port 1**, Pi on
 > its 45 W USB-C, and run the single-panel flight test.
 
-### 🟠 BUY BEFORE THE FULL WALL — power-distribution harness
-The Triple Bonnet has no power connector; Adafruit's guidance is to feed panels
-directly from the supplies via **"two power distribution bus bars,"** injecting 5 V
-in parallel at every panel/pair (never daisy-chain panel power through HUB75).
+### 🟠 BUY BEFORE THE FULL WALL — power distribution (SIMPLIFIED, no-solder — see §9)
+**Revised 2026-06-29 (3-agent optimization pass).** The panels each ship a
+**fork-terminated power pigtail**, so distribution collapses to **one automotive
+fuse block per PSU** — no bus bars, no copper trunks, no crimping, no soldering.
 
 | Need | Spec | Notes |
 |---|---|---|
-| **Fused distro / bus bars** | **4× Hanson "hanpaneldistro" fused boards (~$14.50 ea, ~$58)** — *recommended*, see §7.1 — OR 2× ≥60 A screw-down bus bars + inline fuses | Split the wall: **PSU1 → 8 panels, PSU2 → 8 panels** (don't force two LRS to current-share one rail). The distro boards give per-panel 7 A fusing + panel-back mount; **4 panels/board** (P5 derate). Bench-verify 144 mm hole fit first. |
-| **Trunk wire** | **pure-copper AWG 6** (red + black) PSU→bus bar; AWG 8/10 taps bus→panels | **Buy copper, not the included CCA pigtails** (see §7.1). Inject 5 V at **≥2 points per 8-panel half (4 total)**; center each PSU behind its half. |
-| **Crimp lugs / ferrules** + crimp tool | fork lugs (PSU), ring/spade (bus bars) | **Crimp, never solder** — included CCA won't tin. Use CCA only for the final short bus→panel hop. |
-| **Common-ground bond** | AWG 14 | Tie PSU1 ⏚ ↔ PSU2 ⏚ ↔ Pi/bonnet ⏚ — **mandatory** for clean HUB75 signals (signal reference, *not* a 5 V-rail parallel). |
-| *(recommended)* inline fuse / DC breaker per 5 V output | **~40 A per PSU** | Each PSU half draws ~32 A @ BRIGHTNESS 50; fault protection for a wall-mounted 600 W appliance. |
-| *(NOT needed)* 3rd LRS-350-5 | — | Only for *unrestricted all-white*. The `BRIGHTNESS=50` cap keeps worst case ~64 A < 120 A. Skip it. |
+| **8-way ATC fuse block** w/ negative bus | ~20 A/circuit, ~75 A/block, ~$16 | **1 per PSU** (PSU1→8 panels, PSU2→8). Panel **+5 V forks land on the fused studs, GND forks on the common negative bus** — the block's negative bus *is* your ground bus. One fuse per panel. |
+| **ATC blade fuses** | **7.5 A** (10 A if running bright) | one per panel + spares; panel ≈4 A @ BRIGHTNESS 50. |
+| **10 AWG wire**, red + black | short PSU→block jumpers | Carries the **full ~32 A per PSU** (current only splits *after* the fuses → NOT 14 AWG). Land bare stranded under the screws — no lugs needed. |
+| **Common-ground bond** | 14 AWG | One jumper **PSU1 V− ↔ PSU2 V−**; the bonnet already ties Pi GND to panel GND via the ribbon. Bare wire under screws. |
+| *(NOT needed)* Hanson distro / bus bars / crimp tool / ferrules / copper AWG6 / 3rd PSU | — | All cut. Fork terminals + screw blocks do it all, solder-free. Keep `BRIGHTNESS≤50` so each PSU sits ~32 A < 60 A. |
 
 ### 🟡 BUY BEFORE THE FULL WALL — mounting / structure
 | Need | Notes |
@@ -177,8 +176,12 @@ under-fed panel tints **red**. Don't chase it in software. Fix is geometry + cop
 - **Common-ground bond still mandatory** (PSU1 ⏚ ↔ PSU2 ⏚ ↔ Pi/bonnet ⏚) — that's a *signal-reference* tie, not a power-rail parallel.
 - **~40 A fuse per PSU 5 V output.** **Crimp, never solder, the CCA** (won't tin). Use included CCA pigtails only for the final short bus→panel hop; trunks = pure-copper **AWG6**, taps **AWG8/10**.
 
-**Recommended part for the injection points: Hanson "hanpaneldistro" fused distro
-boards** (wiredwatts.com, ~$14.50, **US-stocked Alpharetta GA**, vetted 2026-06-21).
+> ⚠️ **SUPERSEDED by §9 (2026-06-29):** the Hanson-distro plan below is replaced by
+> **one 8-way ATC fuse block per PSU** (cheaper, fewer items, no-solder, panel forks
+> land directly). The voltage-drop *principles* here still hold; the *part* changed.
+
+**~~Recommended part for the injection points: Hanson "hanpaneldistro" fused distro
+boards~~** (wiredwatts.com, ~$14.50, **US-stocked Alpharetta GA**, vetted 2026-06-21).
 Each is a passive **5 V-in → 4× fused (7 A) 5 V-out** PCB that bolts to a panel back
 (144 mm M3 holes). It IS a bus-bar + fuses + mount in one part — controller-agnostic
 (power only; never touches HUB75), so it works identically with the Pi + Triple
@@ -324,3 +327,57 @@ extrusion, wood, or MDF. Two paths:
 **Sources:** Adafruit DIY LED Video Wall (frame), 80/20 deflection calculator
 (1530 Ix=1.80 / 1545 Ix=5.69 in⁴), Unistrut P1000 load tables, TOGGLER SNAPTOGGLE
 rating, Adafruit #2277 (453 g, 318×158×15 mm, M3) / #4631 mini magnet feet.
+
+---
+
+## 9. ⭐ FINAL OPTIMIZED BUILD — fewest parts, cheapest, NO-SOLDER  (2026-06-29)
+Result of a 3-agent optimization pass (power / mounting / prebuilt+control) against
+the owner's priorities: **fewest items, cheap, no soldering, buy-don't-build.**
+Supersedes the per-part recommendations above where they conflict.
+
+### 9.1 Verdicts
+- **Control = $0.** Keep the **Pi 4 + Triple Bonnet** + existing Python. No prebuilt
+  1024×32 wall worth buying (custom signage = several× the panel cost, locks you to
+  NovaStar video). NovaStar/ESP32 are downgrades. Keep **2×8 center-feed**
+  (`parallel=2 chain=8`); cap `--led-pwm-bits 7–8` for refresh headroom. *(The "use
+  3 lanes / 6+5+5" idea is rejected — a 3rd chain needs a >50 cm jump cable in a
+  single 1-D row; see §5.)*
+- **Power = ~$52, no-solder.** **One 8-way ATC automotive fuse block (w/ negative
+  bus) per PSU.** Panel **fork terminals land directly** (+5 V on fused studs, GND on
+  the common bus). Replaces the 4× Hanson distro + bus bars + crimping. Per-panel
+  fusing kept (a 60 A rail will feed a fire into a shorted 4 A panel — fusing is
+  consensus-mandatory). Bare stranded wire clamps under screws → no crimp tool.
+- **Mounting = ~$48 + free MIT parts, no-solder.** **2020 aluminum extrusion backbone
+  + 3D-printed brackets** (free prints + free extrusion at MIT). Extrusion = rigid
+  coplanar reference + spine + wall rail in one. Magnets+steel **rejected** for a long
+  thin row (a flat 16.8 ft steel sheet is heavy/pricey/not-flat). Wall is only ~30 lb
+  assembled → French cleat + a few toggle bolts, no studs needed.
+
+### 9.2 The whole BOM (beyond the 2× LRS-350-5 + 2 AC cords)
+| Item | Qty | ~$ | Source |
+|---|---|---|---|
+| 8-way ATC fuse block w/ negative bus | 2 | $32 | buy |
+| 7.5 A ATC blade fuses (10 A if bright) | ~30pk | $8 | buy |
+| 10 AWG wire red+black (PSU→block; **full 32 A**) | spool | $12 | buy |
+| 14 AWG wire (PSU1 V−↔PSU2 V− ground bond) | a few ft | (incl.) | buy |
+| M3×8 bolts + 2020 T-nuts | 100pk | $12 | buy |
+| 2020 corner/joiner plates | ~6 | $8 | buy |
+| Aluminum French cleat + toggle bolts | 1 set | $28 | buy |
+| **2020 aluminum extrusion** ~17 ft | — | **FREE** (MIT) or ~$55 | MIT / `reuse@mit.edu` |
+| **3D-printed brackets** (~32–48) | — | **FREE** | print at MIT |
+| *(optional)* DC clamp meter UT210E | 1 | $35 | buy |
+
+**Total ≈ $100 buy + free MIT parts** (~$155 if buying extrusion; +$35 optional meter).
+
+### 9.3 CUT from the plan (do NOT buy)
+Hanson distro boards · copper AWG6 trunks · ferrule/crimp tool · fork-lug kit · bus
+bars · magnets + steel backing · data cables · panel power cables · 3rd PSU ·
+NovaStar/ESP32. All replaced by fuse-block + extrusion, or already in the box.
+
+### 9.4 No-solder assembly order (screwdriver only)
+1. **Power:** fuse block by each PSU → 10 AWG jumpers PSU V+→block input, V−→bus →
+   land the 8 panel forks → 14 AWG bond PSU1 V− ↔ PSU2 V−.
+2. **Frame:** splice extrusion to 5.1 m → print brackets in an alignment jig →
+   bracket-bolt each panel's 6 M3 holes to the T-slot, butting edges.
+3. **Data:** daisy the included ribbons panel→panel, 2 chains of 8, bonnet at center.
+4. **Hang:** French cleat on the extrusion back → toggle bolts → lift on.

@@ -33,6 +33,26 @@ cable type + count, data ribbon count + **length**, screws/clips, confirm zero m
 - Changed: `docs/INVENTORY.md` §6 (verified table + mounting-changed flag),
   `docs/HARDWARE.md` (FM6124HJ/CnGear/JHT2.0/framed). Docs only.
 
+**Update (same day, later) — 3-AGENT OPTIMIZATION PASS → §9 final no-solder build:**
+Owner asked to minimize parts/cost/hassle (no soldering) and check for prebuilt
+options. Ran 3 research agents (power, mounting, prebuilt+control) across web + Reddit
++ xLights/Falcon forums. Outcome (full detail → `INVENTORY.md` §9):
+- **Control = $0:** keep Pi 4 + Triple Bonnet + Python. No prebuilt 1024×32 wall worth
+  buying (custom = several× panel cost, NovaStar-locked). NovaStar/ESP32 = downgrades.
+  Keep 2×8 center-feed; cap `--led-pwm-bits 7–8`. **Rejected the agent's "3-lane/6+5+5"
+  idea** — a 3rd chain needs a >50 cm jump in a 1-D row (the constraint that locked 2×8).
+- **Power = ~$52, no-solder:** drop the 4 Hanson distros → **one 8-way ATC automotive
+  fuse block (w/ negative bus) per PSU**; panel forks land directly (+5 V fused, GND on
+  bus). Per-panel fusing kept (60 A rail + shorted 4 A panel = fire). Bare wire under
+  screws → no crimp tool. **Corrected agent error:** PSU→block trunk carries full ~32 A
+  (splits only *after* fuses) → **10 AWG, not 14 AWG**.
+- **Mounting = ~$48 + free MIT parts:** 2020 extrusion + 3D-printed brackets (free at
+  MIT). Magnets+steel **rejected** for a long thin row (flat 16.8 ft steel = heavy/
+  pricey/not-flat). ~30 lb assembled → French cleat + few toggle bolts, no studs.
+- **Net:** earlier ~$230–330 BOM → **~$100** (≈$155 if buying extrusion). Cut: Hanson
+  distros, copper AWG6, crimp tool, bus bars, magnets/steel, data+power cables, 3rd PSU.
+- Changed: `INVENTORY.md` §2 (fuse-block table), §7.1 (Hanson superseded), **+§9**.
+
 **Update (same day) — mounting + cabling RESOLVED from frame/cable photos (IMG_3783-85):**
 - Owner confirmed **16 individual panels**, each its own CnGear frame; **320 × 158 ×
   ~15 mm**; panels **do NOT interlock**.
