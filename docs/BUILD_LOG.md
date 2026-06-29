@@ -4,6 +4,27 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-06-29 — PSUs + magnets ordered; mounting revised to MAGNETIC
+
+Owner placed Wired Watts order #225740 ($90.60): **2× LRS-350-5** ($29.50 ea — the
+Phase-0/wall power blocker is now resolved, up to 10 biz days), a **Double Stack Mount
+Kit** ($4.50, stacks the 2 PSUs), and **100× Panel Magnets** ($10, screw-in feet for
+the M3 holes — "just in case").
+
+- **⚠️ GAP: no AC cords ordered.** LRS-350-5 has bare L/N/⏚ terminals → needs **2× AC
+  mains cords** (~$8 ea). Added to the still-to-order list. Set PSU input switch to 115 V.
+- **Mounting revised → MAGNETIC** (`INVENTORY.md` §9.1/9.2). 100 magnets = 6×16 + spares,
+  so screw a magnet into each panel's 6 holes and snap onto **2 ferrous rails** (Unistrut
+  / steel flat bar) at the magnet-row heights. Tool-free service, no bracket printing.
+  The earlier "reject magnets" was about a full steel *sheet*; 2 narrow rails avoid that.
+  3D-bracket+extrusion kept as the fallback.
+- **New open item (§9.5):** measure the **panel power-pigtail length** — it sets whether
+  one fuse block per half reaches all 8 panels or we split/extend. Also the Stack Kit
+  implies central PSU placement → plan 5 V runs to reach both ends, or mount split.
+- Still to order (~$95–125): 2 AC cords, 2× Nilight fuse blocks, 7.5 A fuses, 10/14 AWG
+  wire, 2 ferrous rails (free at MIT possible), wall anchors, optional clamp meter.
+- Changed: `INVENTORY.md` §1 (ordered items + AC-cord gap), §9.1/9.2/9.3/9.4 (+§9.5).
+
 ## 2026-06-29 — Panels arrived: specs verified off the boards + framed-panel discovery
 
 **Context:** the 16 panels landed. Owner photographed the backs (IMG_3780-82, HEIC →

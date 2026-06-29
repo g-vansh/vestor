@@ -19,9 +19,16 @@ LRS-350-5 datasheet/listings.
 |---|---|---|
 | Raspberry Pi 4 Model B | brain; runs the hzeller driver | ✅ on hand |
 | Adafruit **Triple** RGB Matrix Bonnet | PID 6358, "active3", 3 chains, **no onboard power** | ✅ on hand |
-| **45 W USB-C power supply** | powers the **Pi** (and the bonnet's logic via the Pi header) | ✅ **fine** — see note below |
+| **45 W USB-C power supply** | powers the **Pi** (and the bonnet's logic via the Pi header) | ✅ **fine** |
 | microSD card | flashed with the Vestor image | ✅ on hand |
-| P5 HUB75 panels ×16 | 64×32, FM6124D, 1/16 scan; each ships w/ ribbon + 1 power cable per 2 panels + magnet screws | 📦 **arriving tomorrow** |
+| **CnGear P5 HUB75 panels ×16** | 64×32, FM6124HJ, 1/16 scan; framed; each w/ data ribbon + fork-terminated power pigtail | ✅ **on hand (arrived 2026-06-29)** |
+| **Mean Well LRS-350-5 ×2** | 5 V / 60 A / 300 W | 🛒 **ORDERED 2026-06-29** (Wired Watts #225740, $29.50 ea; up to 10 biz days) |
+| **Double Stack Mount Kit** (Mean Well) | bracket to stack the 2 PSUs | 🛒 ordered (same order, $4.50) |
+| **Panel Magnets ×100** | $0.10 ea screw-in magnet feet for the M3 holes | 🛒 ordered (same order, $10) — enables magnetic mount (96 = 6×16) |
+
+> ⚠️ **GAP in that order: NO AC power cords.** The LRS-350-5 has bare L/N/⏚ screw
+> terminals — it needs a **2× AC mains cord** (3-conductor, US plug → bare/fork ends,
+> ~$8 ea) to power on. Order 2. Also: set each PSU's input-voltage switch to **115 V**.
 
 **45 W USB-C note:** safe and more than enough. A spec-compliant USB-C PD charger
 outputs **5 V by default** and won't go above 5 V unless the device negotiates up
@@ -347,37 +354,51 @@ Supersedes the per-part recommendations above where they conflict.
   the common bus). Replaces the 4× Hanson distro + bus bars + crimping. Per-panel
   fusing kept (a 60 A rail will feed a fire into a shorted 4 A panel — fusing is
   consensus-mandatory). Bare stranded wire clamps under screws → no crimp tool.
-- **Mounting = ~$48 + free MIT parts, no-solder.** **2020 aluminum extrusion backbone
-  + 3D-printed brackets** (free prints + free extrusion at MIT). Extrusion = rigid
-  coplanar reference + spine + wall rail in one. Magnets+steel **rejected** for a long
-  thin row (a flat 16.8 ft steel sheet is heavy/pricey/not-flat). Wall is only ~30 lb
-  assembled → French cleat + a few toggle bolts, no studs needed.
+- **Mounting = MAGNETIC (revised 2026-06-29 — owner bought 100 panel magnets).** Screw
+  a magnet into each panel's 6 M3 holes (96 used) → panels **snap onto 2 horizontal
+  ferrous rails** at the top-row and bottom-row magnet heights. **Tool-free panel
+  removal** (great for QC/service) and **no brackets to design/print.** The earlier
+  "reject magnets" call was about a full flat steel *sheet* (heavy/not-flat) — **2
+  narrow rails** (Unistrut steel strut, or steel flat bar/angle) avoid that: the rail
+  is spine + magnetic surface + wall mount in one. Wall is only ~30 lb assembled →
+  anchor the rails every ~2–3 ft (toggle bolts, no studs needed). *Fallback if you skip
+  steel: 2020 aluminum extrusion + 3D-printed brackets bolted to the 6 holes (free at
+  MIT), keep the magnets as spares.*
 
-### 9.2 The whole BOM (beyond the 2× LRS-350-5 + 2 AC cords)
+### 9.2 STILL-TO-ORDER for the full build (beyond what's on order)
 | Item | Qty | ~$ | Source |
 |---|---|---|---|
-| 8-way ATC fuse block w/ negative bus | 2 | $32 | buy |
+| **AC mains cord** (3-cond, US plug → bare ends) for the PSUs | 2 | $16 | buy (Amazon/hardware) ⚠️ urgent |
+| 8-way/12-way ATC fuse block w/ negative bus (Nilight 50056L) | 2 | $34 | [Amazon](https://www.amazon.com/Nilight-Circuits-Indicator-Waterproof-Automotive/dp/B089T3R4H9) |
 | 7.5 A ATC blade fuses (10 A if bright) | ~30pk | $8 | buy |
-| 10 AWG wire red+black (PSU→block; **full 32 A**) | spool | $12 | buy |
-| 14 AWG wire (PSU1 V−↔PSU2 V− ground bond) | a few ft | (incl.) | buy |
-| M3×8 bolts + 2020 T-nuts | 100pk | $12 | buy |
-| 2020 corner/joiner plates | ~6 | $8 | buy |
-| Aluminum French cleat + toggle bolts | 1 set | $28 | buy |
-| **2020 aluminum extrusion** ~17 ft | — | **FREE** (MIT) or ~$55 | MIT / `reuse@mit.edu` |
-| **3D-printed brackets** (~32–48) | — | **FREE** | print at MIT |
+| 10 AWG wire red+black (PSU→block; **full 32 A**) + a bit of 14 AWG (ground bond) | spool | $15 | buy |
+| **2 ferrous rails** (Unistrut steel strut, or steel flat bar/angle) ~17 ft ea | — | ~$30–60 **or FREE** | Home Depot / `reuse@mit.edu` |
+| Wall anchors / toggle bolts + rail brackets | ~8 | $20 | hardware |
 | *(optional)* DC clamp meter UT210E | 1 | $35 | buy |
 
-**Total ≈ $100 buy + free MIT parts** (~$155 if buying extrusion; +$35 optional meter).
+**Magnets, PSUs, stack kit, data + power cables = already on hand/ordered.**
+**Total still-to-order ≈ $95–125** (less if rails are free at MIT; +$35 optional meter).
+*(One unknown that sets the power layout: measure the panel power-pigtail length — see §9.5.)*
 
-### 9.3 CUT from the plan (do NOT buy)
+### 9.3 CUT / already covered (do NOT buy)
 Hanson distro boards · copper AWG6 trunks · ferrule/crimp tool · fork-lug kit · bus
-bars · magnets + steel backing · data cables · panel power cables · 3rd PSU ·
-NovaStar/ESP32. All replaced by fuse-block + extrusion, or already in the box.
+bars · 3D brackets+extrusion (magnetic route instead) · steel *sheet* · data cables ·
+panel power cables · 3rd PSU · NovaStar/ESP32.
 
 ### 9.4 No-solder assembly order (screwdriver only)
 1. **Power:** fuse block by each PSU → 10 AWG jumpers PSU V+→block input, V−→bus →
-   land the 8 panel forks → 14 AWG bond PSU1 V− ↔ PSU2 V−.
-2. **Frame:** splice extrusion to 5.1 m → print brackets in an alignment jig →
-   bracket-bolt each panel's 6 M3 holes to the T-slot, butting edges.
+   land the panel forks → 14 AWG bond PSU1 V− ↔ PSU2 V−.
+2. **Frame:** mount 2 ferrous rails to the wall (level, every ~2–3 ft) at the top/bottom
+   magnet heights → screw a magnet into each panel's 6 M3 holes → snap panels on,
+   butting edges.
 3. **Data:** daisy the included ribbons panel→panel, 2 chains of 8, bonnet at center.
-4. **Hang:** French cleat on the extrusion back → toggle bolts → lift on.
+4. **Power on** with the PSU switch set to **115 V**.
+
+### 9.5 ⚠️ Measure to finalize the power layout
+The panel power **pigtails are short**, so the fuse block must sit near the panels it
+feeds. **Measure the pigtail length (plug → fork).** If a block centered on its 8-panel
+half can't reach the end panels, either (a) split into 2 blocks per half (4 panels
+each), or (b) add cheap 2-conductor **extension leads** (fork-to-fork, no solder). Also
+measure the **data-ribbon length** to confirm the bonnet→first-panel feeds work. *(The
+Double Stack Mount Kit puts both PSUs together — if mounted at center, plan the 5 V runs
+to reach both ends; if split one-per-half, runs stay short.)*
