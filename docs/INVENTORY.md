@@ -381,7 +381,7 @@ fork-terminated power pigtails.
 | **2 ferrous rails** (steel — light flat bar/angle **or** Unistrut, ~17 ft ea; magnets need STEEL, not aluminum) | 2 | **FREE** at MIT, else ~$40–70 | `reuse@mit.edu` / Hobby Shop → else Home Depot |
 | **Wall anchors / toggle bolts + rail brackets** (or French cleat) | ~8 | $20 | hardware store |
 | **3D-printed alignment aids** (end-stops + registration combs — see §9.7) | ~6–10 | **FREE** | print at MIT |
-| *(recommended)* **wire crimper + #10 ring terminals** (10 AWG → fuse-block M5 stud) | 1 | $15 | Amazon / hardware |
+| *(recommended)* **ring terminals** for 10 AWG (assorted #8/#10 kit) — **~8 needed** (4 blocks × +input & V−); **crimper FREE at MIT** | ~8 | $6 | Amazon / MIT |
 | *(recommended)* **DC clamp meter** UT210E (QC current checks) | 1 | $35 | Amazon |
 
 **Total still-to-buy ≈ $20 essential** (rails + prints free at MIT; only wall anchors)
@@ -396,6 +396,10 @@ panel power cables · 3rd PSU · NovaStar/ESP32.
 ### 9.4 No-solder assembly order (screwdriver only)
 1. **Power:** fuse block by each PSU → 10 AWG jumpers PSU V+→block input, V−→bus →
    land the panel forks → 14 AWG bond PSU1 V− ↔ PSU2 V−.
+   - *Trunk → block STUDS: use a **ring terminal** (gas-tight, set-and-forget for 16 A/24-7).
+     ~8 needed (4× +input, 4× V−); crimper free at MIT. **Alt = bare-wire J-hook** under the
+     nut — $0/no tool, but stranded wire loosens over thermal cycling → resistance/heat at
+     16 A; needs a tight twist + periodic re-tighten. PSU-end is screw-clamp = bare wire OK.*
 2. **Frame:** mount 2 ferrous rails to the wall (level, every ~2–3 ft) at the top/bottom
    magnet heights → screw a magnet into each panel's 6 M3 holes → snap panels on,
    butting edges.
