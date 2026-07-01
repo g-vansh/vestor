@@ -20,7 +20,7 @@ class LoadingPulseScene(object):
             brightness = (1 - (count / BLINKER_STEPS)) / 2
             brightness = 0 if (brightness < 0 or brightness > 1) else brightness
 
-            self.canvas.SetPixel(
+            self.set_pixel(
                 BLINKER_POSITION[0],
                 BLINKER_POSITION[1],
                 brightness * BLINKER_COLOUR.red,
@@ -32,6 +32,6 @@ class LoadingPulseScene(object):
             reset_count = count == (BLINKER_STEPS - 1)
         else:
             # Not processing, blank the square
-            self.canvas.SetPixel(BLINKER_POSITION[0], BLINKER_POSITION[1], 0, 0, 0)
+            self.set_pixel(BLINKER_POSITION[0], BLINKER_POSITION[1], 0, 0, 0)
 
         return reset_count

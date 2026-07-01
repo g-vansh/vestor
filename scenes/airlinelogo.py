@@ -2,16 +2,16 @@
 airlinelogo.py — the hero band of the single-panel flight card.
 
 Top 13 rows of the 64x32 panel:
-    rows 0..11  full-colour airline wordmark (from the baked logo pack)
+    rows 0..11  full-colour airline logo (fit WHOLE within the band, static)
     row  12     a 1px brand-colour rule (the airline's livery colour)
 
 Behaviour:
-  * Logo that fits in 64px  -> drawn static, horizontally centred.
-  * Wider wordmark          -> scrolled as a slow marquee so the whole name reads.
+  * Every logo is pre-fit within 64x12 (setup/logos.py), so it's drawn STATIC,
+    centred horizontally and vertically — no scrolling, always fully visible.
   * No logo for this carrier -> the curated short name (or ICAO) in brand colour.
 
-Pixels are blitted with self.canvas.SetPixel, which the Pi's Port-3 shim already
-offsets by +64 rows — so this scene carries no panel-lane maths and works
+Pixel writes go through self.set_pixel (Display), which applies the panel's
+draw-offset in one place — so this scene carries no panel-lane maths and works
 unchanged on the eventual centre-fed wall.
 """
 
@@ -23,8 +23,6 @@ from rgbmatrix import graphics
 
 LOGO_BAND_H = 12          # rows 0..11
 RULE_ROW = 12             # brand hairline
-LOGO_GAP = 14             # blank gap between marquee repeats
-LOGO_SPEED = 0.55         # px/frame for the marquee (stately, readable)
 
 FALLBACK_FONT = fonts.small
 
@@ -34,8 +32,8 @@ class AirlineLogoScene(object):
         self._logo_iata = None
         self._logo_rec = None
         self._logo_brand = colours.BLACK
-        self._logo_scroll = 0.0
-        self._logo_static_x = 0
+        self._logo_x = 0
+        self._logo_y = 0
         super().__init__()
 
     def _resolve_logo(self):
@@ -50,10 +48,10 @@ class AirlineLogoScene(object):
         br, bg, bb = airlines.brand_for_callsign(callsign, sampled)
         self._logo_brand = graphics.Color(br, bg, bb)
 
-        # Pre-compute static centring for logos that fit.
-        if rec and rec["w"] <= screen.WIDTH:
-            self._logo_static_x = (screen.WIDTH - rec["w"]) // 2
-        self._logo_scroll = 0.0
+        # Centre the (already band-fit) logo horizontally + vertically.
+        if rec:
+            self._logo_x = (screen.WIDTH - rec["w"]) // 2
+            self._logo_y = (LOGO_BAND_H - rec["h"]) // 2
 
     @Animator.KeyFrame.add(0)
     def airline_logo_setup(self):
@@ -63,12 +61,11 @@ class AirlineLogoScene(object):
             return
         self._resolve_logo()
 
-    def _blit_logo(self, x0):
-        """Blit the rendered logo pixels translated by x0, clipped to the panel."""
+    def _blit_logo(self):
+        """Blit the rendered logo pixels, centred in the band."""
+        x0, y0 = self._logo_x, self._logo_y
         for (x, y, r, g, b) in self._logo_rec["px"]:
-            sx = x0 + x
-            if 0 <= sx < screen.WIDTH:
-                self.canvas.SetPixel(sx, y, r, g, b)
+            self.set_pixel(x0 + x, y0 + y, r, g, b)
 
     def _draw_fallback(self, callsign):
         """No logo: draw the curated short name (or ICAO) in brand colour."""
@@ -89,16 +86,8 @@ class AirlineLogoScene(object):
         # Clear the hero band (logo rows + rule row).
         self.draw_square(0, 0, screen.WIDTH, RULE_ROW, colours.BLACK)
 
-        rec = self._logo_rec
-        if rec:
-            if rec["w"] <= screen.WIDTH:
-                self._blit_logo(self._logo_static_x)
-            else:
-                total = rec["w"] + LOGO_GAP
-                self._logo_scroll += LOGO_SPEED
-                sx = int(self._logo_scroll) % total
-                self._blit_logo(-sx)
-                self._blit_logo(-sx + total)   # seamless wrap
+        if self._logo_rec:
+            self._blit_logo()
         else:
             callsign = self._data[self._data_index].get("callsign", "")
             self._draw_fallback(callsign)

@@ -31,16 +31,17 @@ DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 LOGO_DIR = os.path.join(DIR_PATH, "..", "sim", "logos")
 
 LOGO_H = 12          # logo band height (rows 0..11 of the 64x32 card)
+BOX_W = 64           # panel width — each logo is fit WHOLE within BOX_W x LOGO_H,
+                     # so every carrier renders static + fully visible (no scroll)
 ALPHA_KEEP = 96      # alpha below this is treated as transparent
 MIN_LUM = 6          # drop resulting near-black pixels (faint AA fringe)
-MAX_W = 250          # clamp width (packed x fits a byte; also caps scroll len)
 
 # LED legibility lift
 LIFT_GAMMA = 0.62    # <1 lifts shadows more than highlights
 LIFT_FLOOR = 0.50    # every kept pixel is at least this bright (0..1 value)
 SAT_BOOST = 1.12     # keep lifted colours vivid, not washed out
 
-_cache = {}          # (iata, height) -> record | None
+_cache = {}          # upper(IATA) -> record | None
 _index = None        # upper(IATA) -> png path
 
 
@@ -79,11 +80,14 @@ def _sample_brand(pixels):
     return buckets.most_common(1)[0][0]
 
 
-def _render(path, height):
+def _render(path):
+    """Fit a logo WHOLE within BOX_W x LOGO_H (preserve aspect), lifted for LED."""
     im = Image.open(path).convert("RGBA")
     w0, h0 = im.size
-    new_w = max(1, min(MAX_W, round(w0 * height / h0)))
-    im = im.resize((new_w, height), Image.LANCZOS)
+    scale = min(BOX_W / w0, LOGO_H / h0)
+    new_w = max(1, round(w0 * scale))
+    new_h = max(1, round(h0 * scale))
+    im = im.resize((new_w, new_h), Image.LANCZOS)
     data = im.getdata()
 
     pixels = []
@@ -97,30 +101,30 @@ def _render(path, height):
         rr, gg, bb = _led_lift(rr, gg, bb)
         pixels.append((i % new_w, i // new_w, rr, gg, bb))
 
-    return {"w": new_w, "h": height, "px": pixels, "brand": _sample_brand(pixels)}
+    return {"w": new_w, "h": new_h, "px": pixels, "brand": _sample_brand(pixels)}
 
 
-def get_logo(iata, height=LOGO_H):
+def get_logo(iata):
     """Return a rendered logo record {w,h,px:[(x,y,r,g,b)],brand}, or None."""
     if not _PIL_OK or not iata:
         return None
     if _index is None:
         _build_index()
-    key = (iata.upper(), height)
+    key = iata.upper()
     if key in _cache:
         return _cache[key]
-    path = _index.get(iata.upper())
+    path = _index.get(key)
     rec = None
     if path:
         try:
-            rec = _render(path, height)
+            rec = _render(path)
         except (OSError, ValueError):
             rec = None
     _cache[key] = rec
     return rec
 
 
-def preload_all(height=LOGO_H):
+def preload_all():
     """Render + cache every logo NOW.
 
     Must be called BEFORE RGBMatrix(drop_privileges=True) constructs the matrix:
@@ -132,7 +136,7 @@ def preload_all(height=LOGO_H):
     if _index is None:
         _build_index()
     total = len(_index or {})
-    loaded = sum(1 for iata in list(_index or {}) if get_logo(iata, height))
+    loaded = sum(1 for iata in list(_index or {}) if get_logo(iata))
     print(f"[logos] preloaded {loaded}/{total} airline logos", flush=True)
     return loaded
 

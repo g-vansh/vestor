@@ -70,7 +70,7 @@ class FlightDetailsScene(object):
         else:
             c, rows = LEVEL_COLOUR, [(x, 28), (x + 1, 28), (x + 2, 28)]
         for (px, py) in rows:
-            self.canvas.SetPixel(px, py, c.red, c.green, c.blue)
+            self.set_pixel(px, py, c.red, c.green, c.blue)
 
     def _altitude_field(self, flight):
         alt = flight.get("altitude") or 0

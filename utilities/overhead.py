@@ -43,8 +43,19 @@ SEARCH_RADIUS_NM = _cfg("SEARCH_RADIUS_NM", 10)
 POLL_SECONDS = _cfg("POLL_SECONDS", 10)
 MAX_FLIGHTS = _cfg("MAX_FLIGHTS", 5)
 DEMO_MODE = _cfg("DEMO_MODE", False)
+ZONE_HOME = _cfg("ZONE_HOME", None)
+USE_ZONE_BOX = _cfg("USE_ZONE_BOX", False)
 
 HOME_LAT, HOME_LON = LOCATION_HOME[0], LOCATION_HOME[1]
+
+# Bounding box (same one FR24 used) — kept only if enabled + defined.
+_BOX = ZONE_HOME if (USE_ZONE_BOX and ZONE_HOME) else None
+
+
+def _in_box(lat, lon):
+    if _BOX is None:
+        return True
+    return (_BOX["br_y"] <= lat <= _BOX["tl_y"]) and (_BOX["tl_x"] <= lon <= _BOX["br_x"])
 
 AIRPLANES_URL = "https://api.airplanes.live/v2/point/{lat}/{lon}/{radius}"
 ADSBDB_URL = "https://api.adsbdb.com/v0/callsign/{callsign}"
@@ -129,7 +140,10 @@ class Overhead:
                 continue
             if not (MIN_ALTITUDE < alt < MAX_ALTITUDE):
                 continue
-            if ac.get("lat") is None or ac.get("lon") is None:
+            lat, lon = ac.get("lat"), ac.get("lon")
+            if lat is None or lon is None:
+                continue
+            if not _in_box(lat, lon):
                 continue
             candidates.append(ac)
 

@@ -100,19 +100,19 @@ class JourneyScene(object):
     def _draw_chase(self):
         # Dotted journey track.
         for x in range(TRACK_X0, TRACK_X1 + 1, 3):
-            self.canvas.SetPixel(
+            self.set_pixel(
                 x, TRACK_Y, TRACK_DOT_COLOUR.red, TRACK_DOT_COLOUR.green, TRACK_DOT_COLOUR.blue
             )
         # Brand-colour marker sweeping origin -> destination.
         span = max(1, TRACK_X1 - TRACK_X0)
         pos = (self._chase % CHASE_PERIOD) / CHASE_PERIOD
         mx = TRACK_X0 + int(pos * span)
-        self.canvas.SetPixel(
+        self.set_pixel(
             mx, TRACK_Y, self._route_brand.red, self._route_brand.green, self._route_brand.blue
         )
         if mx - 1 >= TRACK_X0:                # short comet trail
-            self.canvas.SetPixel(mx - 1, TRACK_Y, self._route_brand.red // 3,
-                                 self._route_brand.green // 3, self._route_brand.blue // 3)
+            self.set_pixel(mx - 1, TRACK_Y, self._route_brand.red // 3,
+                           self._route_brand.green // 3, self._route_brand.blue // 3)
         self._chase += 1
 
     @Animator.KeyFrame.add(1)

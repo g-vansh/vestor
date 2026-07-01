@@ -145,6 +145,9 @@ class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene):
         for x in range(x0, x1):
             graphics.DrawLine(self.canvas, x, y0, x, y1, colour)
 
+    def set_pixel(self, x, y, r, g, b):
+        self.canvas.SetPixel(x, y, r, g, b)
+
     def reset_scene(self):
         self.airline_logo_setup()
         self.journey_setup()

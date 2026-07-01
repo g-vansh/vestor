@@ -109,6 +109,11 @@ class Display(
 
         # Setup canvas
         self.canvas = self.matrix.CreateFrameCanvas()
+        # Per-panel vertical draw offset. 0 for a normally-wired panel; the
+        # Port-3 shim overrides this. Pixel writes go through self.set_pixel so
+        # the offset lives in ONE place (SetPixel can't be monkeypatched — it's
+        # an immutable method on the C-extension FrameCanvas type).
+        self._lane_offset_y = 0
         self.canvas.Clear()
 
         # Data to render
@@ -129,6 +134,12 @@ class Display(
     def draw_square(self, x0, y0, x1, y1, colour):
         for x in range(x0, x1):
             _ = graphics.DrawLine(self.canvas, x, y0, x, y1, colour)
+
+    def set_pixel(self, x, y, r, g, b):
+        # Single entry point for pixel writes so the panel draw-offset is applied
+        # in one place (see self._lane_offset_y). Scenes call this, never
+        # canvas.SetPixel directly.
+        self.canvas.SetPixel(x, y + self._lane_offset_y, r, g, b)
 
     @Animator.KeyFrame.add(0)
     def clear_screen(self):
