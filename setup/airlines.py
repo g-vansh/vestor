@@ -6,8 +6,8 @@ FLOW (mirrors the web sim's sim/airlines.js, kept in sync):
                                                        ->  brand colour + name
 
 The flight feed (FlightRadar24) gives us a callsign like "UAL123"; the first
-three letters are the ICAO operator code ("UAL"). IATA is what the baked logo
-pack (assets/airline_logos.pkl) is keyed by, so we translate ICAO->IATA here.
+three letters are the ICAO operator code ("UAL"). IATA is what the logo assets
+(sim/logos/<IATA>.png) are keyed by, so we translate ICAO->IATA here.
 `AIRLINE_DB` holds curated, LED-boosted livery colours + short wordmark names
 for the carriers we expect most at KBOS; everyone else falls back to the colour
 sampled from their own logo, or sodium amber.

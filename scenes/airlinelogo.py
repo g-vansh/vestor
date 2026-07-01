@@ -64,12 +64,11 @@ class AirlineLogoScene(object):
         self._resolve_logo()
 
     def _blit_logo(self, x0):
-        """Blit the baked logo pixels translated by x0, clipped to the panel."""
-        px = self._logo_rec["px"]
-        for i in range(0, len(px), 5):
-            sx = x0 + px[i]
+        """Blit the rendered logo pixels translated by x0, clipped to the panel."""
+        for (x, y, r, g, b) in self._logo_rec["px"]:
+            sx = x0 + x
             if 0 <= sx < screen.WIDTH:
-                self.canvas.SetPixel(sx, px[i + 1], px[i + 2], px[i + 3], px[i + 4])
+                self.canvas.SetPixel(sx, y, r, g, b)
 
     def _draw_fallback(self, callsign):
         """No logo: draw the curated short name (or ICAO) in brand colour."""

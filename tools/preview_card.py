@@ -158,10 +158,12 @@ class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene):
 
 
 SAMPLE = [
+    {"callsign": "AAL191", "origin": "BOS", "destination": "LAX", "aircraft_code": "A321",
+     "plane": "Airbus A321", "altitude": 31000, "vertical_speed": 500},
     {"callsign": "UAL2456", "origin": "SFO", "destination": "BOS", "aircraft_code": "B752",
      "plane": "Boeing 757-200", "altitude": 36000, "vertical_speed": 0},
-    {"callsign": "JBU671", "origin": "BOS", "destination": "MCO", "aircraft_code": "A320",
-     "plane": "Airbus A320", "altitude": 12500, "vertical_speed": 1200},
+    {"callsign": "DAL1180", "origin": "BOS", "destination": "ATL", "aircraft_code": "B739",
+     "plane": "Boeing 737-900", "altitude": 8000, "vertical_speed": 1400},
     {"callsign": "BAW238", "origin": "LHR", "destination": "BOS", "aircraft_code": "B772",
      "plane": "Boeing 777-200", "altitude": 4200, "vertical_speed": -800},
 ]

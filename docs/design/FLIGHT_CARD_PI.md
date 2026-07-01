@@ -33,31 +33,37 @@ that advances the index and re-arms the animations via `reset_scene()`).
 
 ---
 
-## 2. Airline logos — reuse the sim's assets, render with zero runtime deps
+## 2. Airline logos — the sim's assets, rendered on the Pi with Pillow
 
 The web sim ships **64 full-colour wordmark PNGs** (`sim/logos/*.png`, RGBA, 64px
 tall, up to ~750px wide) plus `sim/logos/manifest.json` with the ICAO→IATA map.
-We reuse those exact assets, but the Pi needs raw pixels, not a browser canvas:
+The Pi reuses those exact assets — a **single source of truth** — and renders
+them **at runtime with Pillow** (`setup/logos.py`, `get_logo(iata)`), cached per
+carrier so each logo is rasterised once:
 
-**Offline (Mac), once — `tools/bake_logos.py` → `assets/airline_logos.pkl`:**
-1. Downscale each PNG to **12px tall** (LANCZOS box filter) preserving aspect.
+1. Load `sim/logos/<IATA>.png`, resize to **12px tall** (LANCZOS) preserving
+   aspect.
 2. Flatten alpha against black (anti-aliased edges become naturally dimmer px).
-3. **No gamma correction** — the hzeller driver already applies a CIE1931
-   luminance curve at 11 PWM bits, so we feed it linear sRGB and let it correct.
-   *(This is the opposite of the Adafruit/MatrixPortal pipeline, whose library
-   does NOT auto-gamma; getting this wrong washes out every brand colour.)*
-4. Pack surviving pixels as **5 bytes each — x, y, r, g, b** and pickle them.
-   All 64 logos = **~75 KB**.
+3. **LED legibility lift** — raise each pixel's HSV *value* (`v**0.62`, floored
+   at 0.50) while keeping hue. Many liveries are dark navy/black wordmarks
+   (American, British Airways) — the worst case on a black HUB75 panel because
+   blue is the dimmest subpixel *and* the driver's CIE1931 curve dims mids
+   further. The lift makes them readable and lets the colourful mark (the AA
+   eagle, the BA Speedmarque) pop; already-bright logos barely move.
+4. Emit `[(x,y,r,g,b), …]` and blit with `canvas.SetPixel`, which the temporary
+   Port-3 shim already offsets by +64 rows — so the logo code is
+   **panel-lane-agnostic** and works unchanged on the eventual centre-fed wall.
 
-**On the Pi, at runtime — `setup/logos.py` + `scenes/airlinelogo.py`:**
-- Load the pack with **stdlib `pickle`** — the service carries **no Pillow
-  dependency**.
-- Blit with `canvas.SetPixel`, which the temporary Port-3 shim already offsets
-  by +64 rows — so the logo code is **panel-lane-agnostic** and works unchanged
-  on the eventual centre-fed wall.
-- Logos that fit in 64px are drawn static + centred; wider wordmarks **scroll as
-  a marquee** (this is what reveals e.g. the British Airways Speedmarque).
-- Unknown carrier → the curated short name (or ICAO) in brand colour.
+Logos that fit in 64px are drawn static + centred; wider wordmarks **scroll as a
+marquee** (this is what reveals the BA Speedmarque / the AA eagle). Unknown
+carrier → the curated short name (or ICAO) in brand colour.
+
+> **Dependencies, deliberately.** Pillow does the image work — no hand-rolled
+> resampling — and is a declared runtime dep (`requirements.txt`), present on the
+> Pi. We prefer public packages over bespoke code; the only custom pieces are
+> Vestor-specific (layout, brand map, the LED lift). *(An earlier revision baked
+> the logos offline into a packed-bytes `.pkl` to dodge a runtime Pillow dep —
+> that was needless wheel-reinvention and was removed.)*
 
 **Callsign → logo:** `UAL123` → ICAO `UAL` → IATA `UA` → `UA.png`, via
 `setup/airlines.py` (a Python mirror of `sim/airlines.js`, kept in sync).
@@ -104,28 +110,29 @@ upstream blue callsign was the single worst colour choice and was dropped).
 
 | File | Role |
 |------|------|
-| `tools/bake_logos.py` | offline: sim PNGs → `assets/airline_logos.pkl` (needs Pillow) |
-| `tools/preview_card.py` | offline: pixel-accurate PNG preview (mocks `rgbmatrix` + BDF renderer) |
-| `assets/airline_logos.pkl` | baked pixel pack (committed; ~75 KB) |
+| `sim/logos/*.png` + `manifest.json` | the 64 wordmark assets (shared with the sim) |
+| `setup/logos.py` | runtime Pillow logo renderer: load → resize → LED lift → cache |
 | `setup/airlines.py` | ICAO→IATA map, brand colours + names, FR24 altitude ramp |
-| `setup/logos.py` | stdlib loader for the pixel pack |
 | `scenes/airlinelogo.py` | logo band + livery rule (NEW scene) |
 | `scenes/journey.py` | route band: split-flap codes + chase marker (rewritten) |
 | `scenes/flightdetails.py` | telemetry band: callsign + rotating field (rewritten) |
 | `scenes/planedetails.py` | headless dwell/cycle controller (rewritten) |
 | `utilities/overhead.py` | +`aircraft_code` field for the type readout |
 | `display/__init__.py` | wires `AirlineLogoScene` into the mixin |
+| `tools/preview_card.py` | offline pixel-accurate PNG preview (mocks `rgbmatrix` + a BDF renderer) |
 
 ### Reproduce / redeploy
 ```bash
-# 1. (re)bake logos on a machine with Pillow
-python3 tools/bake_logos.py            # -> assets/airline_logos.pkl
-# 2. preview offline (optional)
+# preview offline (Mac; needs Pillow)
 python3 tools/preview_card.py          # -> tools/preview_card.png
-# 3. ship to the Pi + restart (see RUNBOOK)
-rsync -az setup scenes utilities assets root@vestor:/home/pi/vestor/
+# ship the assets + code to the Pi + restart (see RUNBOOK). Pillow must be
+# installed in the Pi venv (it is): env/bin/pip install Pillow
+rsync -az sim/logos setup scenes utilities root@vestor:/home/pi/vestor/
 ssh root@vestor 'systemctl restart vestor'
 ```
+
+To tune a specific carrier's legibility, adjust `LIFT_*` in `setup/logos.py`
+and restart — no offline bake step.
 
 > ⚠️ **Temp Port-3 shim still active.** The live panel is on bonnet **Port 3**,
 > so the Pi's `display/__init__.py` runs `parallel=3` + a `+64`-row `SetPixel`/

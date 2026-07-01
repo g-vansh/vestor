@@ -8,6 +8,7 @@ FlightRadarAPI==1.5.1
 idna==3.10
 markdown-it-py==4.2.0
 mdurl==0.1.2
+Pillow==12.2.0
 pycparser==3.0
 Pygments==2.20.0
 requests==2.32.4
