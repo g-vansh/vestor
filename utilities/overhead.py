@@ -15,10 +15,39 @@ except (ModuleNotFoundError, NameError, ImportError):
     # If there's no config data
     MIN_ALTITUDE = 0  # feet
 
+try:
+    from config import MAX_ALTITUDE
+
+except (ModuleNotFoundError, NameError, ImportError):
+    MAX_ALTITUDE = 10000  # feet
+
+try:
+    from config import DEMO_MODE
+
+except (ModuleNotFoundError, NameError, ImportError):
+    DEMO_MODE = False
+
+# Sample flights for DEMO_MODE — realistic KBOS routes across airlines with
+# logos and a spread of altitudes (so the FR24 colour ramp + climb/descent
+# arrows all show). Cycled by the display like real overhead traffic.
+DEMO_FLIGHTS = [
+    {"callsign": "AAL191", "origin": "BOS", "destination": "LAX", "plane": "Airbus A321",
+     "aircraft_code": "A321", "altitude": 31000, "vertical_speed": 640},
+    {"callsign": "JBU671", "origin": "BOS", "destination": "MCO", "plane": "Airbus A320",
+     "aircraft_code": "A320", "altitude": 12500, "vertical_speed": 1408},
+    {"callsign": "DAL1180", "origin": "BOS", "destination": "ATL", "plane": "Boeing 737-900",
+     "aircraft_code": "B739", "altitude": 8000, "vertical_speed": 1216},
+    {"callsign": "BAW238", "origin": "LHR", "destination": "BOS", "plane": "Boeing 777-200",
+     "aircraft_code": "B772", "altitude": 4200, "vertical_speed": -768},
+    {"callsign": "UAL2456", "origin": "SFO", "destination": "BOS", "plane": "Boeing 757-200",
+     "aircraft_code": "B752", "altitude": 36000, "vertical_speed": 0},
+    {"callsign": "SWA1234", "origin": "BOS", "destination": "BWI", "plane": "Boeing 737-800",
+     "aircraft_code": "B738", "altitude": 21000, "vertical_speed": -640},
+]
+
 RETRIES = 3
 RATE_LIMIT_DELAY = 1
 MAX_FLIGHT_LOOKUP = 5
-MAX_ALTITUDE = 10000  # feet
 EARTH_RADIUS_KM = 6371
 BLANK_FIELDS = ["", "N/A", "NONE"]
 
@@ -82,6 +111,14 @@ class Overhead:
         with self._lock:
             self._new_data = False
             self._processing = True
+
+        # Demo mode: serve the sample flights and skip FR24 entirely.
+        if DEMO_MODE:
+            with self._lock:
+                self._data = list(DEMO_FLIGHTS)
+                self._new_data = True
+                self._processing = False
+            return
 
         data = []
 

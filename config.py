@@ -27,8 +27,17 @@ TEMPERATURE_UNITS = "imperial"
 
 # ---- Flight filtering / display ----
 MIN_ALTITUDE = 100              # feet — filters out planes on the tarmac
+MAX_ALTITUDE = 40000            # feet — 10000 = only low "visible overhead" traffic
+                                # (mostly idle over a small box); 40000 also catches
+                                # Logan climb/descent + cruise overflights, so the
+                                # board is active. Lower it for see-it-with-your-eyes mode.
 JOURNEY_CODE_SELECTED = "BOS"   # bolds Logan as the local airport
 JOURNEY_BLANK_FILLER = " ? "
+
+# Demo mode: skip FlightRadar24 and cycle a fixed set of sample flights. Useful
+# when the (free, rate-limited) FR24 feed is throttled or during a real lull, so
+# the board still shows the flight card. Set False for live data.
+DEMO_MODE = False
 
 # ---- Display / hardware (Triple Bonnet, Pi 4) ----
 BRIGHTNESS = 50                 # 0-100
