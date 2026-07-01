@@ -4,6 +4,41 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-01 — Pi ONLINE + bonnet working; WiFi root cause found (cmdline instance-id lock)
+
+Long bring-up session. Bare Pi connected once, then nothing would connect (bonnet or
+bare) for hours. **Root cause found by inspecting the SD boot partition:** `cmdline.txt`
+had `ds=nocloud;i=rpi-imager-1781482529670` — the cloud-init instance-id **hardcoded in
+the kernel command line**, which **overrides `meta-data`**. So the earlier "bump the
+instance-id in meta-data" never took effect → cloud-init never re-rendered `network-config`
+→ the added `Vestor` network was **never applied**; the Pi only ever knew `MIT`.
+
+**Fix:** changed `i=` in `cmdline.txt` (+ matched `meta-data`) to a new value
+(`vestor-fix-20260701`). Next boot, cloud-init re-provisioned → **`Vestor` + `MIT` both
+configured**. Also added a `user-data` runcmd that writes `/boot/firmware/vestor-netdiag.txt`
+(offline instrumentation) — validated + used.
+
+**Confirmed working (root Tailscale SSH from the Mac):**
+- Online via **MIT on 5 GHz** (ch 149), signal **-52 dBm/80% bare, -48 dBm/85% with the
+  bonnet** → **the bonnet does NOT shadow the WiFi antenna**; all prior bonnet-WiFi
+  failures were the config bug, not RF. `Vestor` hotspot kept as configured backup.
+- Power clean: 42-44 C, `throttled=0x0` (official Pi brick + **riser header** for solid
+  GPIO contact — the riser was required to clear the Pi 4 PoE pins; a marginal USB-C
+  supply had caused brown-out before).
+- **hzeller `demo` present** at `~/rpi-rgb-led-matrix/examples-api-use/demo` → first light
+  ready once a panel is powered.
+- Tailscale SSH works as `root` (identity auth, no password); `pi` sudo needs a password;
+  `iw` not installed (use `nmcli` / `/proc/net/wireless`); nmcli can't modify the
+  netplan-managed connections (powersave toggle deferred).
+
+**Recommendations captured:** operational wall should use **MIT 5 GHz (or wired MITnet)**,
+not a 2.4 GHz phone hotspot — 5 GHz also dodges the matrix's future 2.4 GHz RFI. Resolves
+the OPEN_QUESTIONS Tailscale/reachability item.
+
+**Next:** power one panel (LRS-350-5 + AC cord, 115 V, red->+V/black->-V) → run the demo
+over SSH → first light.
+
+
 ## 2026-06-29 — PSU sizing confirmed: keep 2× LRS-350-5 (not downsizing)
 
 Owner asked whether the lower-than-budgeted draw means a smaller/cheaper supply
