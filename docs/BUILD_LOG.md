@@ -1130,6 +1130,33 @@ add airline branding.
   on a fixed-IP appliance); switched to a source that's free + unthrottled by
   design. Ultimate path remains a local RTL-SDR + dump1090 receiver.
 
+### 2026-07-01 — Fix: logos invisible (SetPixel can't be monkeypatched) + static logos + box
+- **Symptom (from panel photos):** route codes + telemetry rendered, but the
+  logo band was empty — no logo AND no fallback text — even for carriers with
+  logos (United LAX→JFK, Delta ATL→CDG).
+- **Root cause:** the Port-3 shim added its +64 lane offset to `SetPixel` by
+  monkeypatching `FrameCanvas.SetPixel` — but that's an **immutable method on the
+  compiled C-extension type** (`TypeError: cannot set 'SetPixel' attribute of
+  immutable type`), swallowed by the shim's `try/except`. So every SetPixel-drawn
+  element (the whole logo, chase marker, vs triangle, loading dot) was written to
+  lane 0 (**Port 1 = no panel**) and vanished, while `DrawText`/`DrawLine`
+  (module-level functions, genuinely patched) rendered on Port 3. Verified the
+  TypeError directly on-Pi.
+- **Fix:** stop monkeypatching. Added `Display.set_pixel(x,y,r,g,b)` that adds
+  `self._lane_offset_y` (**0** in-repo, **64** on the Pi shim) — mirroring how
+  `draw_square` wraps `DrawLine`. All scenes now call `self.set_pixel`, never
+  `canvas.SetPixel`. Lesson: **never rely on monkeypatching methods of the
+  rgbmatrix C-extension types.**
+- **Also (owner requests):** logos now **static** — `setup/logos.py` fits each
+  logo WHOLE within 64×12 (no marquee); `airlinelogo.py` centres it H+V.
+  `MAX_ALTITUDE` back to **10000** (visible-overhead only). Bounding box: added
+  `USE_ZONE_BOX` — `overhead.py` filters airplanes.live results to `ZONE_HOME`
+  (the same box FR24 used; point+radius stays the query, radius must cover it).
+- **Verified:** offline preview (all logos static + whole), on-Pi import OK,
+  service stable (`set_pixel` resolves or the every-frame logo draw would
+  AttributeError-loop), `preloaded 64/64`, box+10000ft returned Cape Air
+  LEB→BOS at 225 ft with a 24×12 static logo.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
