@@ -4,6 +4,28 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-01 — ✅ FIRST LIGHT — Phase 0 COMPLETE
+
+One panel fully lit and animating (demo -D4 pulsing color, all 32 rows, correct
+colors), driven over Tailscale SSH from the Mac. **Every link validated together:**
+CnGear FM6124HJ panel + Triple Bonnet + riser + LRS-350-5 (5 V, correct polarity) +
+hzeller driver on the Pi 4.
+
+**Confirmed working config (matches the locked plan exactly):**
+`--led-rows=32 --led-cols=64 --led-gpio-mapping=regular --led-slowdown-gpio=4
+--led-brightness=50` · **no `--led-panel-type`** (FM6124HJ = standard, no init — FM6126A
+made no difference) · **default RGB sequence** (colors correct, no swap).
+
+**The one gotcha (not config — physical):** the demo drives chain/lane 0 = bonnet Port 1;
+the ribbon was on **Port 3**. A panel on the wrong port gets no data and shows a stuck
+half-lit ("top-half white") block that looks like a driver fault but isn't. Drove it with
+`--led-parallel=3` (lane 2 = Port 3) → full panel lit. Lesson: "only half lights / static
+white" first suspect = wrong bonnet port or IN/OUT connector, not the panel-type.
+
+**Next:** QC the remaining 15 panels on the rig (per-panel demo -D3/-D4/-D5), log 1-16,
+keep spares; then full-wall build (mount + power distribution).
+
+
 ## 2026-07-01 — Pi ONLINE + bonnet working; WiFi root cause found (cmdline instance-id lock)
 
 Long bring-up session. Bare Pi connected once, then nothing would connect (bonnet or

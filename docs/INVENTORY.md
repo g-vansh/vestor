@@ -92,7 +92,7 @@ connector, role, and capacity. Refund ≈ $14.95.
 
 | Phase | Can I do it with what I'll have tomorrow? |
 |---|---|
-| **Phase 0** (light 1 panel) | ❌ **Blocked** — need **1× LRS-350-5 + 1× AC cord**. Everything else (Pi, bonnet, SD, 45 W, panel, ribbon) is ready. |
+| **Phase 0** (light 1 panel) | ✅ **DONE 2026-07-01** — one panel fully lit (demo -D4), driven over Tailscale SSH. Config confirmed: standard driver, slowdown 4, RGB. |
 | **Phase 1** (full 16-panel wall) | ❌ Need **2× LRS-350-5 + AC cords + 2 bus bars + trunk wire + lugs + ground bond + a frame**. |
 
 ---
