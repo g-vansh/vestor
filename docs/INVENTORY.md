@@ -367,13 +367,14 @@ Supersedes the per-part recommendations above where they conflict.
 
 ### 9.2 ORDER STATUS
 
-**🛒 ORDERED — Wired Watts #225740 (2026-06-29):** 2× LRS-350-5 · Double Stack Mount Kit
-(now spare) · 100× Panel Magnets.
-**🛒 ORDERED — power consumables (2026-06-29):** 2× AC mains cord · **4× 6-way fuse block**
-· 7.5 A blade fuses · 10 AWG red+black wire (offcut → 14 AWG ground bond) · cable ties +
-self-adhesive tie mounts · yellow #8/#10 ring terminals.
-**✅ ON HAND:** Pi 4 · Triple Bonnet · 45 W USB-C · microSD · 16 panels w/ data ribbons +
-fork-terminated power pigtails.
+**✅ ALL EQUIPMENT ARRIVED (2026-06-29) — on hand:**
+- **Control:** Pi 4 · Triple Bonnet · 45 W USB-C · microSD
+- **Panels:** 16× CnGear P5 + data ribbons + fork-terminated power pigtails
+- **Power:** 2× LRS-350-5 · Double Stack Mount Kit (spare) · 100× Panel Magnets
+- **Power dist:** 4× 6-way fuse block · 7.5 A fuses · 10 AWG wire · yellow #8/#10 ring terminals
+- **AC + cable mgmt:** 2× AC mains cord · cable ties + self-adhesive tie mounts
+
+**→ Phase 0 (first-light single-panel test) IN PROGRESS. Full-build assembly begins.**
 
 **STILL TO BUY:**
 | Item | Qty | ~$ | Source |
