@@ -9,4 +9,38 @@ Detailed, copy-paste expansion of AGENTS.md §7. Execute top to bottom; log to B
 5. **[PI] Service** — `scripts/install_service.sh` installs + daemon-reloads the unit but does NOT enable/start it (hard stop #5). Enable/start happen in the supervised Phase 0 test.
 6. **[EITHER] Dry validation** — everything above works without panels (service error-loops harmlessly).
 7. **[PI] Phase 0 test** — wire 1 panel (data→Port 1, power→PSU). Run hzeller `demo -D0` (already built at `~/rpi-rgb-led-matrix/examples-api-use/demo`) with `--led-gpio-mapping=regular --led-rows=32 --led-cols=64 --led-chain=1 --led-parallel=1 --led-slowdown-gpio=4 --led-show-refresh` (NO `--led-panel-type` — FM6124D is standard; add `=FM6126A`/`=FM6127` only if black). Fix rgb-sequence + row-addr per the tuning ladder. Then run `vestor-tracker.py`.
-8. **[PI] Full wall** — chain_length=6, parallel=3, pixel-mapper for 6+5+5, retune slowdown, pwm_bits 7–9, 2 PSUs + bus bars.
+8. **[PI] Full wall** — 2×8 **center-feed** (`parallel=2 chain=8`, Ports 1&2; left half 180° + SW-flip → 512×64 canvas), retune slowdown, pwm_bits 7–9, 2× LRS-350-5 + fuse blocks. See INVENTORY §5/§9.
+
+---
+
+## ✅ Phase 0 — CONFIRMED & OPERATING (2026-07-01)
+
+**First light** (one panel) — the exact working demo command:
+```
+sudo ~/rpi-rgb-led-matrix/examples-api-use/demo \
+  --led-cols=64 --led-rows=32 --led-chain=1 --led-parallel=1 \
+  --led-gpio-mapping=regular --led-slowdown-gpio=4 --led-brightness=50 -D0
+```
+Config confirmed: **no `--led-panel-type`** (FM6124HJ standard), `regular` mapping,
+slowdown 4, default RGB (colors correct). ⚠️ **Gotcha:** a panel on the WRONG bonnet
+port shows a stuck "top-half white" block that mimics a driver fault — the demo drives
+lane 0 = **Port 1**. Match ribbon port ↔ parallel lane.
+
+**Remote access:** Pi is on Tailscale (MIT 5 GHz). From the Mac: **`ssh root@vestor`**
+(or `ssh root@100.91.127.127`) — Tailscale identity auth, no password. (`pi` sudo needs a
+password; `iw` isn't installed — use `nmcli` / `/proc/net/wireless`.)
+
+**Run the "one-screen" flight-tracker app:**
+```
+sudo systemctl start vestor        # start (restart/stop/status likewise)
+journalctl -u vestor -f            # live logs
+```
+Service = `vestor.service` + a `User=root` drop-in (`/etc/systemd/system/vestor.service.d/
+override.conf`), **enabled** (starts on boot), `Restart=always`. Shows live Logan flights
++ weather + clock.
+
+**⚠️ TEMP Port-3 shim — REVERT before the full-wall build:** the test panel was on
+**Port 3**, so `display/__init__.py` was patched to `parallel=3` + a **+64-row draw
+offset** (lane 2). Backup: `display/__init__.py.port1bak`. **Revert:** `cp display/__init__.py.port1bak
+display/__init__.py` (or move the ribbon to Port 1 and set `parallel=1`). The real wall
+uses 2×8 center-feed (`parallel=2`, Ports 1&2).

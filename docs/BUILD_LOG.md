@@ -4,6 +4,27 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-01 — Single-panel flight-tracker app RUNNING LIVE (as a service)
+
+Found the "one-screen" app already installed on the Pi at `/home/pi/vestor` (venv,
+`rgbmatrix` + `FlightRadarAPI` import OK, `.env` present). Ran it and it's now **live and
+persistent**: enabled `vestor.service` with a `User=root` drop-in (the hzeller lib must
+start as root for GPIO, then drops privileges). `Restart=always`, starts on boot. Pulls
+live Logan/Boston flights (found + detailed a real flight) + weather + clock.
+
+**Port-3 shim (TEMP):** the test panel is on bonnet **Port 3** (lane 2), but the app
+hardcodes `parallel=1` (Port 1). Rather than move the ribbon, patched the Pi's
+`display/__init__.py`: `parallel=1→3` + a +64-row draw offset on `graphics.DrawText/
+DrawLine` and `SetPixel` (app uses no image blits, so 3 primitives cover it). Backup at
+`display/__init__.py.port1bak`. **REVERT before the full-wall build** (which uses 2×8
+center-feed, `parallel=2`, Ports 1&2). Manage: `systemctl {start,stop,restart,status}
+vestor`; `journalctl -u vestor -f`.
+
+- Docs: RUNBOOK (+Phase-0-confirmed/operate section, fixed stale 6+5+5 → 2×8);
+  OPEN_QUESTIONS + INVENTORY headline updated post-first-light. On-Pi code is a static
+  copy (not a git repo) and slightly behind the repo's comment edits — functionally same.
+
+
 ## 2026-07-01 — ✅ FIRST LIGHT — Phase 0 COMPLETE
 
 One panel fully lit and animating (demo -D4 pulsing color, all 32 rows, correct
