@@ -1021,6 +1021,43 @@ add airline branding.
   `sim/logos/*.png` → resize → blit with gamma) for Phase-1; the manifest + ICAO→IATA map are
   already shared-ready.
 
+### 2026-07-01 — Legendary single-panel flight card (on-Pi, logos + split-flap)
+- **Did:** built the airline-branded 64×32 flight scene on the real Pi — the
+  hardware sibling of the sim's logo takeover. New/rewritten:
+  `scenes/airlinelogo.py` (logo band + livery rule), `scenes/journey.py` (route
+  with **split-flap flip-in** + brand-colour chase marker, relocated to rows
+  13–25), `scenes/flightdetails.py` (telemetry: warm-white callsign + right
+  field **rotating** altitude/type/index, off-blue), `scenes/planedetails.py`
+  (now a headless ~7 s dwell/cycle controller). `setup/airlines.py`
+  (ICAO→IATA + brand + names + **FR24 altitude ramp**), `setup/logos.py`
+  (stdlib pack loader). `utilities/overhead.py` +`aircraft_code`.
+  `setup/frames.py` → **20 fps**. `display/__init__.py` wires `AirlineLogoScene`.
+- **Logo pipeline (this delivers the last BUILD_LOG "Next"):** reuse the sim's
+  64 wordmark PNGs + manifest, but bake them **offline** with
+  `tools/bake_logos.py` → `assets/airline_logos.pkl` (12px tall, alpha flattened
+  on black, **no gamma** — the driver auto-applies CIE1931; packed 5 bytes/px,
+  ~75 KB). On the Pi we render with **`SetPixel` (no runtime Pillow)**, so the
+  code rides the existing Port-3 `+64` shim and stays panel-lane-agnostic.
+  *(Chose pre-baked pixels over PIL-at-runtime: dependency-free + shim-friendly.)*
+- **Verified:** `tools/preview_card.py` — a pixel-accurate offline harness that
+  mocks `rgbmatrix` with a real BDF renderer — confirmed the full composition
+  (United/jetBlue/British Airways, split-flap settling, FR24 altitude colours,
+  climb/descent triangles, BA Speedmarque revealed by the marquee); 0 stray red
+  in non-BA route bands. On hardware: `import display` OK in the venv, pack
+  loads, **service active, no tracebacks**, 35% CPU (driver baseline, not
+  pegged), 52 °C, `throttled=0x0`, pulling live Logan flights at 20 fps. The
+  FR24 `Content-Encoding=gzip` log lines are a benign library warning (JSON
+  still decodes).
+- **Changed from brief:** the Pi path renders logos via pre-baked `SetPixel`
+  pixels rather than the sim's live-canvas/PIL blit — same assets + ICAO→IATA
+  map, but zero runtime image deps and compatible with the temporary shim.
+  Dropped the upstream blue callsign (worst LED text colour per research).
+- **Next:** (1) revert the Port-3 shim + `parallel` when the centre-fed wall is
+  wired; (2) optional polish — a pulsing brand "LIVE" dot, scene wipe
+  transitions; (3) port the same card into the wall's multi-panel layout.
+- **Design doc:** [design/FLIGHT_CARD_PI.md](design/FLIGHT_CARD_PI.md)
+  (+ `design/flight_card_preview.png`).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

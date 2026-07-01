@@ -29,3 +29,6 @@ emu_frames/
 
 # OS
 .DS_Store
+
+# Offline preview render (tools/preview_card.py output)
+tools/preview_card.png

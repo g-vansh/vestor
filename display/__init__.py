@@ -5,6 +5,7 @@ from utilities.animator import Animator
 from utilities.overhead import Overhead
 
 from scenes.weather import WeatherScene
+from scenes.airlinelogo import AirlineLogoScene
 from scenes.flightdetails import FlightDetailsScene
 from scenes.journey import JourneyScene
 from scenes.loadingpulse import LoadingPulseScene
@@ -54,6 +55,7 @@ except (ModuleNotFoundError, NameError, ImportError):
 
 class Display(
     WeatherScene,
+    AirlineLogoScene,
     FlightDetailsScene,
     JourneyScene,
     LoadingLEDScene if LOADING_LED_ENABLED else LoadingPulseScene ,

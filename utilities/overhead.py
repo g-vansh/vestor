@@ -136,9 +136,21 @@ class Overhead:
                             else ""
                         )
 
+                        # ICAO aircraft type designator (e.g. B738, A320) — a
+                        # basic Flight attribute, short + clean for the panel's
+                        # telemetry line. Guard it in case it's absent/blank.
+                        try:
+                            aircraft_code = flight.aircraft_code or ""
+                        except AttributeError:
+                            aircraft_code = ""
+                        aircraft_code = (
+                            aircraft_code if aircraft_code.upper() not in BLANK_FIELDS else ""
+                        )
+
                         data.append(
                             {
                                 "plane": plane,
+                                "aircraft_code": aircraft_code,
                                 "origin": origin,
                                 "destination": destination,
                                 "vertical_speed": flight.vertical_speed,
