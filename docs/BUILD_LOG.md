@@ -1058,6 +1058,29 @@ add airline branding.
 - **Design doc:** [design/FLIGHT_CARD_PI.md](design/FLIGHT_CARD_PI.md)
   (+ `design/flight_card_preview.png`).
 
+### 2026-07-01 — Fix: American logo + switch logos to runtime Pillow
+- **Did:** the American logo showed as faint gray "American Airlines" text — its
+  livery is a **dark-navy wordmark**, the worst case on a black HUB75 panel
+  (blue = dimmest subpixel; the driver's CIE1931 curve dims mids further). Added
+  an **LED legibility lift** in `setup/logos.py` (raise HSV *value* `v**0.62`
+  floored at 0.50, keep hue) so dark liveries read and their colourful marks pop
+  (AA eagle, BA Speedmarque); already-bright logos barely move.
+- **Also (owner directive — "install/use whatever packages you need, don't
+  reinvent the wheel"):** replaced the offline pre-baked pixel-pack
+  (`tools/bake_logos.py` → `assets/airline_logos.pkl`, both removed) with
+  **runtime rendering via Pillow** straight from `sim/logos/*.png`, cached per
+  carrier. Pillow is now a **declared dep** (`requirements.txt`) and is used on
+  the Pi as intended (venv already had 12.2). One code path, no custom byte
+  format, `sim/logos/` is the single source of truth. Shipped `sim/logos/` (64
+  PNGs, 1 MB) to the Pi.
+- **Verified:** offline preview (American now bright + recognisable, United/
+  Delta unaffected); on the Pi `get_logo("AA")` → 239-px lifted logo; service
+  active, no tracebacks, ~41% CPU (per-carrier render cached), 52 °C.
+- **Changed from brief:** dropped the "no runtime Pillow dep" goal entirely — it
+  was needless wheel-reinvention. To tune a carrier now: edit `LIFT_*` in
+  `setup/logos.py` + restart (no bake step). Updated
+  [design/FLIGHT_CARD_PI.md](design/FLIGHT_CARD_PI.md) §2.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
