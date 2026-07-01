@@ -1104,6 +1104,32 @@ add airline branding.
 - **Verified:** restart → `preloaded 64/64`, service active, no errors, still
   drops to `daemon` (cache warm).
 
+### 2026-07-01 — Live data: FR24 → airplanes.live + adsbdb (free, no key, 10s poll)
+- **Why:** FR24's unofficial feed throttles/blocks under continuous polling (a
+  45-mile Boston box returned 0 flights after our polling tripped it). It's also
+  ToS-fragile for a 24/7 wall. Researched the free community ADS-B landscape and
+  chose **airplanes.live** (positions + aircraft type, `/v2/point/{lat}/{lon}/
+  {radius}`, ~1 req/s, no key) + **adsbdb.com** (callsign→route, cached, no key)
+  — the same route enricher upstream its-a-plane uses. (Rejected OpenSky: 4000/
+  day cap + OAuth2 + no route; AeroDataBox: ~600 units/mo free ≠ 24/7.)
+- **Did:** new `utilities/overhead.py` self-polls on a background daemon thread
+  every `POLL_SECONDS` (config, default **10s**) and emits the identical
+  per-flight dict, so every scene AND `display/__init__.py` are unchanged (no
+  Pi-shim re-patch). Config adds `SEARCH_RADIUS_NM=10`, `POLL_SECONDS=10`,
+  `MAX_FLIGHTS=5`. FR24 impl preserved as `utilities/overhead_fr24.py`.
+- **CA gotcha (same family as the logo bug):** `requests` verifies with certifi's
+  bundle under `/home/pi` (0700) — unreadable by the dropped `daemon` user — so
+  point `verify` at the OS trust store `/etc/ssl/certs/ca-certificates.crt`.
+  Tested by replicating the service's `import-as-root → setuid(daemon) → HTTPS`
+  sequence: airplanes.live + adsbdb both 200 as uid 1.
+- **Verified:** real flights over Cambridge with routes (JFK→BOS on approach,
+  Republic IND→PHL, a NetJets Citation TVC→BED), types (A21N/E75L/C68A), vspeed;
+  service healthy, `preloaded 64/64` logos, no fetch errors across poll cycles,
+  `DEMO_MODE=False`.
+- **Legit, not evasion:** declined FR24 identity-rotation (ToS-violating, fragile
+  on a fixed-IP appliance); switched to a source that's free + unthrottled by
+  design. Ultimate path remains a local RTL-SDR + dump1090 receiver.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
