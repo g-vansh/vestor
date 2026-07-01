@@ -1,6 +1,7 @@
 import sys
 
 from setup import frames
+from setup import logos
 from utilities.animator import Animator
 from utilities.overhead import Overhead
 
@@ -96,6 +97,14 @@ class Display(
         options.gpio_slowdown = GPIO_SLOWDOWN     # config.py = 4 for Pi 4 (try 5 if garbage on hw)
         options.disable_hardware_pulsing = False  # active3/regular supports hardware PWM natively
         options.drop_privileges = True
+
+        # Load logo assets while we still have root. RGBMatrix() below maps the
+        # PWM hardware as root and then drops to the unprivileged `daemon` user,
+        # which cannot read /home/pi (0700) — so lazy logo loads during
+        # rendering would fail and the card would fall back to text. Warm the
+        # cache here, pre-drop (fonts are likewise loaded at import, pre-drop).
+        logos.preload_all()
+
         self.matrix = RGBMatrix(options=options)
 
         # Setup canvas

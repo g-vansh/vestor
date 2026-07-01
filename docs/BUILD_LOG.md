@@ -1081,6 +1081,29 @@ add airline branding.
   `setup/logos.py` + restart (no bake step). Updated
   [design/FLIGHT_CARD_PI.md](design/FLIGHT_CARD_PI.md) §2.
 
+### 2026-07-01 — Fix: logos showed as name-text (drop_privileges vs file reads)
+- **Symptom:** panel showed airline **names as plain text** (the AirlineLogoScene
+  text fallback), not logos — even though the new code was deployed and
+  `get_logo("AA")` worked in a manual `ssh root` venv test.
+- **Root cause:** `display/__init__.py` sets `options.drop_privileges = True`.
+  `RGBMatrix()` maps the PWM hardware as root, then **drops to the `daemon`
+  user**. `daemon` cannot read the logo PNGs because **`/home/pi` is 0700**
+  (`drwx------ pi`) — so `daemon` can't even traverse into it. Fonts render fine
+  because `setup/fonts.py` `LoadFont` runs at **import** (pre-construction, still
+  root); my logos loaded **lazily at render time** (post-drop) → `Image.open`
+  → PermissionError → `_render` returns None → text fallback. The manual test
+  never constructed the matrix, so it never dropped privileges — masking the bug.
+- **Fix:** `setup/logos.py preload_all()` renders + caches all 64 logos, called
+  from `Display.__init__` **before** `RGBMatrix()` (i.e. while still root).
+  Post-drop rendering hits the warm module-level cache and never touches disk.
+  Logs `"[logos] preloaded 64/64 airline logos"` at startup for observability.
+- **Rule learned (important):** with `drop_privileges=True`, **every file the app
+  reads must be read before the matrix is constructed** — load assets at import
+  or in `__init__` pre-`RGBMatrix()`, never lazily during rendering. (Backup on
+  Pi: `display/__init__.py.prepreload`.)
+- **Verified:** restart → `preloaded 64/64`, service active, no errors, still
+  drops to `daemon` (cache warm).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

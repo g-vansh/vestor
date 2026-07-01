@@ -120,6 +120,23 @@ def get_logo(iata, height=LOGO_H):
     return rec
 
 
+def preload_all(height=LOGO_H):
+    """Render + cache every logo NOW.
+
+    Must be called BEFORE RGBMatrix(drop_privileges=True) constructs the matrix:
+    the driver needs root to map the hardware and then drops to an unprivileged
+    user (`daemon`) that cannot read /home/pi (0700). Loading the PNGs lazily at
+    render time would therefore fail and the card would fall back to text. Doing
+    it here, while still root, warms the cache so rendering never touches disk.
+    """
+    if _index is None:
+        _build_index()
+    total = len(_index or {})
+    loaded = sum(1 for iata in list(_index or {}) if get_logo(iata, height))
+    print(f"[logos] preloaded {loaded}/{total} airline logos", flush=True)
+    return loaded
+
+
 def has_logos():
     if _index is None:
         _build_index()
