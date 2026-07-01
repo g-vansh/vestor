@@ -24,16 +24,17 @@ try:
 except (ModuleNotFoundError, NameError, ImportError):
     JOURNEY_CODE_SELECTED = "BOS"
 
-# Band geometry
-ROUTE_BASELINE = 24        # 8x13 baseline; glyphs sit ~rows 13..24
+# Band geometry — route occupies rows 13..23 (disjoint from the telemetry band
+# at 24..31, so clearing one never erases the other).
+ROUTE_BASELINE = 22        # 8x13 baseline; caps sit ~rows 13..22
 ROUTE_CLEAR_TOP = 13
-ROUTE_CLEAR_BOT = 26
+ROUTE_CLEAR_BOT = 23
 CHAR_W = 8                 # 8x13 advance
 ORIGIN_X = 1               # cells at 1, 9, 17
 DEST_X = screen.WIDTH - 3 * CHAR_W   # cells at 40, 48, 56
 
 # Chase track (the gap between the two codes)
-TRACK_Y = 20
+TRACK_Y = 18
 TRACK_X0 = ORIGIN_X + 3 * CHAR_W + 1   # ~26
 TRACK_X1 = DEST_X - 2                   # ~38
 TRACK_DOT_COLOUR = graphics.Color(120, 78, 0)     # dim amber ties
