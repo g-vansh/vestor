@@ -5,11 +5,11 @@ owner's actual on-hand list. Sources: `HARDWARE.md`, `AGENTS.md`, `BUILD_LOG.md`
 (2026-06-14 power research), Adafruit product pages (6358 / 1466), Mean Well
 LRS-350-5 datasheet/listings.
 
-> **Headline:** you have the **brains and the panels but none of the panel
-> power**. The 2× LRS-350-5 supplies were specced but never bought — so right now
-> you can't light even **one** panel. The Triple Bonnet has no power path; the
-> panel's 5V must come from a dedicated supply. **Buy ≥1 LRS-350-5 + an AC cord to
-> unblock Phase 0; 2 supplies + a distribution harness + a frame for the full wall.**
+> **Headline (updated 2026-07-01):** ✅ **Phase 0 DONE — one panel is lit** (Pi + Triple
+> Bonnet + riser + LRS-350-5 + hzeller, driven over Tailscale SSH). All electrical parts
+> are on hand or ordered. **Remaining for the full 16-panel wall:** finish per-panel QC,
+> then the **mount + power distribution** (fuse blocks, steel rails, magnets) — full
+> plan in **§9**, order status in **§9.2**.
 
 ---
 
