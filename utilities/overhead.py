@@ -1,35 +1,67 @@
-from FlightRadar24.api import FlightRadar24API
+"""
+overhead.py — live "what's overhead" data from free, no-key community ADS-B.
+
+SOURCE (replaces the throttled FlightRadar24 unofficial feed):
+  * Positions + aircraft type: airplanes.live REST API (ADSBExchange v2 format),
+    a point+radius query around LOCATION_HOME. No key, ~1 req/s limit.
+  * Route (origin -> destination): adsbdb.com maps a callsign to its airports.
+    No key, ~120 req/min, cached per callsign (routes don't change) — the same
+    enricher the upstream its-a-plane project uses.
+Raw ADS-B carries no route, hence the two-step (positions from one, route from
+the other). Aircraft type ("t") comes free in the positions payload.
+
+The class self-polls on a background daemon thread every POLL_SECONDS and exposes
+the same interface the display expects (grab_data / new_data / processing / data
+/ data_is_empty), emitting the same per-flight dict schema as before so every
+scene works unchanged:
+    {plane, aircraft_code, origin, destination, vertical_speed, altitude, callsign}
+
+The previous FlightRadar24 implementation is preserved as
+utilities/overhead_fr24.py.
+"""
+
+import math
+import os
 from threading import Thread, Lock
 from time import sleep
-import math
+from urllib.parse import quote
 
-from requests.exceptions import ConnectionError
-from urllib3.exceptions import NewConnectionError
-from urllib3.exceptions import MaxRetryError
+import requests
 
-try:
-    # Attempt to load config data
-    from config import MIN_ALTITUDE
 
-except (ModuleNotFoundError, NameError, ImportError):
-    # If there's no config data
-    MIN_ALTITUDE = 0  # feet
+def _cfg(name, default):
+    try:
+        return getattr(__import__("config"), name)
+    except (ModuleNotFoundError, NameError, ImportError, AttributeError):
+        return default
 
-try:
-    from config import MAX_ALTITUDE
 
-except (ModuleNotFoundError, NameError, ImportError):
-    MAX_ALTITUDE = 10000  # feet
+LOCATION_HOME = _cfg("LOCATION_HOME", [42.354, -71.107, 0.005])
+MIN_ALTITUDE = _cfg("MIN_ALTITUDE", 0)
+MAX_ALTITUDE = _cfg("MAX_ALTITUDE", 40000)
+SEARCH_RADIUS_NM = _cfg("SEARCH_RADIUS_NM", 10)
+POLL_SECONDS = _cfg("POLL_SECONDS", 10)
+MAX_FLIGHTS = _cfg("MAX_FLIGHTS", 5)
+DEMO_MODE = _cfg("DEMO_MODE", False)
 
-try:
-    from config import DEMO_MODE
+HOME_LAT, HOME_LON = LOCATION_HOME[0], LOCATION_HOME[1]
 
-except (ModuleNotFoundError, NameError, ImportError):
-    DEMO_MODE = False
+AIRPLANES_URL = "https://api.airplanes.live/v2/point/{lat}/{lon}/{radius}"
+ADSBDB_URL = "https://api.adsbdb.com/v0/callsign/{callsign}"
 
-# Sample flights for DEMO_MODE — realistic KBOS routes across airlines with
-# logos and a spread of altitudes (so the FR24 colour ramp + climb/descent
-# arrows all show). Cycled by the display like real overhead traffic.
+# The venv's certifi CA bundle lives under /home/pi (0700), which the
+# dropped-privilege `daemon` user the matrix runs as CANNOT read — so verifying
+# with it would fail. Point requests at the OS trust store (world-readable).
+_SYS_CA = "/etc/ssl/certs/ca-certificates.crt"
+VERIFY = _SYS_CA if os.path.exists(_SYS_CA) else True
+
+USER_AGENT = "Vestor-LED-FlightTracker/1.0 (+https://github.com/g-vansh/vestor)"
+HTTP_TIMEOUT = 8
+BLANK_FIELDS = {"", "N/A", "NONE"}
+
+# Sample flights for DEMO_MODE — realistic KBOS routes across airlines with logos
+# and a spread of altitudes (so the FR24 colour ramp + climb/descent arrows all
+# show). Cycled by the display like real overhead traffic.
 DEMO_FLIGHTS = [
     {"callsign": "AAL191", "origin": "BOS", "destination": "LAX", "plane": "Airbus A321",
      "aircraft_code": "A321", "altitude": 31000, "vertical_speed": 640},
@@ -45,74 +77,36 @@ DEMO_FLIGHTS = [
      "aircraft_code": "B738", "altitude": 21000, "vertical_speed": -640},
 ]
 
-RETRIES = 3
-RATE_LIMIT_DELAY = 1
-MAX_FLIGHT_LOOKUP = 5
-EARTH_RADIUS_KM = 6371
-BLANK_FIELDS = ["", "N/A", "NONE"]
-
-try:
-    # Attempt to load config data
-    from config import ZONE_HOME, LOCATION_HOME
-
-    ZONE_DEFAULT = ZONE_HOME
-    LOCATION_DEFAULT = LOCATION_HOME
-
-except (ModuleNotFoundError, NameError, ImportError):
-    # If there's no config data
-    ZONE_DEFAULT = {"tl_y": 62.61, "tl_x": -13.07, "br_y": 49.71, "br_x": 3.46}
-    LOCATION_DEFAULT = [51.509865, -0.118092, EARTH_RADIUS_KM]
-
-
-def distance_from_flight_to_home(flight, home=LOCATION_DEFAULT):
-    def polar_to_cartesian(lat, long, alt):
-        DEG2RAD = math.pi / 180
-        return [
-            alt * math.cos(DEG2RAD * lat) * math.sin(DEG2RAD * long),
-            alt * math.sin(DEG2RAD * lat),
-            alt * math.cos(DEG2RAD * lat) * math.cos(DEG2RAD * long),
-        ]
-
-    def feet_to_meters_plus_earth(altitude_ft):
-        altitude_km = 0.0003048 * altitude_ft
-        return altitude_km + EARTH_RADIUS_KM
-
-    try:
-        (x0, y0, z0) = polar_to_cartesian(
-            flight.latitude,
-            flight.longitude,
-            feet_to_meters_plus_earth(flight.altitude),
-        )
-
-        (x1, y1, z1) = polar_to_cartesian(*home)
-
-        dist = math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2 + (z1 - z0) ** 2)
-
-        return dist
-
-    except AttributeError:
-        # on error say it's far away
-        return 1e6
-
 
 class Overhead:
     def __init__(self):
-        self._api = FlightRadar24API()
         self._lock = Lock()
         self._data = []
         self._new_data = False
         self._processing = False
+        self._route_cache = {}
+        self._session = requests.Session()
+        self._session.headers.update({"User-Agent": USER_AGENT})
+        self._session.verify = VERIFY
+        # Self-poll on a background thread so the display needs no timing changes.
+        Thread(target=self._poll_loop, daemon=True).start()
 
     def grab_data(self):
-        Thread(target=self._grab_data).start()
+        # Kept for interface compatibility; the background poller already runs.
+        pass
 
-    def _grab_data(self):
-        # Mark data as old
-        with self._lock:
-            self._new_data = False
-            self._processing = True
+    def _poll_loop(self):
+        while True:
+            try:
+                self._fetch_once()
+            except Exception as e:  # never let the poller die
+                print(f"[overhead] fetch error: {e}", flush=True)
+                with self._lock:
+                    self._processing = False
+            sleep(POLL_SECONDS)
 
-        # Demo mode: serve the sample flights and skip FR24 entirely.
+    def _fetch_once(self):
+        # Demo mode: serve the sample flights and skip the network.
         if DEMO_MODE:
             with self._lock:
                 self._data = list(DEMO_FLIGHTS)
@@ -120,94 +114,82 @@ class Overhead:
                 self._processing = False
             return
 
+        with self._lock:
+            self._processing = True
+
+        url = AIRPLANES_URL.format(lat=HOME_LAT, lon=HOME_LON, radius=SEARCH_RADIUS_NM)
+        resp = self._session.get(url, timeout=HTTP_TIMEOUT)
+        aircraft = (resp.json() or {}).get("ac", []) or []
+
+        # Keep airborne aircraft in the altitude band with a known position.
+        candidates = []
+        for ac in aircraft:
+            alt = ac.get("alt_baro")
+            if not isinstance(alt, (int, float)):  # skips "ground" and nulls
+                continue
+            if not (MIN_ALTITUDE < alt < MAX_ALTITUDE):
+                continue
+            if ac.get("lat") is None or ac.get("lon") is None:
+                continue
+            candidates.append(ac)
+
+        # Nearest first, keep the closest MAX_FLIGHTS.
+        candidates.sort(key=lambda a: self._dist2(a["lat"], a["lon"]))
+        candidates = candidates[:MAX_FLIGHTS]
+
         data = []
+        for ac in candidates:
+            callsign = (ac.get("flight") or "").strip()
+            origin, destination = self._route(callsign) if callsign else ("", "")
+            vs = ac.get("baro_rate")
+            if vs is None:
+                vs = ac.get("geom_rate") or 0
+            data.append({
+                "plane": "",
+                "aircraft_code": (ac.get("t") or "").strip(),
+                "origin": origin,
+                "destination": destination,
+                "vertical_speed": vs,
+                "altitude": ac.get("alt_baro") or 0,
+                "callsign": callsign,
+            })
 
-        # Grab flight details
-        try:
-            bounds = self._api.get_bounds(ZONE_DEFAULT)
-            flights = self._api.get_flights(bounds=bounds)
-
-            # Sort flights by closest first
-            flights = [
-                f
-                for f in flights
-                if f.altitude < MAX_ALTITUDE and f.altitude > MIN_ALTITUDE
-            ]
-            flights = sorted(flights, key=lambda f: distance_from_flight_to_home(f))
-
-            for flight in flights[:MAX_FLIGHT_LOOKUP]:
-                retries = RETRIES
-
-                while retries:
-                    # Rate limit protection
-                    sleep(RATE_LIMIT_DELAY)
-
-                    # Grab and store details
-                    try:
-                        details = self._api.get_flight_details(flight)
-
-                        # Get plane type
-                        try:
-                            plane = details["aircraft"]["model"]["text"]
-                        except (KeyError, TypeError):
-                            plane = ""
-
-                        # Tidy up what we pass along
-                        plane = plane if not (plane.upper() in BLANK_FIELDS) else ""
-
-                        origin = (
-                            flight.origin_airport_iata
-                            if not (flight.origin_airport_iata.upper() in BLANK_FIELDS)
-                            else ""
-                        )
-
-                        destination = (
-                            flight.destination_airport_iata
-                            if not (flight.destination_airport_iata.upper() in BLANK_FIELDS)
-                            else ""
-                        )
-
-                        callsign = (
-                            flight.callsign
-                            if not (flight.callsign.upper() in BLANK_FIELDS)
-                            else ""
-                        )
-
-                        # ICAO aircraft type designator (e.g. B738, A320) — a
-                        # basic Flight attribute, short + clean for the panel's
-                        # telemetry line. Guard it in case it's absent/blank.
-                        try:
-                            aircraft_code = flight.aircraft_code or ""
-                        except AttributeError:
-                            aircraft_code = ""
-                        aircraft_code = (
-                            aircraft_code if aircraft_code.upper() not in BLANK_FIELDS else ""
-                        )
-
-                        data.append(
-                            {
-                                "plane": plane,
-                                "aircraft_code": aircraft_code,
-                                "origin": origin,
-                                "destination": destination,
-                                "vertical_speed": flight.vertical_speed,
-                                "altitude": flight.altitude,
-                                "callsign": callsign,
-                            }
-                        )
-                        break
-
-                    except (KeyError, AttributeError):
-                        retries -= 1
-
-            with self._lock:
-                self._new_data = True
-                self._processing = False
-                self._data = data
-
-        except (ConnectionError, NewConnectionError, MaxRetryError):
-            self._new_data = False
+        with self._lock:
+            self._data = data
+            self._new_data = True
             self._processing = False
+
+    def _dist2(self, lat, lon):
+        """Cheap squared planar distance to home (fine for nearest-first sort)."""
+        dlat = lat - HOME_LAT
+        dlon = (lon - HOME_LON) * math.cos(math.radians(HOME_LAT))
+        return dlat * dlat + dlon * dlon
+
+    def _route(self, callsign):
+        """callsign -> (origin_iata, destination_iata) via adsbdb, cached."""
+        if callsign in self._route_cache:
+            return self._route_cache[callsign]
+        try:
+            resp = self._session.get(
+                ADSBDB_URL.format(callsign=quote(callsign)), timeout=HTTP_TIMEOUT
+            )
+        except Exception:
+            return ("", "")  # transient — don't cache, retry next poll
+        origin = destination = ""
+        if resp.status_code in (200, 404):  # 404 = adsbdb knows of no route
+            try:
+                fr = (resp.json() or {}).get("response", {})
+                if isinstance(fr, dict):
+                    route = fr.get("flightroute") or {}
+                    o = ((route.get("origin") or {}).get("iata_code") or "").strip()
+                    d = ((route.get("destination") or {}).get("iata_code") or "").strip()
+                    origin = o if o.upper() not in BLANK_FIELDS else ""
+                    destination = d if d.upper() not in BLANK_FIELDS else ""
+            except (ValueError, KeyError, AttributeError):
+                pass
+            self._route_cache[callsign] = (origin, destination)
+            return (origin, destination)
+        return ("", "")  # 5xx/other — don't cache
 
     @property
     def new_data(self):
@@ -230,13 +212,10 @@ class Overhead:
         return len(self._data) == 0
 
 
-# Main function
 if __name__ == "__main__":
-
     o = Overhead()
-    o.grab_data()
     while not o.new_data:
         print("processing...")
         sleep(1)
-
-    print(o.data)
+    for f in o.data:
+        print(f)

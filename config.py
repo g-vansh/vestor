@@ -31,6 +31,12 @@ MAX_ALTITUDE = 40000            # feet — 10000 = only low "visible overhead" t
                                 # (mostly idle over a small box); 40000 also catches
                                 # Logan climb/descent + cruise overflights, so the
                                 # board is active. Lower it for see-it-with-your-eyes mode.
+
+# ---- Live data source: airplanes.live (positions+type) + adsbdb.com (routes) ----
+# Free, no-key community ADS-B (replaces the throttled FR24 unofficial feed).
+SEARCH_RADIUS_NM = 10           # nm around LOCATION_HOME to scan for aircraft
+POLL_SECONDS = 10               # how often to poll airplanes.live for what's overhead
+MAX_FLIGHTS = 5                 # show the nearest N aircraft (cycled on the board)
 JOURNEY_CODE_SELECTED = "BOS"   # bolds Logan as the local airport
 JOURNEY_BLANK_FILLER = " ? "
 
