@@ -102,6 +102,10 @@ VERIFY = _SYS_CA if os.path.exists(_SYS_CA) else True
 USER_AGENT = "Vestor-LED-FlightTracker/1.0 (+https://github.com/g-vansh/vestor)"
 HTTP_TIMEOUT = 8
 FR24_MIN_INTERVAL = 20        # s — cap FR24 feed queries to stay well under throttle
+ROUTE_TTL = 1800             # s — a route is cached only ~30 min: long enough to
+                             # survive one overhead pass, short enough that a reused
+                             # callsign (a different leg later) re-fetches. Never
+                             # persisted to disk; pruned each grab.
 BLANK_FIELDS = {"", "N/A", "NONE"}
 
 # Sample flights for DEMO_MODE — realistic KBOS routes across airlines with logos
@@ -188,12 +192,14 @@ class Overhead:
         candidates.sort(key=lambda a: self._dist2(a["lat"], a["lon"]))
         candidates = candidates[:MAX_FLIGHTS]
 
-        # If any callsign has no cached route yet, do ONE FR24 zone query (actual
+        self._prune_routes()
+
+        # If any callsign has no fresh cached route, do ONE FR24 zone query (actual
         # current routes for everything overhead). Cheap: only fires for new
-        # flights, then everything is cached.
+        # flights, then everything is cached until the TTL expires.
         need = [(ac.get("flight") or "").strip() for ac in candidates]
         fr24_map = {}
-        if any(cs and cs not in self._route_cache for cs in need):
+        if any(cs and self._cached_route(cs) is None for cs in need):
             fr24_map = self._fr24_zone_routes()
 
         data = []
@@ -224,18 +230,33 @@ class Overhead:
         dlon = (lon - HOME_LON) * math.cos(math.radians(HOME_LAT))
         return dlat * dlat + dlon * dlon
 
+    def _cached_route(self, callsign):
+        """Return a still-fresh cached route for a callsign, or None."""
+        entry = self._route_cache.get(callsign)
+        if entry and (monotonic() - entry[1]) < ROUTE_TTL:
+            return entry[0]
+        return None
+
+    def _prune_routes(self):
+        """Drop expired route-cache entries (keeps the dict small; TTL-bounded)."""
+        now = monotonic()
+        self._route_cache = {
+            k: v for k, v in self._route_cache.items() if now - v[1] < ROUTE_TTL
+        }
+
     def _resolve_route(self, callsign, vs, fr24_map):
         """callsign -> (origin, destination), FR24 first (accurate current route),
-        else adsbdb + BOS plausibility. Cached permanently per callsign."""
+        else adsbdb + BOS plausibility. Cached for ROUTE_TTL (not permanent)."""
         if not callsign:
             return ("", "")
-        if callsign in self._route_cache:
-            return self._route_cache[callsign]
+        cached = self._cached_route(callsign)
+        if cached is not None:
+            return cached
         if callsign in fr24_map:                 # FR24 has the real current route
             route = fr24_map[callsign]
         else:                                    # fall back to the stale DB, fixed up
             route = _plausible_route(*self._adsbdb_route(callsign), vs)
-        self._route_cache[callsign] = route
+        self._route_cache[callsign] = (route, monotonic())
         return route
 
     def _fr24_zone_routes(self):

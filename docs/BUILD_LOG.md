@@ -1190,9 +1190,11 @@ add airline branding.
   origin/dest on the *basic* get_flights object (no per-flight detail calls).
 - **Did:** `overhead.py` route enrichment is now **FR24-first, adsbdb-fallback**.
   When any overhead callsign has no cached route, do ONE FR24 `get_flights` over
-  the zone → `{callsign: (origin,dest)}`; routes are cached **permanently per
-  callsign**. Callsigns FR24 doesn't cover fall back to adsbdb + the BOS
-  plausibility fix. Positions still come from airplanes.live every 10s.
+  the zone → `{callsign: (origin,dest)}`; routes are cached in-memory with a
+  **30-min TTL** (`ROUTE_TTL`, pruned each grab, never persisted) — long enough
+  to survive one overhead pass, short enough that a reused callsign (a different
+  leg later) re-fetches. Callsigns FR24 doesn't cover fall back to adsbdb + the
+  BOS plausibility fix. Positions still come from airplanes.live every 10s.
 - **Won't re-throttle:** routes are static, so it's ~0 FR24 calls in steady
   state and one per new arrival; plus a hard **`FR24_MIN_INTERVAL=20s`** rate-cap
   and graceful `{}`-on-error fallback. (The original throttle was polling FR24's
