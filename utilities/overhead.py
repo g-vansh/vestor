@@ -23,10 +23,18 @@ utilities/overhead_fr24.py.
 import math
 import os
 from threading import Thread, Lock
-from time import sleep
+from time import sleep, monotonic
 from urllib.parse import quote
 
 import requests
+
+try:                                   # FR24 gives the ACTUAL current route (the
+    from FlightRadarAPI import FlightRadar24API   # filed flight plan), unlike the
+except ImportError:                    # stale scheduled-route DBs. Used low-volume
+    try:                               # (once per new callsign, then cached).
+        from FlightRadar24 import FlightRadar24API
+    except ImportError:
+        FlightRadar24API = None
 
 
 def _cfg(name, default):
@@ -93,6 +101,7 @@ VERIFY = _SYS_CA if os.path.exists(_SYS_CA) else True
 
 USER_AGENT = "Vestor-LED-FlightTracker/1.0 (+https://github.com/g-vansh/vestor)"
 HTTP_TIMEOUT = 8
+FR24_MIN_INTERVAL = 20        # s — cap FR24 feed queries to stay well under throttle
 BLANK_FIELDS = {"", "N/A", "NONE"}
 
 # Sample flights for DEMO_MODE — realistic KBOS routes across airlines with logos
@@ -124,6 +133,9 @@ class Overhead:
         self._session = requests.Session()
         self._session.headers.update({"User-Agent": USER_AGENT})
         self._session.verify = VERIFY
+        self._fr24 = FlightRadar24API() if FlightRadar24API else None
+        self._fr24_last_t = 0.0        # rate-limit FR24 feed queries
+        self._fr24_last_map = {}
         # Self-poll on a background thread so the display needs no timing changes.
         Thread(target=self._poll_loop, daemon=True).start()
 
@@ -176,14 +188,21 @@ class Overhead:
         candidates.sort(key=lambda a: self._dist2(a["lat"], a["lon"]))
         candidates = candidates[:MAX_FLIGHTS]
 
+        # If any callsign has no cached route yet, do ONE FR24 zone query (actual
+        # current routes for everything overhead). Cheap: only fires for new
+        # flights, then everything is cached.
+        need = [(ac.get("flight") or "").strip() for ac in candidates]
+        fr24_map = {}
+        if any(cs and cs not in self._route_cache for cs in need):
+            fr24_map = self._fr24_zone_routes()
+
         data = []
         for ac in candidates:
             callsign = (ac.get("flight") or "").strip()
             vs = ac.get("baro_rate")
             if vs is None:
                 vs = ac.get("geom_rate") or 0
-            origin, destination = self._route(callsign) if callsign else ("", "")
-            origin, destination = _plausible_route(origin, destination, vs)
+            origin, destination = self._resolve_route(callsign, vs, fr24_map)
             data.append({
                 "plane": "",
                 "aircraft_code": (ac.get("t") or "").strip(),
@@ -205,18 +224,63 @@ class Overhead:
         dlon = (lon - HOME_LON) * math.cos(math.radians(HOME_LAT))
         return dlat * dlat + dlon * dlon
 
-    def _route(self, callsign):
-        """callsign -> (origin_iata, destination_iata) via adsbdb, cached."""
+    def _resolve_route(self, callsign, vs, fr24_map):
+        """callsign -> (origin, destination), FR24 first (accurate current route),
+        else adsbdb + BOS plausibility. Cached permanently per callsign."""
+        if not callsign:
+            return ("", "")
         if callsign in self._route_cache:
             return self._route_cache[callsign]
+        if callsign in fr24_map:                 # FR24 has the real current route
+            route = fr24_map[callsign]
+        else:                                    # fall back to the stale DB, fixed up
+            route = _plausible_route(*self._adsbdb_route(callsign), vs)
+        self._route_cache[callsign] = route
+        return route
+
+    def _fr24_zone_routes(self):
+        """One FR24 feed query over the zone -> {callsign: (origin, dest)}.
+
+        get_flights returns origin/destination IATA on the basic Flight object, so
+        no per-flight detail calls are needed. Returns {} on any error/throttle
+        (callers then fall back to adsbdb)."""
+        if self._fr24 is None:
+            return {}
+        now = monotonic()
+        if now - self._fr24_last_t < FR24_MIN_INTERVAL:
+            return self._fr24_last_map     # reuse recent result — bound FR24 load
+        try:
+            if _BOX:
+                bounds = self._fr24.get_bounds(_BOX)
+            else:
+                bounds = self._fr24.get_bounds_by_point(HOME_LAT, HOME_LON, 20000)
+            out = {}
+            for f in self._fr24.get_flights(bounds=bounds):
+                cs = (getattr(f, "callsign", "") or "").strip()
+                o = (getattr(f, "origin_airport_iata", "") or "")
+                d = (getattr(f, "destination_airport_iata", "") or "")
+                o = o if o.upper() not in BLANK_FIELDS else ""
+                d = d if d.upper() not in BLANK_FIELDS else ""
+                if cs and (o or d):
+                    out[cs] = (o, d)
+            self._fr24_last_t = now
+            self._fr24_last_map = out
+            return out
+        except Exception as e:
+            print(f"[overhead] FR24 route lookup failed: {e}", flush=True)
+            self._fr24_last_t = now        # back off after a failure/throttle too
+            return {}
+
+    def _adsbdb_route(self, callsign):
+        """callsign -> (origin_iata, destination_iata) via adsbdb (may be stale)."""
         try:
             resp = self._session.get(
                 ADSBDB_URL.format(callsign=quote(callsign)), timeout=HTTP_TIMEOUT
             )
         except Exception:
-            return ("", "")  # transient — don't cache, retry next poll
+            return ("", "")
         origin = destination = ""
-        if resp.status_code in (200, 404):  # 404 = adsbdb knows of no route
+        if resp.status_code in (200, 404):
             try:
                 fr = (resp.json() or {}).get("response", {})
                 if isinstance(fr, dict):
@@ -227,9 +291,7 @@ class Overhead:
                     destination = d if d.upper() not in BLANK_FIELDS else ""
             except (ValueError, KeyError, AttributeError):
                 pass
-            self._route_cache[callsign] = (origin, destination)
-            return (origin, destination)
-        return ("", "")  # 5xx/other — don't cache
+        return (origin, destination)
 
     @property
     def new_data(self):
