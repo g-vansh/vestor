@@ -1,92 +1,133 @@
 """
 airlinelogo.py — the LEFT panel of the 3-panel departure board: AIRLINE identity.
 
-Full 64x32 panel (canvas cols 0..63):
-    rows 1..22   the airline logo, fit WHOLE + static, centred
-    row  23      a brand-colour livery rule across the panel
-    rows 25..31  the airline name (curated) in the brand colour, centred
+Full 64x32 panel (canvas cols 0..63). The content is composed as a group and
+VERTICALLY CENTRED so it never sits low:
 
-Pixel writes go through self.set_pixel (Display) which applies the panel
-draw-offset; text via the shimmed DrawText/DrawLine. Coordinates are canvas-
-absolute (col 0..63 = the physical left panel, per the 2026-07-01 calibration).
+    [ logo | aircraft icon ]      top element
+    ---- brand rule ----          thin divider
+    NAME / CATEGORY               label beneath
+
+  * Airline with a logo -> the logo (fit 62x22, static) + curated name.
+  * No logo (GA / heli / private jet / regional) -> a pixel-art aircraft icon
+    (helicopter / private jet / turboprop / airliner) + a label (the operator
+    name if known, else the category).
+
+Pixels via self.set_pixel; text via the shimmed DrawText/DrawLine. Coordinates
+are canvas-absolute (cols 0..63 = physical left panel).
 """
 
 from utilities.animator import Animator
 from setup import colours, fonts, screen
-from setup import airlines, logos
+from setup import airlines, logos, aircraft
 
 from rgbmatrix import graphics
 
 ZONE_X = screen.ZONE_AIRLINE      # 0 — left panel
 PANEL_W = screen.PANEL_W          # 64
 
-LOGO_TOP = 1
-LOGO_REGION_H = 22                # rows 1..22
-RULE_ROW = 23
-NAME_BASELINE = 31                # name sits rows ~25..31
+ICON_COLOUR = graphics.Color(200, 210, 225)   # silver — reads as "aircraft"
+GAP = 2
+
+CATEGORY_LABEL = {
+    "heli": "HELICOPTER",
+    "bizjet": "PRIVATE JET",
+    "prop": "PROP",
+    "airliner": "AIRLINER",
+}
 
 
 class AirlineLogoScene(object):
     def __init__(self):
         self._logo_rec = None
-        self._logo_brand = colours.BLACK
-        self._logo_x = ZONE_X
-        self._logo_y = LOGO_TOP
-        self._name = ""
+        self._icon = None             # (px, w, h) when no logo
+        self._brand = colours.BLACK
+        self._label = ""
         super().__init__()
 
-    def _resolve_logo(self):
+    def _resolve(self):
         flight = self._data[self._data_index]
         callsign = flight.get("callsign", "")
         iata = airlines.iata_for_callsign(callsign)
+        icao = airlines.icao_for_callsign(callsign)
         rec = logos.get_logo(iata)
         self._logo_rec = rec
 
         sampled = rec["brand"] if rec else None
         br, bg, bb = airlines.brand_for_callsign(callsign, sampled)
-        self._logo_brand = graphics.Color(br, bg, bb)
-        self._name = airlines.name_for_callsign(callsign) or callsign[:3]
+        self._brand = graphics.Color(br, bg, bb)
 
         if rec:
-            self._logo_x = ZONE_X + (PANEL_W - rec["w"]) // 2
-            self._logo_y = LOGO_TOP + (LOGO_REGION_H - rec["h"]) // 2
+            self._icon = None
+            self._label = airlines.name_for_callsign(callsign) or icao
+        else:
+            code = flight.get("aircraft_code", "")
+            px, w, h, cat = aircraft.icon_for(code)
+            self._icon = (px, w, h)
+            if icao in airlines.AIRLINE_DB:      # known operator, just no logo file
+                self._label = airlines.AIRLINE_DB[icao]["name"]
+            else:
+                self._label = CATEGORY_LABEL[cat]
 
     @Animator.KeyFrame.add(0)
     def airline_logo_setup(self):
         if len(self._data) == 0:
             self._logo_rec = None
+            self._icon = None
             return
-        self._resolve_logo()
+        self._resolve()
 
-    def _draw_name(self):
-        if not self._name:
-            return
-        # Pick the biggest font that fits the panel width.
-        font = fonts.large_bold if len(self._name) <= 7 else fonts.small
-        width = graphics.DrawText(self.canvas, font, screen.WIDTH + 40, NAME_BASELINE,
-                                  self._logo_brand, self._name)
-        x = ZONE_X + max(1, (PANEL_W - width) // 2)
-        graphics.DrawText(self.canvas, font, x, NAME_BASELINE, self._logo_brand, self._name)
+    def _label_font(self):
+        return fonts.large_bold if len(self._label) <= 7 else fonts.small
+
+    def _label_metrics(self):
+        font = self._label_font()
+        h = 13 if font is fonts.large_bold else 8
+        width = graphics.DrawText(self.canvas, font, screen.WIDTH + 60, 20,
+                                  colours.BLACK, self._label) if self._label else 0
+        return font, width, h
 
     @Animator.KeyFrame.add(1)
     def airline_logo(self, count):
         if len(self._data) == 0:
             return
 
-        # Clear this panel only.
         self.draw_square(ZONE_X, 0, ZONE_X + PANEL_W, screen.HEIGHT, colours.BLACK)
 
+        # Top element dimensions (logo or icon).
+        if self._logo_rec:
+            top_w, top_h = self._logo_rec["w"], self._logo_rec["h"]
+            rule_colour = self._brand
+        elif self._icon:
+            _, top_w, top_h = self._icon
+            rule_colour = ICON_COLOUR
+        else:
+            return
+
+        font, label_w, label_h = self._label_metrics()
+
+        # Centre the whole group vertically.
+        group_h = top_h + 1 + GAP + label_h
+        top_y = max(0, (screen.HEIGHT - group_h) // 2)
+
+        # Top element, centred horizontally.
+        top_x = ZONE_X + (PANEL_W - top_w) // 2
         if self._logo_rec:
             for (x, y, r, g, b) in self._logo_rec["px"]:
-                self.set_pixel(self._logo_x + x, self._logo_y + y, r, g, b)
+                self.set_pixel(top_x + x, top_y + y, r, g, b)
         else:
-            # No logo: draw the name big in the logo region instead.
-            self._draw_name()
+            for (x, y) in self._icon[0]:
+                self.set_pixel(top_x + x, top_y + y, ICON_COLOUR.red,
+                               ICON_COLOUR.green, ICON_COLOUR.blue)
 
-        # Brand livery rule across the panel.
-        graphics.DrawLine(self.canvas, ZONE_X, RULE_ROW, ZONE_X + PANEL_W - 1,
-                          RULE_ROW, self._logo_brand)
+        # Brand rule.
+        rule_y = top_y + top_h + 1
+        graphics.DrawLine(self.canvas, ZONE_X + 2, rule_y, ZONE_X + PANEL_W - 3,
+                          rule_y, rule_colour)
 
-        # Airline name beneath the logo (skip if we already used it as fallback).
-        if self._logo_rec:
-            self._draw_name()
+        # Label beneath.
+        if self._label:
+            label_colour = self._brand if self._logo_rec else ICON_COLOUR
+            baseline = rule_y + GAP + label_h - 1
+            x = ZONE_X + max(1, (PANEL_W - label_w) // 2)
+            graphics.DrawText(self.canvas, font, x, baseline, label_colour, self._label)

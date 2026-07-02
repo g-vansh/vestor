@@ -163,14 +163,16 @@ class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene):
 
 
 SAMPLE = [
-    {"callsign": "AAL191", "origin": "BOS", "destination": "LAX", "aircraft_code": "A321",
-     "plane": "Airbus A321", "altitude": 31000, "vertical_speed": 500},
-    {"callsign": "UAL2456", "origin": "SFO", "destination": "BOS", "aircraft_code": "B752",
-     "plane": "Boeing 757-200", "altitude": 36000, "vertical_speed": 0},
     {"callsign": "DAL1180", "origin": "BOS", "destination": "ATL", "aircraft_code": "B739",
      "plane": "Boeing 737-900", "altitude": 8000, "vertical_speed": 1400},
-    {"callsign": "BAW238", "origin": "LHR", "destination": "BOS", "aircraft_code": "B772",
-     "plane": "Boeing 777-200", "altitude": 4200, "vertical_speed": -800},
+    {"callsign": "RPA5689", "origin": "ORD", "destination": "BOS", "aircraft_code": "E75L",
+     "plane": "Embraer 175", "altitude": 525, "vertical_speed": -600},
+    {"callsign": "N247NE", "origin": "", "destination": "", "aircraft_code": "EC45",
+     "plane": "Eurocopter EC145", "altitude": 850, "vertical_speed": -200},
+    {"callsign": "EJA680", "origin": "", "destination": "TEB", "aircraft_code": "C68A",
+     "plane": "Cessna Citation", "altitude": 41000, "vertical_speed": 0},
+    {"callsign": "N512SR", "origin": "", "destination": "", "aircraft_code": "SR22",
+     "plane": "Cirrus SR22", "altitude": 6500, "vertical_speed": 700},
 ]
 
 

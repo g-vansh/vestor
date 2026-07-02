@@ -79,6 +79,9 @@ AIRLINE_DB = {
     "KAP": {"name": "CAPE AIR",   "color": (235, 70, 70)},
     "FDX": {"name": "FEDEX",      "color": (120, 90, 200)},
     "UPS": {"name": "UPS",        "color": (170, 110, 40)},
+    # Common bizjet operators near KBOS (no logo file — shown as name + icon)
+    "EJA": {"name": "NETJETS",    "color": (120, 160, 230)},
+    "LXJ": {"name": "FLEXJET",    "color": (200, 170, 110)},
 }
 
 GENERIC_BRAND = (255, 176, 0)   # sodium amber (#FFB000) — Solari departure-board
