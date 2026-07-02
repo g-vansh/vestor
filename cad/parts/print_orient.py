@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cadquery as cq
 import mount_params as P
 from util import box, OUT
-import top_cleat, anti_swing_foot, corner_enclosure, psu_bracket
+import top_cleat, anti_swing_foot, corner_enclosure, psu_bracket, gap_hanger
 
 PRINT = os.path.join(OUT, "print"); os.makedirs(PRINT, exist_ok=True)
 PLA = 1.24  # g/cm³
@@ -78,9 +78,13 @@ if __name__ == "__main__":
     tab = anti_swing_foot.build_tab().rotate((0, 0, 0), (1, 0, 0), 90)   # lay the 50 mm length flat
     out(tab, "02_foot_tab", 7, "no", "COUPON B: slides up into the BOTTOM groove")
 
-    # ── PART 5 · corner enclosure — backplate flat on the bed ───────────────
+    # ── PART 5 · center enclosure (Pi + Bonnet) — backplate flat on the bed ──
     enc = corner_enclosure.build().rotate((0, 0, 0), (1, 0, 0), -90)
-    out(enc, "05_corner_enclosure", 1, "yes", "plate flat; light supports under the tongue/saddle")
+    out(enc, "05_center_enclosure", 1, "yes", "Pi+Bonnet tray, hung at wall CENTER; light supports under tongue")
+
+    # ── PART 7 · gap hanger — ON ITS SIDE (profile flat, width up) ──────────
+    gh = gap_hanger.build().rotate((0, 0, 0), (0, 1, 0), 90)
+    out(gh, "07_gap_hanger", 6, "no", "carries the electronics strip + valance; support-free on-side")
 
     # ── PART 6 · PSU cradle — as modelled, base on the bed ──────────────────
     out(psu_bracket.build(), "06_psu_cradle", 4, "no", "base down; retaining nubs bridge fine")

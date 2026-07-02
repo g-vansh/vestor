@@ -95,6 +95,17 @@ def station_x(i):
 ANCHOR_STATION = N_STATIONS // 2   # the one cleat that rigidly anchors the rails (rest slot)
 FOOT_EVERY = 2          # an anti-swing tab at every 2nd station (~854 mm)
 
+# ── ceiling gap (electronics plenum above the panels) ──────────────────────
+# Behind the panels is only ~1 cm; all electronics live in the ~22.5 cm gap between
+# the piece top (Z=0) and the ceiling, on a backer strip hung from the SAME top groove.
+CEIL_Z          = 225.0   # ceiling, above the piece top (22.5 cm)
+STRIP_FRONT_Y   = 30.0    # backer-strip front face — electronics hang forward of this
+STRIP_BACK_Y    = 18.0
+VALANCE_BACK_Y  = 61.0    # valance board back
+VALANCE_FRONT_Y = PANEL_FACE_Y   # 71 — valance flush with the panel face (one clean plane)
+VALANCE_TOP_Z   = 208.0   # stop below the ceiling → a continuous vent reveal for the PSUs
+HANGER_TOP_Z    = 200.0   # top of the gap-hanger bracket
+
 # ── fasteners ───────────────────────────────────────────────────────────────
 M4_CLR = 4.5            # M4 clearance hole
 M3_CLR = 3.4
