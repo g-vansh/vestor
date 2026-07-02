@@ -1157,6 +1157,31 @@ add airline branding.
   AttributeError-loop), `preloaded 64/64`, box+10000ft returned Cape Air
   LEB→BOS at 225 ft with a 24×12 static logo.
 
+### 2026-07-01 — 3-panel departure board (airline | route | telemetry)
+- **Did:** owner chained 2 more panels left of the original. **Calibrated** the
+  geometry with a labelled test pattern (`scratchpad/calibrate3.py`): canvas col
+  0..63 = physical LEFT, 64..127 = middle, 128..191 = right; L/R + v correct →
+  **no mirror/flip**, canvas X = physical X. Rebuilt the card as a 192×32
+  three-zone board: LEFT = big static airline logo + name + livery rule
+  (`airlinelogo.py`); MIDDLE = big stacked ORIGIN/DEST codes, split-flap
+  flip-in, plane sprite on a dotted track (`journey.py`); RIGHT = callsign +
+  big FR24-coloured altitude + climb/descent marker + type + N/M + vertical
+  altitude gauge (`flightdetails.py`). `config CHAIN_LENGTH=3` drives
+  `display.chain_length` + `setup/screen` zone offsets (ZONE_AIRLINE/ROUTE/
+  TELEM = 0/64/128); `setup/logos` fits to a larger 62×22 box. Scenes draw
+  canvas-absolute per zone; the Pi's Port-3 `+64` row shim is unchanged.
+- **Verified:** offline preview (`tools/preview_card.py` now 192×32) + live —
+  service active, restarts 0, preloaded 64/64, ~54% CPU (3× draw load, fine),
+  50 °C, no throttle. JetBlue JFK→BUR and United IAD→BOS rendered with full
+  logo+route+telemetry.
+- **Connectivity fix (earlier):** a deploy `rsync` hung on a WiFi blip (no
+  keepalive) → zombie session saturated the Pi's tailscaled SSH → banner
+  timeouts; a power-cycle cleared it. Added a `Host vestor` block to
+  `~/.ssh/config` (ConnectTimeout + ServerAliveInterval) so a blip fails fast
+  instead of hanging. tailscale ping/TCP were always healthy — it was never WiFi.
+- **Next:** 4th panel → extend zones; enhance the idle (no-flight) state to
+  span all panels (currently the clock draws only on the left panel).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
