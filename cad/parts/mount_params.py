@@ -42,16 +42,23 @@ ATTACH_BOT_Z  = -83.0   # solid attach band -50..-83  (nothing may pass here)
 BOT_GRV_TOP_Z = -83.0   # bottom groove closed top
 PIECE_BOT_Z   = -140.0  # piece bottom == bottom groove open mouth
 
-# ── the mount stackup (Y): cleat face → bar → steel tape → magnet → panel ────
-FACE_Y      = 40.0      # front face of every wall bracket (6 mm proud of piece)
-BAR_THK     = 5.0       # aluminium flat-bar depth (Y)
-BAR_FRONT_Y = FACE_Y + BAR_THK        # 45  (bar front = where steel tape goes)
-STEEL_THK   = 1.0       # adhesive ferrous magnet-target strip
-STEEL_Y     = BAR_FRONT_Y + STEEL_THK # 46  (magnet contact plane)
+# ── the mount stackup (Y): cleat face → STEEL rail → magnet → panel ──────────
+# CHANGED after the manufacturing-strategy research (docs/design/MANUFACTURING_PLAN.md):
+# the rails are now STEEL, not aluminium + a glued steel strip. Steel IS the magnet
+# target (bare low-carbon steel is what neodymium actually grips — a thin/coated/
+# alloy strip silently loses 40-60% of hold), it is 3× stiffer than aluminium (holds
+# the flat datum plane), and it expands half as much — so there is no separate strip
+# to shear-peel. The rail front face IS the magnet contact plane.
+FACE_Y      = 40.0      # front face of every wall bracket (6 mm proud of the piece)
+RAIL_THK    = 5.0       # steel rail depth (Y) — bare low-carbon steel, the magnet target
+RAIL_FRONT_Y = FACE_Y + RAIL_THK       # 45  (magnet contact plane)
+STEEL_Y     = RAIL_FRONT_Y             # alias: the magnet contacts the rail front directly
 MAGNET_STAND = 11.0     # magnet-screw protrusion off the panel back
-PANEL_BACK_Y = STEEL_Y + MAGNET_STAND # 57
+PANEL_BACK_Y = RAIL_FRONT_Y + MAGNET_STAND  # 56
 PANEL_D      = 15.0
-PANEL_FACE_Y = PANEL_BACK_Y + PANEL_D # 72
+PANEL_FACE_Y = PANEL_BACK_Y + PANEL_D  # 71 (~37 mm proud of the piece)
+# back-compat alias (older parts referenced BAR_FRONT_Y / BAR_THK)
+BAR_THK, BAR_FRONT_Y = RAIL_THK, RAIL_FRONT_Y
 
 # ── panels / rows ───────────────────────────────────────────────────────────
 PANEL_W, PANEL_H = 320.0, 160.0
@@ -62,19 +69,31 @@ PANEL_TOP_Z, PANEL_BOT_Z = 0.0, -PANEL_H            # 0 .. -160
 M3_TOP_Z, M3_BOT_Z = -8.0, -152.0      # the two M3 hole rows (144 mm pitch)
 M3_V_PITCH = 144.0
 
-# ── the two aluminium bars (flat bar, run along X) ──────────────────────────
-BAR_H       = 26.0      # bar height (Z)
+# ── the two STEEL rails (run along X) ───────────────────────────────────────
+# TOP rail = steel flat bar (magnet target only). BOTTOM rail = steel ANGLE: its
+# vertical leg is the magnet target, its horizontal leg is a CONTINUOUS ledge every
+# panel bottom RESTS on — so the magnets never carry the panel weight in shear (the
+# validated fix), and it deletes the 16 separate printed rest-shoes.
+BAR_H       = 26.0      # rail face height (Z) — tall enough for magnet-screw wiggle room
 TOP_BAR_CZ  = M3_TOP_Z  # -8   (centred on the top M3 row)
 BOT_BAR_CZ  = M3_BOT_Z  # -152 (centred on the bottom M3 row)
-def bar_z(cz):          # (z0, z1) of a bar centred at cz
+def bar_z(cz):          # (z0, z1) of a rail face centred at cz
     return (cz - BAR_H / 2, cz + BAR_H / 2)
+LEDGE_Z     = PANEL_BOT_Z          # -160  bottom-angle ledge top (panel rests here)
+LEDGE_THK   = 4.0                  # steel angle leg thickness
+LEDGE_FRONT_Y = PANEL_BACK_Y + 8   # 64    ledge reaches under the panel back edge
+
+# THERMAL: a 5 m steel rail grows ~1.2 mm per 20 °C. Anchor each rail to ONE central
+# cleat only; every other cleat's rail-bolt hole is SLOTTED in X so the rail breathes.
+# Leave a sub-mm gap at the row ends (hidden at the corner).
 
 # ── stations (vertical lines of hardware) ───────────────────────────────────
 N_STATIONS   = 13
-STATION_PITCH = ROW_W / (N_STATIONS - 1)   # ≈ 427 mm
+STATION_PITCH = ROW_W / (N_STATIONS - 1)   # ≈ 427 mm (≤450 keeps rail sag invisible)
 def station_x(i):
     return i * STATION_PITCH
-FOOT_EVERY = 2          # an anti-swing foot at every 2nd station (~854 mm)
+ANCHOR_STATION = N_STATIONS // 2   # the one cleat that rigidly anchors the rails (rest slot)
+FOOT_EVERY = 2          # an anti-swing tab at every 2nd station (~854 mm)
 
 # ── fasteners ───────────────────────────────────────────────────────────────
 M4_CLR = 4.5            # M4 clearance hole

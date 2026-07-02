@@ -4,6 +4,31 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-02 — Manufacturing strategy researched + design revised → `MANUFACTURING_PLAN.md`
+Owner asked to deep-research the EASIEST/least-labor way to actually build the mount
+(print vs CNC vs waterjet vs off-the-shelf) and make the plan airtight. Ran 4 parallel
+web-research agents: (1) LED-wall mounting best practice, (2) off-the-shelf hardware,
+(3) makerspace process-labor, (4) adversarial engineering validation.
+- **Method verdict:** printing the custom parts + saw/drill the rails is least-*human*-labor
+  by a wide margin (quantity is nearly free on a printer; waterjet needs 50 mm plate + tab-
+  grinding, CNC needs ~3 setups/part, laser can't do it, custom extrusion die $750+). Print
+  cleats on-side (support-free + shear along layers). Hobby Shop confirmed waterjet/mills/saws,
+  no laser/router.
+- **Validation caught 3 real problems** (skeleton was fine — wood 20-100× margin, PLA 4-5×
+  under creep): 🔴 coplanarity (roughly-straight bar + 96 screws won't give invisible P5 seams;
+  the Caudell jumbotron that used our exact magnet-on-bars scheme cable-tied panels on),
+  🟠 magnet shear-only is marginal (friction ~15% of pull; needs a load-bearing ledge),
+  🟠 5 m thermal growth (~1-2.4 mm) into a butt-tight row.
+- **Design revised (CAD updated, collide-check clean):** (a) cleat → **tall C-bracket carrying
+  BOTH rails** on one rigid spine = coplanarity datum you level once (jackscrew + slotted holes);
+  (b) rails → **steel** (flat bar top + **angle** bottom whose leg is a continuous rest ledge →
+  weight off the magnets, deletes 16 rest-shoes); (c) center-anchor + slotted rail holes (thermal);
+  (d) bare 2-3 mm low-carbon steel for magnet grip. **Magnets KEPT** (owner owns/tested them +
+  tool-free service; engineering says fine once weight's on the ledge & rail is flat) — bolt-in-
+  sections documented as the fallback. Part count ~43 → ~25. Full cited writeup: `docs/design/
+  MANUFACTURING_PLAN.md`; `MOUNT_PARTS.md` banner-flagged as superseded.
+- Next: owner review; then print 1 cleat + 1 foot as fit coupons against the real grooves.
+
 ## 2026-07-02 — Mount hardware designed (all 6 parts) → `cad/parts/`
 Built the whole mount as real CadQuery solids on ONE shared parameter set
 (`cad/parts/mount_params.py`) so parts can't drift: **(1)** top cleat, **(2)**

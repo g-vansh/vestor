@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cadquery as cq
 import mount_params as P
 from util import box, OUT, IMG
-import top_cleat, anti_swing_foot, panel_rest, bars, corner_enclosure
+import top_cleat, anti_swing_foot, bars
 
 ASM = os.path.join(OUT, "asm"); os.makedirs(ASM, exist_ok=True)
 SECT_X = 700.0     # render a 700 mm slice (~2 panels)
@@ -40,20 +40,16 @@ def section_solids():
     S.append(("wall",   box(-40, SECT_X + 40, -25, 0, -320, 40)))
     S.append(("piece",  box(-40, SECT_X + 40, P.PIECE_BACK_Y, P.PIECE_FRONT_Y, P.PIECE_BOT_Z, 0)))
     S.append(("bridge", box(-40, SECT_X + 40, 0, P.PIECE_BACK_Y, P.ATTACH_BOT_Z, P.ATTACH_TOP_Z)))
-    # ---- the two bars + steel over the slice ----
-    S.append(("bar_top",   bars.build_bar(P.TOP_BAR_CZ, SECT_X)))
-    S.append(("bar_bot",   bars.build_bar(P.BOT_BAR_CZ, SECT_X)))
-    S.append(("steel_top", bars.build_steel(P.TOP_BAR_CZ, SECT_X)))
-    S.append(("steel_bot", bars.build_steel(P.BOT_BAR_CZ, SECT_X)))
-    # ---- cleats at two stations ----
+    # ---- the two STEEL rails over the slice (bottom rail = angle w/ rest ledge) ----
+    S.append(("bar_top", bars.build_top_rail(SECT_X)))
+    S.append(("bar_bot", bars.build_bottom_rail(SECT_X)))
+    # ---- tall station cleats (each carries BOTH rails) ----
     for i, x0 in enumerate((40.0, 440.0)):
         S.append((f"cleat_{i}", top_cleat.build(x0)))
-    # ---- one anti-swing foot (base + tab) ----
-    S.append(("foot_0", anti_swing_foot.build_base(35.0)))
-    S.append(("tab_0",  anti_swing_foot.build_tab(35.0)))
-    # ---- rest shoes under two panel centres ----
-    for i, x0 in enumerate((140.0, 460.0)):
-        S.append((f"rest_{i}", panel_rest.build(x0)))
+    # ---- one anti-swing tab foot (pure anti-swing; sits BETWEEN cleat stations so
+    #      its base clears the tall spine; bolts to the continuous bottom rail) ----
+    S.append(("foot_0", anti_swing_foot.build_base(240.0)))
+    S.append(("tab_0",  anti_swing_foot.build_tab(240.0)))
     # ---- two panels (front) ----
     for i, a in enumerate((0.0, 320.0)):
         S.append((f"panel_{i}", box(a + 1, a + P.PANEL_W - 1, P.PANEL_BACK_Y, P.PANEL_FACE_Y - 1.5, P.PANEL_BOT_Z, 0)))
@@ -74,13 +70,18 @@ def collide_check(S):
         except Exception:
             return 0.0
     issues = []
-    for n, s in S:
-        if not n.startswith(("cleat", "foot", "tab", "rest")):
-            continue
+    hardware = [(n, s) for n, s in S if n.startswith(("cleat", "foot", "tab", "rest"))]
+    for n, s in hardware:
         for label, ref in (("panel", panel_vol), ("piece", piece_vol)):
-            inter = vol(s.intersect(ref))
-            if inter > 1.0:   # > 1 mm³ of shared solid = a real clash
-                issues.append(f"{n} clashes with {label} ({inter:.0f} mm³)")
+            if vol(s.intersect(ref)) > 1.0:   # > 1 mm³ of shared solid = a real clash
+                issues.append(f"{n} clashes with {label}")
+    # hardware-vs-hardware: a foot/tab must not collide with a cleat spine (offset check)
+    cleats = [(n, s) for n, s in hardware if n.startswith("cleat")]
+    feet   = [(n, s) for n, s in hardware if n.startswith(("foot", "tab"))]
+    for fn, fs in feet:
+        for cn, cs in cleats:
+            if vol(fs.intersect(cs)) > 1.0:
+                issues.append(f"{fn} clashes with {cn}")
     return issues
 
 
@@ -119,32 +120,32 @@ def render_section():
     import anti_swing_foot as F
     fig, ax = plt.subplots(figsize=(9, 11))
     draw_wall(ax)
-    # top cleat
+    # tall station cleat (tongue + saddle + full spine carrying both rails)
     prof = [(top_cleat.TONGUE_Y0, -top_cleat.TONGUE_DEEP), (top_cleat.TONGUE_Y0, top_cleat.SADDLE_TOP),
-            (P.FACE_Y, top_cleat.SADDLE_TOP), (P.FACE_Y, top_cleat.UPRIGHT_BOT),
-            (top_cleat.UPRIGHT_BACK, top_cleat.UPRIGHT_BOT), (top_cleat.UPRIGHT_BACK, 0),
+            (P.FACE_Y, top_cleat.SADDLE_TOP), (P.FACE_Y, top_cleat.SPINE_BOT),
+            (top_cleat.SPINE_BACK, top_cleat.SPINE_BOT), (top_cleat.SPINE_BACK, 0),
             (top_cleat.TONGUE_Y1, 0), (top_cleat.TONGUE_Y1, -top_cleat.TONGUE_DEEP)]
     ax.add_patch(Polygon(prof, closed=True, facecolor=PALETTE["cleat"], ec="k", lw=1.2, zorder=5))
-    # bars + steel
-    bar_patch(ax, P.TOP_BAR_CZ, "top bar")
-    bar_patch(ax, P.BOT_BAR_CZ, "bottom bar")
+    # top steel rail (flat bar)
+    z0, z1 = P.bar_z(P.TOP_BAR_CZ)
+    ax.add_patch(Rectangle((P.FACE_Y, z0), P.RAIL_THK, P.BAR_H, facecolor=PALETTE["bar"], ec="k", lw=.7, zorder=6))
+    # bottom steel rail (ANGLE: vertical magnet leg + horizontal rest ledge)
+    ax.add_patch(Rectangle((P.FACE_Y, P.LEDGE_Z), P.RAIL_THK, 30, facecolor=PALETTE["bar"], ec="k", lw=.7, zorder=6))
+    ax.add_patch(Rectangle((P.FACE_Y, P.LEDGE_Z - P.LEDGE_THK), P.LEDGE_FRONT_Y - P.FACE_Y, P.LEDGE_THK,
+                           facecolor=PALETTE["bar"], ec="k", lw=.7, zorder=6))
     # anti-swing foot base + tab
-    ax.add_patch(Rectangle((0, F.BASE_BOT), P.FACE_Y, F.BASE_TOP - F.BASE_BOT, facecolor=PALETTE["foot"], ec="k", lw=1.1, zorder=5))
-    ax.add_patch(Rectangle((F.CH_Y0, F.TAB_BOT), F.CH_Y1 - F.CH_Y0, F.TAB_TOP - F.TAB_BOT, facecolor=PALETTE["tab"], ec="k", lw=1.1, zorder=6))
-    # rest shoe (front wall + ledge)
-    z0b, _ = P.bar_z(P.BOT_BAR_CZ)
-    ax.add_patch(Rectangle((P.FACE_Y - 3, z0b - 3), (P.BAR_FRONT_Y + 3) - (P.FACE_Y - 3), 21, facecolor=PALETTE["rest"], ec="k", lw=.9, zorder=4))
-    ax.add_patch(Rectangle((P.BAR_FRONT_Y, P.PANEL_BOT_Z - 3), 19, 3, facecolor=PALETTE["rest"], ec="k", lw=.9, zorder=7))
+    ax.add_patch(Rectangle((0, F.BASE_BOT), P.FACE_Y, F.BASE_TOP - F.BASE_BOT, facecolor=PALETTE["foot"], ec="k", lw=1.1, zorder=4))
+    ax.add_patch(Rectangle((F.CH_Y0, F.TAB_BOT), F.CH_Y1 - F.CH_Y0, F.TAB_TOP - F.TAB_BOT, facecolor=PALETTE["tab"], ec="k", lw=1.1, zorder=4))
     # magnet screws at both M3 rows
     for z in (P.M3_TOP_Z, P.M3_BOT_Z):
-        ax.plot([P.STEEL_Y, P.PANEL_BACK_Y], [z, z], color="orange", lw=3, zorder=8)
+        ax.plot([P.RAIL_FRONT_Y, P.PANEL_BACK_Y], [z, z], color="orange", lw=3, zorder=8)
     # labels
-    ax.annotate("PART 1  top cleat → TOP groove", (7, -30), (82, -20), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
-    ax.annotate("PART 4  top bar + steel", (P.FACE_Y+2, P.TOP_BAR_CZ), (82, -55), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
-    ax.annotate("magnet screws → panel\n(6 per panel, adjustable)", (P.PANEL_BACK_Y, P.M3_TOP_Z), (82, -90), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
-    ax.annotate("PART 4  bottom bar + steel", (P.FACE_Y+2, P.BOT_BAR_CZ), (82, -128), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
+    ax.annotate("PART 1  tall cleat → TOP groove\n(one spine carries BOTH rails)", (7, -30), (82, -18), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
+    ax.annotate("PART 4  top rail (steel flat bar)", (P.FACE_Y+2, P.TOP_BAR_CZ), (82, -58), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
+    ax.annotate("magnet screws → panel\n(hold flat only, not weight)", (P.PANEL_BACK_Y, P.M3_TOP_Z), (82, -92), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
+    ax.annotate("PART 4  bottom rail (steel ANGLE)", (P.FACE_Y+2, P.BOT_BAR_CZ), (82, -128), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
+    ax.annotate("continuous ledge — panel RESTS here\n(weight off the magnets)", (P.LEDGE_FRONT_Y-3, P.LEDGE_Z), (78, -186), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
     ax.annotate("PART 2  anti-swing tab → BOT groove", (F.CH_Y1, -118), (82, -158), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
-    ax.annotate("PART 3  rest shoe (panel sits on it)", (P.BAR_FRONT_Y+8, P.PANEL_BOT_Z), (82, -185), fontsize=8.5, arrowprops=dict(arrowstyle="->"))
     ax.set_xlim(-30, 150); ax.set_ylim(-205, 30); ax.set_aspect("equal"); ax.grid(alpha=.3)
     ax.set_xlabel("Y — depth into room (mm)"); ax.set_ylabel("Z — vertical (mm, 0 = piece top)")
     ax.set_title("VESTOR MOUNT — full cross-section (all parts, one frame)")

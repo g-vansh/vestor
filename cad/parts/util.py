@@ -66,10 +66,9 @@ def draw_wall(ax, panel=True):
 
 
 def bar_patch(ax, cz, label=None):
-    """Draw one aluminium bar + its steel tape at bar-centre cz (YZ view)."""
+    """Draw one STEEL rail (the rail front face IS the magnet target) at cz (YZ view)."""
     from matplotlib.patches import Rectangle
     z0, z1 = P.bar_z(cz)
-    ax.add_patch(Rectangle((P.FACE_Y, z0), P.BAR_THK, P.BAR_H, facecolor=(.75, .78, .82), ec="k", lw=.5))
-    ax.add_patch(Rectangle((P.BAR_FRONT_Y, z0 + 4), P.STEEL_THK, P.BAR_H - 8, facecolor=(.6, .62, .66), ec="k", lw=.4))
+    ax.add_patch(Rectangle((P.FACE_Y, z0), P.RAIL_THK, P.BAR_H, facecolor=(.62, .64, .68), ec="k", lw=.6))
     if label:
         ax.annotate(label, (P.FACE_Y + 2, cz), (95, cz), fontsize=7, arrowprops=dict(arrowstyle="->"))

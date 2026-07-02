@@ -2,8 +2,11 @@
 """
 anti_swing_foot.py — PART 2: BOTTOM ANTI-SWING FOOT (base + slide-up tab).
 
-Carries the BOTTOM bar and captures the assembly in the wall's BOTTOM groove so
-the panel bottoms can't kick out. Because the bottom groove opens UPWARD, the tab
+PURE anti-swing insurance now (the tall station cleats carry the bottom rail, so
+this no longer bears weight). It bolts to the continuous bottom rail BETWEEN cleat
+stations (so its base clears the tall spine) and wedges a tab up into the wall's
+BOTTOM groove so the panel bottoms can't kick out. Because the bottom groove opens
+UPWARD, the tab
 CANNOT drop in with the rest of the assembly (it would hit the solid attach band).
 So the tab is a SEPARATE slide-up piece engaged AFTER the assembly is hung:
 

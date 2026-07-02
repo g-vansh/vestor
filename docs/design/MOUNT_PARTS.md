@@ -1,5 +1,13 @@
 # VESTOR MOUNT — PARTS MANIFEST (buildable)
 
+> **⚠️ REVISED 2026-07-02 by the manufacturing-strategy research → see `MANUFACTURING_PLAN.md`
+> (authoritative).** Key changes since this manifest was first written: rails are now
+> **steel** (flat bar top + **angle** bottom), not aluminium + a glued strip; the cleat is
+> now a **tall C-bracket carrying BOTH rails** (coplanarity datum); the **16 rest-shoes are
+> deleted** (the bottom angle's leg is a continuous ledge); rails are center-anchored +
+> slotted for thermal. The CAD (`cad/parts/`) already reflects this; the tables below are
+> being updated to match — trust `MANUFACTURING_PLAN.md` + the code where they differ.
+
 Every printable/stock part of the mount, modelled as a real CadQuery solid on a
 **single shared parameter set** (`cad/parts/mount_params.py`) so nothing can drift
 out of alignment. Source: `cad/parts/*.py`. STL (print) + STEP (Fusion) regenerate
