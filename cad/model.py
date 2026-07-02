@@ -22,13 +22,22 @@ PIECE_BACK, PIECE_FRONT = TOP_GRV_GAP, PIECE_PROUD      # 14 .. 34
 Z_TOP, Z_BOT = 0.0, -PIECE_HEIGHT                       # 0 .. -140
 Z_MID_TOP, Z_MID_BOT = -TOP_GRV_H, -(TOP_GRV_H + MID_H)  # -50 .. -83
 
+# ---- MOUNT STACKUP (from cad/parts/top_cleat.py) ---------------------------
+# The panel plane is set by: cleat front face -> aluminium flat bar -> steel
+# magnet tape -> the 11 mm magnet-screw standoff -> the panel. Coplanarity is
+# taken out at each panel's 6 adjustable magnet screws, NOT by a precision rail.
+CLEAT_FACE_Y = 40       # cleat front upright, 6 mm proud of the piece (34)
+RAIL_THICK   = 5        # aluminium flat bar bolted to the cleat face
+STEEL_THICK  = 1        # adhesive ferrous strip on the bar (magnet target)
+MAGNET_STAND = 11       # magnet-screw protrusion off the panel back (0.8 shaft + 0.3 base)
+
 # ---- PANELS ----------------------------------------------------------------
 PANEL_W, PANEL_H, PANEL_D = 320.0, 160.0, 15.0
 N_PANELS = 16
 ROW_W = PANEL_W * N_PANELS                              # 5120
 WALL_USABLE = 5118.0                                    # 201.5"
-PANEL_BACK_Y = PIECE_FRONT + 2                          # 36 (just off the piece)
-PANEL_FACE_Y = PANEL_BACK_Y + PANEL_D                   # 51
+PANEL_BACK_Y = CLEAT_FACE_Y + RAIL_THICK + STEEL_THICK + MAGNET_STAND  # 57
+PANEL_FACE_Y = PANEL_BACK_Y + PANEL_D                   # 72 (~38 mm proud of the piece)
 M3_V_PITCH = 144.0
 
 # ---- MOUNT (MOUNT_DESIGN.md) -----------------------------------------------
