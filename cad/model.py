@@ -66,11 +66,17 @@ def parts():
     P.append(("tongue", (0, ROW_W, PIECE_BACK - TONGUE_THICK, PIECE_BACK, Z_MID_TOP + 2, Z_TOP), C_BIRCH))
     P.append(("tab",    (0, ROW_W, -WALL_STEP + 1, -WALL_STEP + 1 + TAB_THICK, Z_BOT, Z_BOT + ENGAGE), C_BIRCH))
 
-    # --- left corner: perpendicular return wall + ledge + electronics ---
-    P.append(("corner_wall",  (-120, 0, -120, 380, Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
-    P.append(("corner_ledge", (0, PIECE_FRONT, -120, 380, Z_BOT, Z_TOP),           C_PIECE))
-    P.append(("pi_bonnet", (45, 140, 90, 150, -120, -55),  C_PI))    # Pi + Triple Bonnet
-    P.append(("psu",       (45, 160, 190, 220, -235, -120), C_PSU))  # LRS-350-5
+    # --- LEFT WALL: a room corner FACING the panel wall, extending INTO the room
+    # (+Y). SAME structure as the front wall (2 cm piece + top/bottom grooves),
+    # rotated 90°: its surface is at X=0, the piece juts +X, grooves face +X.
+    LWY = 520                                    # modeled length along the left wall
+    P.append(("corner_solid", (-120, 0, -120, 0, Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
+    P.append(("left_wall",    (-120, 0, 0, LWY, Z_BOT - 120, CEIL_TO_TOP + 20),  C_WALL))
+    P.append(("left_piece",   (PIECE_BACK, PIECE_FRONT, 0, LWY, Z_BOT, Z_TOP),   C_PIECE))  # juts +X
+    P.append(("left_bridge",  (0, PIECE_BACK, 0, LWY, Z_MID_BOT, Z_MID_TOP),     C_PIECE))
+    # electronics HUNG from the left wall's grooves, tucked into the corner
+    P.append(("pi_bonnet", (PIECE_FRONT, PIECE_FRONT + 80, 150, 215, -110, -50),   C_PI))
+    P.append(("psu",       (PIECE_FRONT, PIECE_FRONT + 115, 280, 315, -220, -110), C_PSU))
     return P
 
 

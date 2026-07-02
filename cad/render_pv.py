@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""render_pv.py — shaded 3D fit-check renders via PyVista/VTK (offscreen)."""
+import os
+import pyvista as pv
+import model as M
+
+pv.OFF_SCREEN = True
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out", "img")
+os.makedirs(OUT, exist_ok=True)
+
+
+def _scene(size=(2000, 1150), subset=None):
+    pl = pv.Plotter(off_screen=True, window_size=size)
+    pl.set_background("white")
+    for name, b, c in M.parts():
+        if subset and not subset(name, b):
+            continue
+        box = pv.Box(bounds=(b[0], b[1], b[2], b[3], b[4], b[5]))
+        emissive = name.startswith("screen")
+        pl.add_mesh(box, color=c, show_edges=True, edge_color=(0.15, 0.15, 0.18),
+                    line_width=0.4, ambient=0.5 if emissive else 0.32,
+                    diffuse=0.5 if emissive else 0.7, specular=0.08)
+    pl.enable_lightkit()
+    return pl
+
+
+def overview():
+    pl = _scene((2400, 720))
+    pl.camera_position = [(M.ROW_W * 0.30, 5200, 2600),
+                          (M.ROW_W * 0.52, 40, -70), (0, 0, 1)]
+    pl.camera.zoom(1.5)
+    pl.screenshot(os.path.join(OUT, "pv_overview.png")); print("wrote pv_overview.png")
+
+
+def corner():
+    # from inside the room (+X,+Y, above) looking into the corner so the left-wall
+    # face, its grooves, and the hung electronics are all visible
+    pl = _scene((1500, 1250), subset=lambda n, b: b[0] < 950)
+    pl.camera_position = [(1550, 1950, 780), (60, 240, -130), (0, 0, 1)]
+    pl.camera.zoom(1.2)
+    pl.screenshot(os.path.join(OUT, "pv_corner.png")); print("wrote pv_corner.png")
+
+
+if __name__ == "__main__":
+    overview()
+    corner()
