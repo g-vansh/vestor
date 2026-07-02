@@ -102,14 +102,18 @@ groove (open at bottom) takes an anti-swing tab pushed up into it → the assemb
 
 ## 6. Electrical — LOCKED
 
-- **Feed: single chain of 16 from the corner** — `--led-chain=16 --led-parallel=1`,
-  **`pwm_bits=9` → measured 111 Hz** on the Pi (flicker-free for this static-ish board).
-  All HUB75 ribbons stay short; **removes the "snake"/180° left-half flip** in
-  `display/__init__.py`. (Supersedes the old 2×8 center-feed.)
-- **Power: 2× Mean Well LRS-350-5** (5 V/60 A). Keep 5 V drop < 3 %: put **PSU2 out near
-  the right half** (short runs), OR a heavy 5 V bus if all-in-corner. `BRIGHTNESS ≤ 50`.
-- **Brain: Raspberry Pi 4 + Adafruit Triple RGB Matrix Bonnet 6358** (regular mapping),
-  in the corner.
+- **Feed: center-fed 2×8** — `--led-chain=8 --led-parallel=2 --led-pixel-mapper="U-mapper;Rotate:180"`,
+  **`pwm_bits=11` → measured 150 Hz** on the Pi. Pi in the CENTER, two chains of 8 outward
+  (Bonnet outputs land on center panels 8 & 9). Chosen over the single chain of 16 for **11-bit
+  vs 9-bit color depth, 150 vs 111 Hz, and safe 8/chain signal integrity** (16/chain risks
+  bright-text ghosting) — see `BACK_OF_HOUSE.md`. (Reverses the earlier "single chain of 16".)
+- **Power: 2× Mean Well LRS-350-5** (5 V/60 A), **SPLIT one per half** (PSU-L left end, PSU-R
+  right end, each own AC outlet); per-panel **7.5 A** fused; **10 AWG** star trunks; trim ~5.2 V;
+  bond both V− + Pi GND, never V+. `BRIGHTNESS ≤ 50`. Full detail: **`../ELECTRICAL.md`**.
+- **Brain: Raspberry Pi 4 + Adafruit Triple RGB Matrix Bonnet 6358** — in the **center** of the
+  ceiling gap; USB-C powered; Bonnet 5 V terminal empty, Bonnet GND → PSU-L V−.
+- **Siting: all electronics in the ~22.5 cm ceiling gap** on a groove-hung backer strip, hidden
+  by a removable vented valance (`BACK_OF_HOUSE.md`).
 
 ---
 
