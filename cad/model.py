@@ -51,32 +51,33 @@ def parts():
     """Return [(name, (x0,x1,y0,y1,z0,z1), rgb), ...]."""
     P = []
     # --- wooden wall feature (grooves are the un-filled gaps) ---
-    # The panel-hanging wall face is the FULL available space = 201.5" (WALL_USABLE)
-    # measured FROM the corner. Corner (viewer's LEFT) at X = WL. The front trim runs
-    # the WHOLE length to the corner (no truncation → face is 5118 mm, not 5086).
-    WL = WALL_USABLE                              # 5118 mm
-    P.append(("wall",   (0, WL, -120, 0,          Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
+    # The usable panel FACE = the full available space = 201.5" (WALL_USABLE), measured
+    # to the INSIDE CORNER (X=WL) where the left wall's proud piece begins — the panels
+    # STOP there. The left wall's SURFACE sits PIECE_FRONT (34 mm) BEHIND that corner,
+    # since its own piece juts 34 mm into the room to meet the front face.
+    WL = WALL_USABLE                              # 5118 mm — usable face, ends at the corner
+    xc = WL + PIECE_FRONT                          # left-wall surface (its piece front = WL = corner)
+    P.append(("wall",   (0, xc, -120, 0,          Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
     P.append(("piece",  (0, WL, PIECE_BACK, PIECE_FRONT, Z_BOT, Z_TOP),           C_PIECE))
     P.append(("bridge", (0, WL, 0, PIECE_BACK,    Z_MID_BOT, Z_MID_TOP),          C_PIECE))  # attach
     P.append(("tongue", (0, WL, PIECE_BACK - TONGUE_THICK, PIECE_BACK, Z_MID_TOP + 2, Z_TOP), C_BIRCH))
     P.append(("tab",    (0, WL, -WALL_STEP + 1, -WALL_STEP + 1 + TAB_THICK, Z_BOT, Z_BOT + ENGAGE), C_BIRCH))
 
-    # --- panels: 16×320 = 5120 mm, BUTT the corner (X=WL); the +2 mm overshoots
-    # the FAR end (panel 0 sticks ~2 mm past X=0), never the corner ---
+    # --- panels: 16×320 = 5120 mm, BUTT the corner (X=WL); the +2 mm overshoots the
+    # FAR end (panel 0 sticks ~2 mm past X=0), never the corner ---
     x0p = WL - ROW_W                              # -2 mm
     for i in range(N_PANELS):
         a = x0p + i * PANEL_W
         P.append((f"panel_{i:02d}", (a + 0.5, a + PANEL_W - 0.5, PANEL_BACK_Y, PANEL_FACE_Y - 1.5, -PANEL_H, 0), C_PANEL))
         P.append((f"screen_{i:02d}", (a + 3, a + PANEL_W - 3, PANEL_FACE_Y - 1.5, PANEL_FACE_Y, -PANEL_H + 3, -3), C_SCREEN))
 
-    # --- LEFT WALL = the viewer's LEFT as they face the panels: a room corner at
-    # X=WL that comes TOWARD them (+Y), built identically. Its piece butts the FRONT
-    # piece's front plane (Y=PIECE_FRONT) → clean L, no crossing, and the front face
-    # keeps its FULL length. ---
-    LWY, xc = 520, WL
+    # --- LEFT WALL (viewer's LEFT): a room corner coming TOWARD them (+Y), built
+    # identically. Its proud piece FRONT sits exactly at the corner (X=WL) where the
+    # front face ends, so NOTHING juts into the panel row — clean L. ---
+    LWY = 520
     P.append(("corner_solid", (xc, xc + 120, -120, 0, Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
     P.append(("left_wall",    (xc, xc + 120, 0, LWY, Z_BOT - 120, CEIL_TO_TOP + 20),  C_WALL))
-    P.append(("left_piece",   (xc - PIECE_FRONT, xc - PIECE_BACK, PIECE_FRONT, LWY, Z_BOT, Z_TOP), C_PIECE))
+    P.append(("left_piece",   (xc - PIECE_FRONT, xc - PIECE_BACK, PIECE_FRONT, LWY, Z_BOT, Z_TOP), C_PIECE))  # front @ WL
     P.append(("left_bridge",  (xc - PIECE_BACK, xc, PIECE_FRONT, LWY, Z_MID_BOT, Z_MID_TOP),      C_PIECE))
     # electronics HUNG from the LEFT-wall grooves, deeper along the side wall
     P.append(("pi_bonnet", (xc - PIECE_FRONT - 80, xc - PIECE_FRONT, 250, 320, -110, -50),   C_PI))
