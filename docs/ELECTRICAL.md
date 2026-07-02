@@ -23,11 +23,11 @@ Data is independent: a single HUB75 chain of 16 from the corner.
   chained). A 64×32 P5 draws **~3.5–4 A at full white / 100 % brightness** (1/16 scan → 384
   sub-LEDs lit at once × ~10 mA; ~2.4 A measured on comparable panels), and only **~1–2 A at
   brightness ≤50**. So the fuse must sit **just above ~4 A** and **below the pigtail's ampacity**.
-- **Value:** **5 A is the safe default** — at ≤50 brightness it runs at 20–40 %, never
-  nuisance-blows, and stays under a thin-CCA pigtail's ~5–10 A rating. **7.5 A (on hand) is
-  fine IF the pigtail is ~18 AWG _copper_** (~10 A ampacity) — then it clears the load with
-  more margin. **Confirm before choosing:** (a) clamp-meter one panel at full white/full
-  bright for the real max, (b) read the pigtail's gauge (thin CCA → 5 A; ≥18 AWG copper → 7.5 A OK).
+- **Value = 7.5 A (the fuses on hand).** The pigtail is marked **"RV … 450/750 V"** — RV is the
+  Chinese spec for **solid-copper-core** flexible PVC wire, and it's already sized to carry the
+  panel's own ~4 A, so it's ≥0.5 mm² copper (~7–10 A ampacity). **7.5 A > the 4 A load and ≤ the
+  wire's ampacity → it protects the wire.** (5 A only if the pigtail turns out to be a thin
+  0.3 mm² — glance at the mm² printed on it to be 100 % sure; ≥0.5 mm² → 7.5 A.)
 - **Per-panel, not per-group.** A group fuse must be ≥16 A (4 panels) so it never blows for
   one panel's thin-pigtail short. 24 slots / 4 blocks → **16 fuses, one per panel**, 8 spare.
 
@@ -42,9 +42,12 @@ Budget <3 % of 5 V (<0.15 V). Per-branch (4 panels ≈ 16 A) over ~2 m round-tri
 
 - **Star:** each fuse block gets its own 10 AWG feed straight off the PSU terminals (not
   daisy-chained). 2 branches × 4 panels per half → 4 trunks total.
-- Your **yellow 10–12 AWG ring terminals** are correct for the PSU M3.5 studs (ring > fork on
-  the high-current V+/V− lugs; ≤2 wires per screw, ~8 kgf-cm torque). **Verify your red/black
-  cable is actually 10 AWG** — thin cable is the one thing that breaks this.
+- **Owner's trunk = 10 AWG CCA** (copper-clad aluminum, 25 ft spool). CCA carries like ~12 AWG
+  copper, so drop is a bit higher — **acceptable here** given split PSUs, short runs, ~5.2 V trim,
+  and the dark brightness-≤50 content (real ~4–8 A/trunk → <0.15 V; only a pathological all-white
+  16-panel frame would droop, which this board never shows). Keep each block **close to its PSU**.
+- Your **yellow 10–12 AWG ring terminals** land the trunk on the PSU/​block studs (ring > fork on
+  the high-current lugs; ≤2 wires per screw, ~8 kgf-cm). CCA → crimp + anti-oxidant + re-torque.
 
 ### 3. Placement — **SPLIT** (one PSU per half), each on its own AC outlet
 - Split makes every panel ≤2.5 m from its PSU (vs ≤5 m). At 10 AWG, split holds ≥4.48 V even
@@ -77,23 +80,26 @@ Budget <3 % of 5 V (<0.15 V). Per-branch (4 panels ≈ 16 A) over ~2 m round-tri
 what makes the pigtails sufficient *and* keeps the 10 AWG runs short. (Putting all blocks in the
 corner would strand the far pigtails 5 m away.)
 
-## Shopping delta (vs what's on hand)
-- **5 A ATC blade fuses** (×16 + spares) — unless a clamp-meter reading + pigtail gauge confirm the
-  pigtail is ~18 AWG copper, in which case the **7.5 A already on hand** are fine.
-- **10 AWG red/black copper** for the 4 trunk runs (confirm your existing red/black isn't thinner).
-- **Anti-oxidant paste + crimp ferrules** for the CCA forks.
-- **One negative bus bar** to bond the two PSU V− + Pi GND at a single point (unless a fuse block
-  has an integrated ground bus — **check your block type**).
-- **On hand & correct:** 4× 6-way fuse blocks (16/24 slots used), yellow 10–12 AWG ring terminals,
-  the 2× LRS-350-5, the panel pigtails.
+## Shopping delta (vs what's on hand) — almost nothing
+- **Anti-oxidant paste** (Noalox-type) + crimp ferrules for the **CCA trunk** terminations.
+- (Maybe) a 2nd trunk spool if the 4 runs exceed ~7.6 m — probably not; and confirm enough ring/fork terminals.
+- **NOT needed:** 5 A fuses (the 7.5 A work), a negative bus bar (block has one), copper trunk (10 AWG CCA is fine here).
+- **On hand & correct:** 4× 6-way fuse blocks (built-in +/− bus, 16/24 slots used), 10 AWG CCA trunk,
+  yellow 10–12 AWG rings, copper RV pigtails, 2× LRS-350-5, 100 cable ties + adhesive mounts.
 
-## Confirmed on the owner's parts (2026-07-02)
-- Fuse blocks are **enclosed with a built-in negative bus** → no separate bus bar needed; touch-safe.
-- Red/black trunk cable is **10 AWG** → correct for the trunks.
+## Confirmed on the owner's parts (2026-07-02, from photos)
+- **Fuse blocks (×4): 6-way, enclosed, blown-fuse LEDs, with BOTH a fused +bus and a −ground bus.**
+  Terminal map: **bottom center stud = + IN** (PSU +5 V trunk), **top center stud = − IN** (PSU ground),
+  **6 side screws = fused + OUT** (one per panel), **6 top-bar screws = − ground OUT** (one per panel).
+  → no separate negative bus bar needed; each block = a complete +fused/−bus unit for ≤4 panels.
+- **Trunk cable = 10 AWG CCA** (TYUMEN, 25 ft) → acceptable (see §2).
+- **Pigtail = "RV … 450/750 V" = solid-copper flexible wire** → **7.5 A fuses on hand are the right value.**
+- **100 cable ties + adhesive mounts** → dress the HUB75 ribbons + power leads along the rails so nothing
+  sags or **chafes** (chafing is the fault the fuses guard against — tidy routing is itself a safety measure).
 
-## Still to measure (decides the fuse value)
-1. **One panel's full-white/full-bright current** with a clamp meter → the real per-panel max (~2.4–4 A expected).
-2. **The pigtail's own gauge** (not the trunk): thin CCA → 5 A fuses; ~18 AWG copper → the 7.5 A on hand are fine.
+## Only thing left to eyeball
+- The **mm² printed on the pigtail** (≥0.5 mm² → 7.5 A good; a rare 0.3 mm² → drop to 5 A). Optionally
+  clamp-meter one panel at full white to log the real per-panel max (~2.4–4 A expected).
 
 ## Sources
 Mean Well LRS-350 datasheet + Enclosed-Type install manual; hzeller rpi-rgb-led-matrix `wiring.md`
