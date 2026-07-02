@@ -4,6 +4,29 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-02 — Plane-swoop scene transitions + fuller center jet
+A big airliner now swoops left→right on every scene change (flight↔flight, flight↔clock):
+NEW screen reveals to the LEFT of the plane, OLD stays frozen to the RIGHT, with a bright
+sweep line at the seam + a contrail (commit 14f435f, deployed + verified: 68/68 logos, 0
+restarts, ~54% CPU steady, 51°C). Design doc image: `docs/design/swoop_preview.png`.
+- **How the wipe works on a single-buffer renderer:** the display draws into ONE persistent
+  canvas and each scene clears+redraws only its own zone per frame. `utilities/transition.py`
+  installs a **clip window `[0,edge)`** that every primitive obeys during a wipe, so scenes
+  only repaint the revealed left side and the OLD frame is left frozen on the right — no second
+  framebuffer, no pixel readback. `edge` sweeps 0→WIDTH under the plane. Steady-state hot path
+  is byte-identical (clip is `None`). Text can't be pixel-clipped in the C `DrawText`, so a
+  whole-glyph **prefix** is drawn using the real binding's `CharacterWidth` (a straddling glyph
+  sits under the wide plane body anyway).
+- `install()` also **subsumes the Port-3 lane-offset shim** (the old ad-hoc `graphics.DrawText`
+  `+64` monkeypatch is gone). `TransitionMixin` provides `set_pixel`/`draw_square` (offset+clip),
+  overrides `reset_scene` to launch a swoop instead of a hard cut, and adds the `swoop` keyframe
+  (alphabetically after all scene draws, before `sync`). Toggle: `config.TRANSITIONS_ENABLED`.
+- **Two display variants:** repo `display/__init__.py` = clean (lane 0, parallel 1). The Pi runs
+  a Port-3 variant (lane 64, parallel 3, `panel_type=FM6126A`) with the SAME transition wiring —
+  deployed by hand (NOT rsynced), previous copy backed up on-Pi as `display/__init__.py.preswoop`.
+- `journey.py`: center track plane is now a fuller mini-jet (2px fuselage + tail fin + swept
+  wing), not a 1px stick. Offline validation: `tools/preview_transition.py` (swoop filmstrip).
+
 ## 2026-07-01 — Route accuracy + operator logos (NetJets/PAL/Envoy) + real plane sprite
 Five field-reported fixes (commit f6e2904), deployed + verified on-Pi (68/68 logos, 0 restarts):
 - **`BOS→???` for ENY4047 (real: BOS-DCA):** FR24's lightweight feed returned the origin
