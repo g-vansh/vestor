@@ -32,10 +32,17 @@ cooler cavity/closet, dropping a PSU there (DC out into the gap) is the cleanest
 ## Hiding it: a breathing valance
 
 Close the gap's front with a **removable, paintable valance** (MDF or 1× pine, full 5.1 m,
-painted to match) standing off the wall — but leave a **continuous vent reveal at the ceiling**
-so warm air rises out. It hides the row of silver boxes so the wall reads as **one clean trim
-band**, and stays **removable** (magnets/cleat/few screws) for service — required, since a PSU
-can't be permanently sealed (NEC). This is the pro-standard for a floating wall with no rear clearance.
+painted to match) standing off the wall — built as a **CHIMNEY, not a seal**: a **continuous vent
+reveal at the ceiling (exhaust) + a low intake slot** so warm air convects out on its own
+(optionally a quiet low-RPM exhaust fan). This is the highest-leverage permanent thermal decision —
+retrofitting airflow into a closed 5 m gap is painful, and heat drives the top failure modes
+(`../HARDENING.md`). It hides the row of silver boxes so the wall reads as **one clean trim band**,
+and stays **removable** (magnets/cleat/few screws) for service — required, since a PSU can't be
+permanently sealed (NEC) and terminals need re-torque access. Pro-standard for a floating wall with no rear clearance.
+
+**EMI note:** run **wired Ethernet to the Pi and disable WiFi** — the wall is a broadband RF emitter
+next to the Pi (Foundation-documented 2.4 GHz desense). Keep ribbons short and on a separate path
+from the 60 A DC bus (cross at right angles). Details: `../HARDENING.md`.
 
 ## Wiring dress
 - **10 AWG DC trunks** run along the strip, locked with adhesive/screw cable-tie mounts every

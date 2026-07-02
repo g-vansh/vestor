@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cadquery as cq
 import mount_params as P
 from util import box, OUT
-import top_cleat, anti_swing_foot, corner_enclosure, psu_bracket, gap_hanger
+import top_cleat, anti_swing_foot, corner_enclosure, psu_bracket, gap_hanger, cable_clip
 
 PRINT = os.path.join(OUT, "print"); os.makedirs(PRINT, exist_ok=True)
 PLA = 1.24  # g/cm³
@@ -85,6 +85,9 @@ if __name__ == "__main__":
     # ── PART 7 · gap hanger — ON ITS SIDE (profile flat, width up) ──────────
     gh = gap_hanger.build().rotate((0, 0, 0), (0, 1, 0), 90)
     out(gh, "07_gap_hanger", 6, "no", "carries the electronics strip + valance; support-free on-side")
+
+    # ── PART 8 · screw-down cable clip — flat on the bed ────────────────────
+    out(cable_clip.build(), "08_cable_clip", 40, "no", "strain-relief anchor; screw-down, NOT adhesive")
 
     # ── PART 6 · PSU cradle — as modelled, base on the bed ──────────────────
     out(psu_bracket.build(), "06_psu_cradle", 4, "no", "base down; retaining nubs bridge fine")

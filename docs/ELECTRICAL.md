@@ -100,8 +100,14 @@ corner would strand the far pigtails 5 m away.)
 - **All on hand:** 2× LRS-350-5, 2 AC cords, 4× 6-way fuse blocks (built-in +/− bus), 7.5 A fuses,
   10 AWG CCA trunk, copper RV pigtails, yellow rings, 100 cable ties + mounts, Pi 4 + Triple Bonnet,
   a 96 W USB-C charger for the Pi, 16 panels + ribbons (ribbons reach panel-to-panel).
-- **Skipped (not needed):** anti-oxidant paste (moderate indoor CCA — just crimp well + **re-torque the
-  studs after ~1 week**), 5 A fuses (7.5 A work), a negative bus bar (block has one), copper trunk.
+- **CCA trunk (reliability pass corrected the earlier "skip the paste"):** for a permanent wall,
+  either **treat every CCA joint** — Noalox anti-oxidant + AL/CU-rated crimp lugs + **re-torque at
+  ~30 days then annually** — **or swap the ~7 m trunk to copper**. Ampacity is fine for the 16 A
+  branches; the risk is termination oxidation/creep over years. See **`../HARDENING.md`**.
+- **Not needed:** 5 A fuses (7.5 A work), a negative bus bar (block has one).
+- **Add per the hardening pass:** bootlace ferrules + crimp (not solder-only), Belleville/Nord-Lock
+  washers on the M3.5 PSU studs, latching JST-VH plugs, bulk decoupling caps at the center feeds,
+  clip-on ferrites, and **wired Ethernet (disable WiFi)** — full list in `../HARDENING.md`.
 - **PSU placement LOCKED = split:** PSU-L at the corner, PSU-R at the right end (its own AC outlet, confirmed).
 - (Only ~16 AWG for the V− bond + Bonnet-GND wire — reuse trunk offcut.)
 
