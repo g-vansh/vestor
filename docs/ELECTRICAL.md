@@ -80,13 +80,15 @@ Budget <3 % of 5 V (<0.15 V). Per-branch (4 panels ≈ 16 A) over ~2 m round-tri
 - **AC mains:** each LRS-350-5 has bare **L / N / ⏚ screw terminals** → each needs an **AC cord**
   (2 total; C13/hardwired to a plug). Set the **115 V** input switch. Each PSU on its **own outlet**
   (inrush). Land **⏚ (earth) → the PSU FG terminal**.
-- **Pi power — separate.** Power the Pi 4 from its **own official USB-C brick** (the Phase-0 supply),
-  NOT the panel 5 V rail — a 60 A rail's spikes can brown-out / corrupt the Pi. Keep it independent.
-- **Bonnet 5 V:** the Triple Bonnet's level-shifters need 5 V — feed its **5 V terminal from PSU-L**
-  via one fuse-block slot (tiny, ~0.1 A). Its GND is common with everything (below).
-- **Ground bond:** a **~16 AWG wire from PSU-L V− ↔ PSU-R V−** (runs the wall length) makes the single
-  common reference; the Pi/Bonnet GND ties to PSU-L V−. It carries only reference/imbalance current, so
-  16 AWG is plenty — but it must be present and solid (this is the "where goes data, so goes V−" link).
+- **Pi power:** a USB-C charger (owner uses a 96 W MacBook charger — fine; the Pi pulls only the
+  ~5 V/1.5 A it needs). Independent of the panel rail → no brownout.
+- **Bonnet power: NONE separately.** The level-shifters run off the Pi's 5 V through the GPIO header,
+  so the USB-C charger already powers them. **Leave the Bonnet's 5 V terminal EMPTY** — wiring a PSU
+  there too would parallel two 5 V sources (back-feed).
+- **Ground bond (critical, esp. with an isolated USB-C charger):** wire the **Bonnet's GND terminal →
+  PSU-L V−**, plus a **~16 AWG V− bond between the two PSUs**. This is the ONLY solid ground reference
+  tying the Pi/data to the panel supplies — the thin HUB75 ribbon ground isn't enough across 16 panels.
+  Missing it → flicker/garbage. ("Where goes data, so goes V−.")
 
 ## Are the pigtails long enough? Yes — because the blocks are distributed
 ~55 cm reaches ±1.7 panels, so **one fuse block per 4-panel group** (blocks A/B/C/D at panels
@@ -94,12 +96,14 @@ Budget <3 % of 5 V (<0.15 V). Per-branch (4 panels ≈ 16 A) over ~2 m round-tri
 what makes the pigtails sufficient *and* keeps the 10 AWG runs short. (Putting all blocks in the
 corner would strand the far pigtails 5 m away.)
 
-## Shopping delta (vs what's on hand) — almost nothing
-- **Anti-oxidant paste** (Noalox-type) + crimp ferrules for the **CCA trunk** terminations.
-- (Maybe) a 2nd trunk spool if the 4 runs exceed ~7.6 m — probably not; and confirm enough ring/fork terminals.
-- **NOT needed:** 5 A fuses (the 7.5 A work), a negative bus bar (block has one), copper trunk (10 AWG CCA is fine here).
-- **On hand & correct:** 4× 6-way fuse blocks (built-in +/− bus, 16/24 slots used), 10 AWG CCA trunk,
-  yellow 10–12 AWG rings, copper RV pigtails, 2× LRS-350-5, 100 cable ties + adhesive mounts.
+## Shopping delta — the electrical side needs NOTHING
+- **All on hand:** 2× LRS-350-5, 2 AC cords, 4× 6-way fuse blocks (built-in +/− bus), 7.5 A fuses,
+  10 AWG CCA trunk, copper RV pigtails, yellow rings, 100 cable ties + mounts, Pi 4 + Triple Bonnet,
+  a 96 W USB-C charger for the Pi, 16 panels + ribbons (ribbons reach panel-to-panel).
+- **Skipped (not needed):** anti-oxidant paste (moderate indoor CCA — just crimp well + **re-torque the
+  studs after ~1 week**), 5 A fuses (7.5 A work), a negative bus bar (block has one), copper trunk.
+- **PSU placement LOCKED = split:** PSU-L at the corner, PSU-R at the right end (its own AC outlet, confirmed).
+- (Only ~16 AWG for the V− bond + Bonnet-GND wire — reuse trunk offcut.)
 
 ## Confirmed on the owner's parts (2026-07-02, from photos)
 - **Fuse blocks (×4): 6-way, enclosed, blown-fuse LEDs, with BOTH a fused +bus and a −ground bus.**
