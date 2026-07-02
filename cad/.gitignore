@@ -2,3 +2,6 @@ cadenv/
 __pycache__/
 out/
 *.stl
+# …except the committed print-ready STLs (what the user actually prints):
+!print_stl/
+!print_stl/*.stl
