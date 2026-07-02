@@ -1202,6 +1202,28 @@ add airline branding.
 - **Verified:** JBU251 now shows **BOS→MCO** (was `BOS → ?`); service active,
   restarts 0, no FR24 errors, ~59% CPU, 53 °C.
 
+### 2026-07-01 — Design tiers 1–4: idle screen, richer cards, polish, prioritization
+- **Tier 1 — idle screen** (`scenes/idle.py`, replaces the old single-panel
+  clock/date/day/weather): when no aircraft is overhead, all 3 panels show a big
+  blinking clock (middle), day/date/year (left), and weather (right), with a
+  radar sweep across the board. Weather from **Open-Meteo** (`setup/weather.py`,
+  free/no-key, 10-min refresh) in **both °C and °F**. `setup/fonts.py` +`huge`
+  (10x20). `display` wires `IdleScene` + `weather.start()`.
+- **Tier 2 — richer telemetry** (`scenes/flightdetails.py`): ARR/DEP status tag
+  (green down / amber up, from BOS origin/dest + climb/descent), ground speed,
+  and an **emergency-squawk alert** (7500/7600/7700 → flashing red HIJACK/NORDO/
+  EMERG). `overhead.py` now enriches flights with ground_speed/heading/squawk/
+  registration/distance/bearing.
+- **Tier 3 — polish**: **dynamic icons** — helicopter rotor + prop SPIN
+  (`setup/aircraft.py` marks `*` animated px; `airlinelogo.py` sweeps a bright
+  spot); pulsing LIVE dot. (Split-flap already transitions each flight; a
+  full-board plane flyover was left out — packed layout, no free strip.)
+- **Tier 4 — smart prioritization** (`overhead.py`): sort overhead flights by
+  interest (commercial + arriving-low) then nearest, so the board leads with the
+  best flight.
+- **Verified:** idle + flight previews; live on the Pi (weather 28C/83F, ARR/DEP
+  tags, 7700 alert, service healthy, ~64% CPU, 52 °C).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
