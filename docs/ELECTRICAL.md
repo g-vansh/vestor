@@ -13,16 +13,21 @@ Data is independent: a single HUB75 chain of 16 from the corner.
 
 ## The decisions, with the numbers
 
-### 1. Fuses — YES, and use **5 A**, not the 7.5 A on hand (per panel, 16 total)
+### 1. Fuses — YES (per panel, 16 total). Value depends on the pigtail gauge.
 - The LRS-350-5's own protection (OCP at **110–140 % → ~66–84 A**, hiccup auto-recover;
   **no 150 % peak on the 5 V model**) protects the *supply*, not your wiring. A soft short
   (pinched/chafed pigtail, backed-out terminal) draws **10–25 A** through a ~4 A pigtail and
   the 60 A PSU **never trips** → the wire becomes a cartridge heater. **The fuse protects the
   WIRE.** Genuine fire-safety item for a 24/7 wall.
-- **Value = 5 A.** The panel pigtails are thin **CCA** (copper-clad aluminum); a "18 AWG" CCA
-  wire carries like ~20 AWG copper → real ampacity ~5–10 A. 5 A > the ~4 A full-white draw
-  (no nuisance blows) and ≤ the pigtail's ampacity. **7.5 A is too high** — the wire cooks
-  before it blows. → **Buy 5 A ATC blade fuses; set the 7.5 A aside.**
+- **The load:** each pigtail carries only its OWN panel (power is injected per-panel, not
+  chained). A 64×32 P5 draws **~3.5–4 A at full white / 100 % brightness** (1/16 scan → 384
+  sub-LEDs lit at once × ~10 mA; ~2.4 A measured on comparable panels), and only **~1–2 A at
+  brightness ≤50**. So the fuse must sit **just above ~4 A** and **below the pigtail's ampacity**.
+- **Value:** **5 A is the safe default** — at ≤50 brightness it runs at 20–40 %, never
+  nuisance-blows, and stays under a thin-CCA pigtail's ~5–10 A rating. **7.5 A (on hand) is
+  fine IF the pigtail is ~18 AWG _copper_** (~10 A ampacity) — then it clears the load with
+  more margin. **Confirm before choosing:** (a) clamp-meter one panel at full white/full
+  bright for the real max, (b) read the pigtail's gauge (thin CCA → 5 A; ≥18 AWG copper → 7.5 A OK).
 - **Per-panel, not per-group.** A group fuse must be ≥16 A (4 panels) so it never blows for
   one panel's thin-pigtail short. 24 slots / 4 blocks → **16 fuses, one per panel**, 8 spare.
 
@@ -73,7 +78,8 @@ what makes the pigtails sufficient *and* keeps the 10 AWG runs short. (Putting a
 corner would strand the far pigtails 5 m away.)
 
 ## Shopping delta (vs what's on hand)
-- **5 A ATC blade fuses** (×16 + spares) — the 7.5 A are the wrong value for these pigtails.
+- **5 A ATC blade fuses** (×16 + spares) — unless a clamp-meter reading + pigtail gauge confirm the
+  pigtail is ~18 AWG copper, in which case the **7.5 A already on hand** are fine.
 - **10 AWG red/black copper** for the 4 trunk runs (confirm your existing red/black isn't thinner).
 - **Anti-oxidant paste + crimp ferrules** for the CCA forks.
 - **One negative bus bar** to bond the two PSU V− + Pi GND at a single point (unless a fuse block
@@ -81,9 +87,13 @@ corner would strand the far pigtails 5 m away.)
 - **On hand & correct:** 4× 6-way fuse blocks (16/24 slots used), yellow 10–12 AWG ring terminals,
   the 2× LRS-350-5, the panel pigtails.
 
-## Two things to confirm on your actual parts
-1. **Fuse-block type** — positive-only (need a separate negative bus bar) vs has a ground bus. (A photo answers it.)
-2. **Red/black cable gauge** — must be 10 AWG for the trunks.
+## Confirmed on the owner's parts (2026-07-02)
+- Fuse blocks are **enclosed with a built-in negative bus** → no separate bus bar needed; touch-safe.
+- Red/black trunk cable is **10 AWG** → correct for the trunks.
+
+## Still to measure (decides the fuse value)
+1. **One panel's full-white/full-bright current** with a clamp meter → the real per-panel max (~2.4–4 A expected).
+2. **The pigtail's own gauge** (not the trunk): thin CCA → 5 A fuses; ~18 AWG copper → the 7.5 A on hand are fine.
 
 ## Sources
 Mean Well LRS-350 datasheet + Enclosed-Type install manual; hzeller rpi-rgb-led-matrix `wiring.md`
