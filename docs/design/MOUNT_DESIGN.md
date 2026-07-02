@@ -5,6 +5,30 @@ knew the wall has a built-in structural wooden pocket and before we had the MIT 
 Shop's full wood + metal + print capability). Reads with
 `docs/design/WALL_PROFILE.md` (the wall) and `docs/FABRICATION.md` (the shop).
 
+## ✅ LOCKED DECISIONS (2026-07-02)
+
+1. **Hang from the wall's built-in grooves — zero new wall holes.** Wood **½″
+   Baltic-birch top tongue-cleat** into the **top groove** (open-up, carries the load,
+   ~10× margin) + a **bottom capture tab** up into the **bottom groove** (open-down,
+   anti-swing). Fully captured top + bottom.
+2. **Frame = two continuous horizontal aluminum rails** at the panel's 144 mm M3 rows
+   (dead-flat reference). *(Can machine our own from bar/plate on the Hobby Shop mills/
+   waterjet — no need to buy 80/20.)*
+3. **Panels = MAGNETIC** (owner-tested OK): thin **steel strips** on the rails + the
+   on-hand **magnet screws** (96/100) → snap-on, self-aligning, tool-free; **alignment
+   pins** for lateral seams.
+4. **Electronics in the LEFT CORNER** (the grooved piece turns the corner) — Pi + Triple
+   Bonnet on the 3.4 cm ledge / hung. Resolves depth-behind-panels.
+5. **Feed = SINGLE CHAIN OF 16 from the corner** (`--led-chain=16 --led-parallel=1`,
+   **`pwm_bits=9` → measured 111 Hz**). All ribbons short; **removes the snake/180° flip**
+   in `display/__init__.py`. (Supersedes the old 2×8 center-feed.)
+6. **Power:** keep **PSU2 out near the right half** (short 5 V runs) — or a heavy 5 V bus
+   if all-in-corner (keep drop < 3 %).
+7. **Fit:** 16 × 320 = 5120 mm into **201.5″ (~5118 mm) usable → butt tight, no side
+   frames.** Panels ~flush to the wall (connectors barely protrude).
+8. **3D prints locate/interface only** (panel clips, Pi/PSU enclosures, cable clips) —
+   PLA now, PETG/ASA later; nothing structural rides on PLA.
+
 ## Design goals, in priority order
 
 1. **Won't fall** (safety first).
