@@ -46,6 +46,11 @@ except (ModuleNotFoundError, NameError):
     HAT_PWM_ENABLED = False
 
 try:
+    from config import CHAIN_LENGTH
+except (ModuleNotFoundError, NameError, ImportError):
+    CHAIN_LENGTH = 1
+
+try:
     # Attempt to load experimental config data
     from config import LOADING_LED_ENABLED
 
@@ -80,7 +85,7 @@ class Display(
         options.hardware_mapping = "regular"      # Triple Bonnet active3 — NOT adafruit-hat/-pwm
         options.rows = 32
         options.cols = 64
-        options.chain_length = 1                  # single-panel test (wall: 8 — center-fed chain)
+        options.chain_length = CHAIN_LENGTH        # chained panels on the data line (config)
         options.parallel = 1                      # single-panel test (wall: 2 chains, center-fed)
         options.row_address_type = 0              # 1/16 scan ABCD; try 3 or 5 if rows scramble on hw
         options.panel_type = ""                   # FM6124D is a STANDARD driver (no init). Fallback #1 if

@@ -1,18 +1,14 @@
 """
-airlinelogo.py — the hero band of the single-panel flight card.
+airlinelogo.py — the LEFT panel of the 3-panel departure board: AIRLINE identity.
 
-Top 13 rows of the 64x32 panel:
-    rows 0..11  full-colour airline logo (fit WHOLE within the band, static)
-    row  12     a 1px brand-colour rule (the airline's livery colour)
+Full 64x32 panel (canvas cols 0..63):
+    rows 1..22   the airline logo, fit WHOLE + static, centred
+    row  23      a brand-colour livery rule across the panel
+    rows 25..31  the airline name (curated) in the brand colour, centred
 
-Behaviour:
-  * Every logo is pre-fit within 64x12 (setup/logos.py), so it's drawn STATIC,
-    centred horizontally and vertically — no scrolling, always fully visible.
-  * No logo for this carrier -> the curated short name (or ICAO) in brand colour.
-
-Pixel writes go through self.set_pixel (Display), which applies the panel's
-draw-offset in one place — so this scene carries no panel-lane maths and works
-unchanged on the eventual centre-fed wall.
+Pixel writes go through self.set_pixel (Display) which applies the panel
+draw-offset; text via the shimmed DrawText/DrawLine. Coordinates are canvas-
+absolute (col 0..63 = the physical left panel, per the 2026-07-01 calibration).
 """
 
 from utilities.animator import Animator
@@ -21,78 +17,76 @@ from setup import airlines, logos
 
 from rgbmatrix import graphics
 
-LOGO_BAND_H = 12          # rows 0..11
-RULE_ROW = 12             # brand hairline
+ZONE_X = screen.ZONE_AIRLINE      # 0 — left panel
+PANEL_W = screen.PANEL_W          # 64
 
-FALLBACK_FONT = fonts.small
+LOGO_TOP = 1
+LOGO_REGION_H = 22                # rows 1..22
+RULE_ROW = 23
+NAME_BASELINE = 31                # name sits rows ~25..31
 
 
 class AirlineLogoScene(object):
     def __init__(self):
-        self._logo_iata = None
         self._logo_rec = None
         self._logo_brand = colours.BLACK
-        self._logo_x = 0
-        self._logo_y = 0
+        self._logo_x = ZONE_X
+        self._logo_y = LOGO_TOP
+        self._name = ""
         super().__init__()
 
     def _resolve_logo(self):
-        """Look up the current flight's logo record + brand colour."""
-        callsign = self._data[self._data_index].get("callsign", "")
+        flight = self._data[self._data_index]
+        callsign = flight.get("callsign", "")
         iata = airlines.iata_for_callsign(callsign)
         rec = logos.get_logo(iata)
-        self._logo_iata = iata
         self._logo_rec = rec
 
         sampled = rec["brand"] if rec else None
         br, bg, bb = airlines.brand_for_callsign(callsign, sampled)
         self._logo_brand = graphics.Color(br, bg, bb)
+        self._name = airlines.name_for_callsign(callsign) or callsign[:3]
 
-        # Centre the (already band-fit) logo horizontally + vertically.
         if rec:
-            self._logo_x = (screen.WIDTH - rec["w"]) // 2
-            self._logo_y = (LOGO_BAND_H - rec["h"]) // 2
+            self._logo_x = ZONE_X + (PANEL_W - rec["w"]) // 2
+            self._logo_y = LOGO_TOP + (LOGO_REGION_H - rec["h"]) // 2
 
     @Animator.KeyFrame.add(0)
     def airline_logo_setup(self):
-        # Re-arm whenever the scene resets (new flight / new index / new data).
         if len(self._data) == 0:
             self._logo_rec = None
             return
         self._resolve_logo()
 
-    def _blit_logo(self):
-        """Blit the rendered logo pixels, centred in the band."""
-        x0, y0 = self._logo_x, self._logo_y
-        for (x, y, r, g, b) in self._logo_rec["px"]:
-            self.set_pixel(x0 + x, y0 + y, r, g, b)
-
-    def _draw_fallback(self, callsign):
-        """No logo: draw the curated short name (or ICAO) in brand colour."""
-        text = airlines.name_for_callsign(callsign) or "FLIGHT"
-        # Measure by drawing off-screen, then draw centred.
-        width = graphics.DrawText(
-            self.canvas, FALLBACK_FONT, screen.WIDTH + 40, 9, self._logo_brand, text
-        )
-        x = max(1, (screen.WIDTH - width) // 2)
-        graphics.DrawText(self.canvas, FALLBACK_FONT, x, 9, self._logo_brand, text)
+    def _draw_name(self):
+        if not self._name:
+            return
+        # Pick the biggest font that fits the panel width.
+        font = fonts.large_bold if len(self._name) <= 7 else fonts.small
+        width = graphics.DrawText(self.canvas, font, screen.WIDTH + 40, NAME_BASELINE,
+                                  self._logo_brand, self._name)
+        x = ZONE_X + max(1, (PANEL_W - width) // 2)
+        graphics.DrawText(self.canvas, font, x, NAME_BASELINE, self._logo_brand, self._name)
 
     @Animator.KeyFrame.add(1)
     def airline_logo(self, count):
-        # Guard against no data — leave the band clear for the idle scenes.
         if len(self._data) == 0:
             return
 
-        # Clear the hero band (logo rows + rule row).
-        self.draw_square(0, 0, screen.WIDTH, RULE_ROW, colours.BLACK)
+        # Clear this panel only.
+        self.draw_square(ZONE_X, 0, ZONE_X + PANEL_W, screen.HEIGHT, colours.BLACK)
 
         if self._logo_rec:
-            self._blit_logo()
+            for (x, y, r, g, b) in self._logo_rec["px"]:
+                self.set_pixel(self._logo_x + x, self._logo_y + y, r, g, b)
         else:
-            callsign = self._data[self._data_index].get("callsign", "")
-            self._draw_fallback(callsign)
+            # No logo: draw the name big in the logo region instead.
+            self._draw_name()
 
-        # Brand-colour rule under the logo — a dim livery hairline.
-        graphics.DrawLine(
-            self.canvas, 0, RULE_ROW, screen.WIDTH - 1, RULE_ROW, self._logo_brand
-        )
+        # Brand livery rule across the panel.
+        graphics.DrawLine(self.canvas, ZONE_X, RULE_ROW, ZONE_X + PANEL_W - 1,
+                          RULE_ROW, self._logo_brand)
+
+        # Airline name beneath the logo (skip if we already used it as fallback).
+        if self._logo_rec:
+            self._draw_name()

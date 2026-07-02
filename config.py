@@ -31,6 +31,12 @@ MAX_ALTITUDE = 10000            # feet — only low "visible overhead" traffic (
                                 # you can actually see from the window). Raise toward
                                 # 40000 to also catch cruise overflights.
 
+# ---- Panel geometry ----
+# Number of 64x32 panels chained on the data line (left->right, calibrated
+# 2026-07-01: canvas col 0..63 = physical LEFT panel, 64..127 = middle, 128..191
+# = right; no mirror/flip). Drives the multi-panel departure-board layout.
+CHAIN_LENGTH = 3
+
 # ---- Live data source: airplanes.live (positions+type) + adsbdb.com (routes) ----
 # Free, no-key community ADS-B (replaces the throttled FR24 unofficial feed).
 # We query airplanes.live by point+radius, then (if USE_ZONE_BOX) keep only the

@@ -30,9 +30,9 @@ except ImportError:                      # graceful: card falls back to text
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 LOGO_DIR = os.path.join(DIR_PATH, "..", "sim", "logos")
 
-LOGO_H = 12          # logo band height (rows 0..11 of the 64x32 card)
-BOX_W = 64           # panel width — each logo is fit WHOLE within BOX_W x LOGO_H,
-                     # so every carrier renders static + fully visible (no scroll)
+BOX_W = 62           # each logo is fit WHOLE within BOX_W x BOX_H (static, no
+BOX_H = 22           # scroll) — sized for the dedicated LEFT panel (64x32), with
+                     # the airline name rendered beneath it
 ALPHA_KEEP = 96      # alpha below this is treated as transparent
 MIN_LUM = 6          # drop resulting near-black pixels (faint AA fringe)
 
@@ -84,7 +84,7 @@ def _render(path):
     """Fit a logo WHOLE within BOX_W x LOGO_H (preserve aspect), lifted for LED."""
     im = Image.open(path).convert("RGBA")
     w0, h0 = im.size
-    scale = min(BOX_W / w0, LOGO_H / h0)
+    scale = min(BOX_W / w0, BOX_H / h0)
     new_w = max(1, round(w0 * scale))
     new_h = max(1, round(h0 * scale))
     im = im.resize((new_w, new_h), Image.LANCZOS)

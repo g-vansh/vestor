@@ -21,7 +21,10 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.join(HERE, "..")
 sys.path.insert(0, ROOT)
 
-WIDTH, HEIGHT = 64, 32
+# screen.py only imports config (no rgbmatrix), so it's safe to read the real
+# canvas geometry (192x32 for the 3-panel board) before the mock is installed.
+from setup import screen  # noqa: E402
+WIDTH, HEIGHT = screen.WIDTH, screen.HEIGHT
 
 
 # ----- minimal BDF font -----------------------------------------------------
@@ -151,7 +154,6 @@ class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene):
     def reset_scene(self):
         self.airline_logo_setup()
         self.journey_setup()
-        self.flight_details_setup()
 
     def render_frame(self, frame):
         self.airline_logo(frame)
@@ -172,10 +174,21 @@ SAMPLE = [
 ]
 
 
+def _add_panel_dividers(img, scale):
+    """Faint vertical lines at the 64px panel seams, for orientation."""
+    px = img.load()
+    for seam in range(64, WIDTH, 64):
+        x = seam * scale
+        for y in range(img.size[1]):
+            if x < img.size[0]:
+                px[x, y] = (70, 70, 80)
+    return img
+
+
 def main():
-    frames_to_grab = [0, 4, 10, 40, 90]     # split-flap progressing -> settled + marquee
-    scale = 8
-    pad = 6
+    frames_to_grab = [3, 14, 70]            # split-flap progressing -> settled
+    scale = 6
+    pad = 8
     cols = len(frames_to_grab)
     rows = len(SAMPLE)
     sheet = Image.new(
@@ -192,6 +205,7 @@ def main():
                 img = card.render_frame(f)
                 f += 1
             big = img.resize((WIDTH * scale, HEIGHT * scale), Image.NEAREST)
+            _add_panel_dividers(big, scale)
             x = pad + ci * (WIDTH * scale + pad)
             y = pad + ri * (HEIGHT * scale + pad)
             sheet.paste(big, (x, y))
