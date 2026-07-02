@@ -29,6 +29,52 @@ Shop's full wood + metal + print capability). Reads with
 8. **3D prints locate/interface only** (panel clips, Pi/PSU enclosures, cable clips) —
    PLA now, PETG/ASA later; nothing structural rides on PLA.
 
+## ✅ DESIGN VALIDATED + REFINED (deep research, 2026-07-02)
+
+Checked the locked plan against how commercial LED walls + architectural panels are
+actually hung. It matches best practice on every axis; three refinements make it optimal.
+
+**What the research says:**
+- Coplanar seams come from a **rigid, precisely-LEVELED rail grid** + per-module
+  **micro-adjustment in 3 axes** (esp. depth/Z). [LumenMatrix, ledlightsworld]
+- Modules are **magnet-snapped** for quick positioning, then **alignment pins / micro-
+  adjusters** refine seams; magnetic connectors cut install errors ~50%. [Radiant, MOUNT-IT]
+- **Adjustable magnet HEIGHT is the standard coplanarity control** — exactly what our
+  **thread-in magnet screws** provide (screw in/out = per-panel Z-adjust). [ledscreenparts]
+- **6063-T5 aluminium** frames are the industry standard (dimensionally stable).
+- **Continuous aluminium cleat / Z-clip rails** (6–12 ft lengths) are a proven concealed
+  hanging system with easy **lateral adjustment** — validates a continuous cleat. [Eagle/Monarch/Orange Aluminum]
+- Magnets are great for **indoor / light / low-vibration** + service; weaker than bolts in
+  shear/vibration (irrelevant for 0.45 kg indoor panels) — but **rest the weight on the
+  rail** so magnets only hold coplanarity, not shear.
+
+**Three refinements to the locked plan:**
+1. **Continuous cleat-tongue** in the top groove (not discrete cleats) → better load spread
+   + easier leveling & lateral adjustment.
+2. **Panel weight rests on the bottom rail / a lip** (magnets only hold it flat) → removes
+   any long-term magnet-shear / creep worry.
+3. **Alignment pins** between panels for lateral seam registration (magnets don't locate sideways).
+
+**FINAL ARCHITECTURE (optimal, research-validated):**
+1. Continuous **½″ Baltic-birch (or aluminium) tongue** in the TOP groove — the hang.
+2. Two continuous **6063 aluminium rails** at the panels' 144 mm M3 rows → the flat reference
+   grid, hung from the top groove + laser-leveled.
+3. **Steel strips** on the rail faces → the ferrous plane for the magnets.
+4. **Panels magnet-mount** via the on-hand magnet screws; **thread depth = per-panel Z
+   coplanarity micro-adjust**; **alignment pins** set lateral seams; panel weight **rests on
+   the bottom rail** (a lip), magnets hold it flat.
+5. **Anti-swing tab** up into the BOTTOM groove (mid-height capture) → fully constrained,
+   zero new wall holes.
+6. **Corner electronics** hung from the LEFT-wall grooves (same tongue system).
+7. **3D prints** = adjustable panel clips, alignment-pin holders, Pi/PSU enclosures, cable
+   clips (PLA now → PETG/ASA later; nothing structural on PLA).
+
+**Build sequence:** hang + **laser-level the rails on the wall** (using the top groove) →
+populate panels **one at a time** (tool-free magnetic, self-coplanarizing via magnet-screw
+depth + alignment pins), re-checking flatness every 2–3 → engage the bottom anti-swing tab →
+hang the Pi/PSU in the corner → dress cabling. **Never handle a floppy 5 m assembly** (rails
+first, then populate — the pro method).
+
 ## Design goals, in priority order
 
 1. **Won't fall** (safety first).
