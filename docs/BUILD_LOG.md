@@ -4,6 +4,26 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-01 — Route accuracy + operator logos (NetJets/PAL/Envoy) + real plane sprite
+Five field-reported fixes (commit f6e2904), deployed + verified on-Pi (68/68 logos, 0 restarts):
+- **`BOS→???` for ENY4047 (real: BOS-DCA):** FR24's lightweight feed returned the origin
+  but an empty destination that instant, and we cached that partial route for the full 30-min
+  TTL — so it stuck. Now: partial FR24 routes are completed from adsbdb **only when adsbdb
+  corroborates the endpoint FR24 already knows** (adsbdb is often a stale *different* leg —
+  it had ENY4047 as PHX-SLC), and partial routes cache for just **25 s** (`INCOMPLETE_TTL`)
+  so the next FR24 scan (refreshed every 20 s) fills the gap. Self-heals in ~25 s vs. never.
+- **NetJets logo:** `EJA→1I`; wordmark from kiwi (served on white → white-keyed to alpha).
+- **PAL Airlines (PVL7668) showed "AIRLINER":** `PVL→PB` + `AIRLINE_DB["PVL"]="PAL"`. Note
+  **adsbdb mislabels ICAO PVL as an Italian operator "Professione Volare"** — our AIRLINE_DB
+  overrides the name; PVL=PAL Airlines confirmed (IATA PB, callsign PROVINCIAL, airhex/wiki).
+- **Envoy shown as "American Eagle":** `ENY` mapped to `MQ` (= American Eagle). Now `ENY→ENY`,
+  keying Envoy's **own** navy "envoy" wordmark (Wikimedia SVG, rasterised via the MediaWiki
+  thumbnailer). MQ.png (American Eagle) is now orphaned/unused but left on disk.
+- **Center-panel plane** was a 7×5 blob → **14×5 side-view jet** (tail fin + swept wing +
+  brightened nose tip) in `scenes/journey.py`.
+- `tools/fetch_logos.py` gains a `SPECIAL_LOGOS` pipeline (non-avs sources + optional white-key)
+  so NetJets/Envoy are reproducible; `PVL→PB` added to the avs map. Re-run reproduces all 66.
+
 ## 2026-07-01 — Single-panel flight-tracker app RUNNING LIVE (as a service)
 
 Found the "one-screen" app already installed on the Pi at `/home/pi/vestor` (venv,
