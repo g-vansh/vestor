@@ -1,0 +1,4 @@
+cadenv/
+__pycache__/
+out/
+*.stl
