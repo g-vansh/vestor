@@ -31,7 +31,8 @@ is fully constrained **with zero new holes in the wall**.
 | **TOP groove** | ~5 cm tall × 1.4 cm | behind the piece **top**, **open at the top** |
 | **BOTTOM groove** | 5.7 cm tall × 1.8 cm | behind the piece **bottom**, **open at the bottom** |
 | middle | ~3.3 cm | band where the piece **attaches to the wall** (14 − 5 − 5.7) |
-| projection | 3.4 → 3.8 cm | piece front off the wall (top ≈ 1.4+2 = 3.4; bottom ≈ 1.8+2 = 3.8) |
+| projection | ~3.4 cm | piece front off the (main) wall — **uniform; the piece is straight** |
+| wall step | 0.4 cm | the wall is **cut 0.4 cm deeper *below* the attachment** → that's why the bottom gap (1.8) > top gap (1.4), NOT because the piece tilts |
 
 Full width (into the page): **~512 cm (~201 in)** — both grooves run the whole way.
 
@@ -48,8 +49,10 @@ wall, at the top and bottom:
 - **BOTTOM groove** — between the piece bottom and the wall: **1.8 cm wide × 5.7 cm
   tall, OPEN AT THE BOTTOM** (slide a tab up into it from below; closed at its top).
 - Ceiling → top of piece: **22.5 cm**. Heights: 5 + 3.3 + 5.7 = **14**.
-- Projection: **≈3.4 cm at top (1.4+2), ≈3.8 cm at bottom (1.8+2)** — the piece
-  sits a touch more proud at the bottom (the bottom gap is 0.4 cm deeper).
+- The **piece is perfectly STRAIGHT** (uniform 2 cm, vertical front), projecting a
+  **uniform ~3.4 cm** off the main wall. The bottom gap is **1.8 cm (vs 1.4 top)
+  only because the WALL is permanently cut 0.4 cm deeper *below* the attachment**
+  — the piece does NOT tilt.
 
 ```
    ceiling ─────────────────────────────

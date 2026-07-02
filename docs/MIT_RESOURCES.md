@@ -44,8 +44,36 @@ Assoc. instructor **Charlotte Reiter creiter@mit.edu**. **FREE for students.**
 - Hours: Mon 10–8, Tue–Fri 10–7, Sat 10–4, Sun closed. **Cash/TechCash only.** Ethos =
   finished projects; staff give 1-on-1 help.
 
+#### 🧰 Full equipment (access GRANTED 2026-07-02) — what each buys THIS build
+The Hobby Shop is a full metal **and** wood shop. Relevant machines, grouped by build use:
+- **Precision metal cutting:** **Omax Micro Jet waterjet** (cut aluminum/steel plate to any
+  shape — brackets, cleats, **steel magnet strips**), **Baileigh 14″ cold saw** + **DoAll 24″
+  bandsaw** (cut rail/extrusion to length), **Epilog 120 W laser** (acrylic diffusers/bezels,
+  thin jigs/templates), **sheet-metal tools** (form the steel magnet strips).
+- **Precision machining:** **Bridgeport mills ×2**, **Prototrak DPM2 mill**, **Haas Mini Mill 2**,
+  **Menig micro mill**, **Prototrak/Trak lathes** → machine custom aluminum rails/brackets with
+  exact hole patterns (means we **don't have to buy 80/20** — we can mill our own rails), turned parts.
+- **Welding:** **Miller MIG + TIG** → a welded steel/aluminum frame if ever wanted (likely overkill).
+- **Big CNC (wood/plastic sheets):** **Laguna Swift 4×8 CNC router** (8 ft!) + **ShopBot Buddy**
+  → cut wood cassettes/frames/tongues from full sheets with exact hole grids + connector windows.
+- **Shaper Origin** (handheld precision CNC) → cut the tongue-cleat, mortises, brackets — even
+  in-place work.
+- **Flat-stock prep:** **Martin 20″ jointer + 24″ planer + SawStop table saws ×2 + Oliver 30″
+  bandsaw** → mill our OWN dead-flat/straight hardwood (mitigates the ply-warp concern), **Laguna
+  LMB 200 mortiser** (precise mortise-and-tenon for the tongues), **Finishing Room** (SEAL wood
+  against humidity → dimensional stability), **glue-up table** (laminate cleats / torsion boxes).
+- **Formtech 989 vacuum former** → thermoform plastic covers/diffusers if desired.
+- **Printers:** Bambu **P2S** + **H2S**, Formlabs **Form 3L** (the auto-generated access list still
+  shows a Stratasys uPrint, but **Charlotte's email says it's GONE — treat as gone**).
+- Not build-relevant (but available): leatherworking, tufting guns, sewing, **softserve machine**.
+
+**Upshot:** we can build the mount to a high standard entirely in-house in **either metal or wood**,
+and make every precise interface part (tongues, steel strips, brackets) on the waterjet/mills/CNC.
+This removes the "buy 80/20" dependency and de-risks flatness/precision. Hours: Mon 10–8, Tue–Fri
+10–7, Sat 10–4. Orientation required first (email hayami@mit.edu).
+
 **⚠️ None stock 80/20 T-slot extrusion** — buy the raw extrusion/steel (or source free,
-§2), then bring it in to cut/drill/weld/finish.
+§2) **or machine our own rails from aluminum bar/plate on the mills/waterjet** (now viable).
 
 **Best plan:** **Hobby Shop** for the metal cutting/welding/waterjet (one orientation,
 everything in one room) **+ MITERS** for free 24/7 iterative drilling + electronics +

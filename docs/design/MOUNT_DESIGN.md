@@ -130,23 +130,40 @@ micro-adjust makes hitting perfect coplanarity easier. Either is reliable.
 switch the rails to Baltic-birch cassettes if you want zero-cost + all-in-house and
 accept marginally less long-term stability.
 
-## The one thing that gates the geometry — MEASURE THIS
+## Measurements, checks & tests before CAD/build
 
-Everything above is robust regardless, but the **bracket/tongue geometry and whether
-the Pi+bonnet fits behind vs below** hinge on one measurement:
+The design is robust regardless, but these resolve the exact part geometry. Grouped:
 
-> **How much clear depth is there from the wall face to the front of the pocket lip,
-> and how does the pocket's height line up with where the panel row's top edge will
-> sit?**
+### MEASURE (tape / calipers; do the wall ones at ~5 points across the 512 cm)
+1. **Re-confirm the wall numbers + that they're UNIFORM full-width:** ceiling→top-of-piece
+   (22.5), piece thickness (2), height (14), **top groove** width (1.4) + depth (5),
+   **bottom groove** width (1.8) + height (5.7), middle attach (~3.3), wall step (0.4).
+   Note the **usable** groove widths (a hair under, after paint/finish).
+2. **Depth in front of the wall** for the panel stack, and **how the top-groove height
+   lines up with where you want the row's top** (top groove sits ~22.5 cm below ceiling).
+   → decides Pi **behind** vs **below**: lip is ~34 mm proud, Pi+bonnet ~40–50 mm.
+   **Recommended: panels ~flush with the lip + Pi/bonnet below** (cleaner, cooler, serviceable).
+3. **Panel back:** how far the **HUB75 connectors + plugged-in ribbon** protrude, and
+   **where** (photo of the back with a ruler). → sets standoff + magnet-strip placement.
+4. **Panel M3 hole grid:** vertical pitch (~144 mm) + horizontal column spacing + positions
+   vs the panel edges. → the bracket/clip CAD.
+5. **Weigh one panel** (confirm ~0.45 kg).
 
-- The lip is **34 mm** proud; the Pi+Triple-Bonnet stack is **~40–50 mm** deep.
-  - **If we keep panels ~flush with the lip (~34 mm standoff):** cleanest look, but the
-    Pi/bonnet **mounts below the row** (good anyway — serviceable, cooler, ribbons drop
-    down).
-  - **If we stand panels ~55–60 mm off the wall:** the Pi/bonnet fits *behind* center,
-    but the wall sticks out more.
-  - **Recommended: panels ~flush, Pi/bonnet below.** Minimal protrusion, best service
-    access, best thermals.
+### CHECK (eyes/hands)
+6. **Continuity:** is the piece + both grooves **unbroken across all 512 cm** — any outlets,
+   corners, nails, blobs, or spots where a groove is blocked/narrower?
+7. **Groove interior:** clean wood a tongue slides freely in? Any paint/caulk narrowing it?
+8. **Piece is solid + firmly attached** along its whole length (push/pull — does it flex?).
+
+### TEST (5-minute, before committing parts)
+9. **Tongue fit:** cut a short (~10 cm) scrap to the measured groove widths and **slide one
+   into the top groove** (seats on the floor ~5 cm down, snug but free) and one into the
+   **bottom groove** (1.8). Validates the cleat/tab thickness before making full-length ones.
+10. **Magnet connector-clearance:** screw **one magnet screw** into a panel's edge M3 hole,
+    plug in the ribbon, and see if the **1.1 cm standoff clears** the connectors/ribbon at
+    the edge rows (hold a steel ruler 1.1 cm off the back). → decides **magnetic vs magnet-free**.
+11. **Magnet hold:** stick a magnet screw to a steel scrap — confirm a firm hold (6/panel
+    holds 0.45 kg with big margin, but confirm the magnets aren't weak).
 
 ## Build sequence at the Hobby Shop
 
