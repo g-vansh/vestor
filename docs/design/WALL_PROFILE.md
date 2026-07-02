@@ -8,52 +8,60 @@ three passes. All units **cm** (inches noted where useful).
 ## TL;DR — what this is
 
 Running the **full width of the wall (~201 in / ~512 cm)** there is a
-**structural WOODEN rail** at the top: a **2 cm-thick lip that stands 3.4 cm
-proud of the wall**, with a **continuous open-top pocket (1.4 cm wide × 5 cm
-deep) behind it**. It is load-bearing ("can hold a lot of weight"). This is,
-in effect, a **built-in full-width cleat rail** — the natural anchor to **hang
-the entire LED panel row from**, dropping a top cleat/tongue into the pocket from
-above, with the lip's 3.4 cm projection giving standoff room behind the panels.
+**structural WOODEN rail** at the top: a **2 cm-thick lip, 14 cm tall, standing
+~3.4 cm proud of the wall**, attached to the wall only across its **middle ~3.3 cm**
+— so behind it are **TWO grooves** (updated 2026-07-02):
+- **TOP groove** — 1.4 cm wide × ~5 cm tall, **open at the TOP** (drop a cleat in
+  from above; bottoms out ~5 cm down).
+- **BOTTOM groove** — 1.8 cm wide × 5.7 cm tall, **open at the BOTTOM** (slide a
+  tab up into it from below; closed at its top).
+
+It's load-bearing ("holds a lot of weight"). In effect it's a **built-in full-width
+mounting rail captured at BOTH ends** — **hang** the panel row's weight from the
+top groove and **capture** its bottom in the bottom groove, so the whole assembly
+is fully constrained **with zero new holes in the wall**.
 
 ## Measured dimensions
 
 | Label     | Value | Role |
 |-----------|-------|------|
 | `22.5 cm` | 22.5  | ceiling straight down to the **TOP of the piece** |
-| `2 cm`    | 2.0   | **thickness** of the jutting wooden piece/lip |
-| `14 cm`   | 14.0  | **height** of the piece (extends down from its top) |
-| `~5 cm`   | ~4.8  | **depth (height) of the open-top pocket** behind the piece |
-| `1.4 cm`  | 1.4   | **width of the pocket/groove** between the piece and the wall |
-| `3.4 cm`  | 3.4   | **total projection** of the piece front off the wall (= 1.4 + 2) |
+| `2 cm`    | 2.0   | **thickness** of the jutting wooden piece/lip (uniform) |
+| `14 cm`   | 14.0  | **height** of the piece |
+| **TOP groove** | ~5 cm tall × 1.4 cm | behind the piece **top**, **open at the top** |
+| **BOTTOM groove** | 5.7 cm tall × 1.8 cm | behind the piece **bottom**, **open at the bottom** |
+| middle | ~3.3 cm | band where the piece **attaches to the wall** (14 − 5 − 5.7) |
+| projection | 3.4 → 3.8 cm | piece front off the wall (top ≈ 1.4+2 = 3.4; bottom ≈ 1.8+2 = 3.8) |
 
-Full width (into the page): **~512 cm (~201 in)** — the pocket runs the whole way.
+Full width (into the page): **~512 cm (~201 in)** — both grooves run the whole way.
 
-## Geometry (confirmed)
+## Geometry (confirmed; bottom groove added 2026-07-02)
 
-A **2 cm-thick wooden piece juts out from the wall and is anchored to the wall at
-its BOTTOM**. Between the piece and the wall is a **groove/pocket that is 1.4 cm
-wide, ~5 cm deep, OPEN AT THE TOP and closed at the bottom** — a slot you can
-drop something into from above. There is **no recess cut into the wall itself**;
-the groove *is* the space between the piece and the wall.
+A **2 cm-thick wooden piece** juts ~3.4 cm out from the wall, **14 cm tall**,
+attached to the wall only across its **middle ~3.3 cm**. There is **no recess cut
+into the wall itself** — the grooves *are* the space between the piece and the
+wall, at the top and bottom:
 
-- Ceiling → top of piece: **22.5 cm**.
-- The piece is **2 cm thick, 14 cm tall**, front face **3.4 cm proud** of the wall.
-- Behind its **top ~5 cm** is the **open pocket** (1.4 cm wide, open from the
-  top); the piece is **backed/anchored to the wall over its lower portion**, so
-  the pocket bottoms out ~5 cm down and the piece joins the wall at its bottom.
-- Sanity check that the read is right: **1.4 (pocket) + 2 (piece) = 3.4**.
+- **TOP groove** — between the piece top and the wall: **1.4 cm wide × ~5 cm tall,
+  OPEN AT THE TOP** (drop a cleat/tongue in from above; it bottoms out ~5 cm down).
+- **MIDDLE ~3.3 cm** — the piece **attaches to the wall** here.
+- **BOTTOM groove** — between the piece bottom and the wall: **1.8 cm wide × 5.7 cm
+  tall, OPEN AT THE BOTTOM** (slide a tab up into it from below; closed at its top).
+- Ceiling → top of piece: **22.5 cm**. Heights: 5 + 3.3 + 5.7 = **14**.
+- Projection: **≈3.4 cm at top (1.4+2), ≈3.8 cm at bottom (1.8+2)** — the piece
+  sits a touch more proud at the bottom (the bottom gap is 0.4 cm deeper).
 
 ```
    ceiling ─────────────────────────────
               │ 22.5 cm (to top of piece)
-              ▼
-        ┌──┐  ▲  ← pocket OPEN at top (1.4 wide × ~5 deep)
-        │  │▒▒│     (▒ = the 1.4 cm slot; you drop a cleat in here)
-        │  │██│  ← below ~5 cm: solid backing anchors piece to wall
-        │  │██│
-   piece│  │██│  14 cm tall, 2 cm thick, stands 3.4 cm proud
-        └──┘██│
-   ────────wall────────
+              ▼   ↓ drop cleat in
+        ┌──┐▒▒│  ← TOP groove  OPEN at top   (1.4 wide × ~5 tall)
+        │  │▒▒│
+        │  │██│  ← MIDDLE ~3.3 cm: piece attached to wall
+        │  │▒▒│  ← BOTTOM groove OPEN at bottom (1.8 wide × 5.7 tall)
+   piece│  │▒▒│
+        └──┘▒▒│  ↑ push tab up
+   ────────wall────────   (piece 14 cm tall, 2 cm thick, ~3.4 proud)
 ```
 
 ## What it must carry — the LED panel row
