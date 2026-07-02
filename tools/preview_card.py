@@ -171,17 +171,17 @@ class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene, IdleScene):
 
 SAMPLE = [
     {"callsign": "JBU353", "origin": "JFK", "destination": "BOS", "aircraft_code": "A21N",
-     "plane": "Airbus A321neo", "altitude": 4200, "vertical_speed": -900},
+     "altitude": 4200, "vertical_speed": -900, "ground_speed": 280, "squawk": "3412"},
     {"callsign": "DAL1180", "origin": "BOS", "destination": "ATL", "aircraft_code": "B739",
-     "plane": "Boeing 737-900", "altitude": 8000, "vertical_speed": 1400},
+     "altitude": 8000, "vertical_speed": 1400, "ground_speed": 340, "squawk": "1200"},
     {"callsign": "RPA5689", "origin": "ORD", "destination": "BOS", "aircraft_code": "E75L",
-     "plane": "Embraer 175", "altitude": 525, "vertical_speed": -600},
+     "altitude": 525, "vertical_speed": -600, "ground_speed": 140, "squawk": "6521"},
     {"callsign": "N247NE", "origin": "", "destination": "", "aircraft_code": "EC45",
-     "plane": "Eurocopter EC145", "altitude": 850, "vertical_speed": -200},
-    {"callsign": "EJA680", "origin": "", "destination": "TEB", "aircraft_code": "C68A",
-     "plane": "Cessna Citation", "altitude": 41000, "vertical_speed": 0},
+     "altitude": 850, "vertical_speed": -200, "ground_speed": 90, "squawk": "1200"},
+    {"callsign": "SWA88", "origin": "MDW", "destination": "BOS", "aircraft_code": "B738",
+     "altitude": 3200, "vertical_speed": -1100, "ground_speed": 210, "squawk": "7700"},
     {"callsign": "N512SR", "origin": "", "destination": "", "aircraft_code": "SR22",
-     "plane": "Cirrus SR22", "altitude": 6500, "vertical_speed": 700},
+     "altitude": 6500, "vertical_speed": 700, "ground_speed": 150, "squawk": "1200"},
 ]
 
 

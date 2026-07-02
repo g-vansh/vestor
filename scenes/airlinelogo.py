@@ -40,7 +40,8 @@ CATEGORY_LABEL = {
 class AirlineLogoScene(object):
     def __init__(self):
         self._logo_rec = None
-        self._icon = None             # (px, w, h) when no logo
+        self._icon = None             # (static_px, anim_px, w, h) when no logo
+        self._icon_frame = 0
         self._brand = colours.BLACK
         self._label = ""
         super().__init__()
@@ -62,8 +63,8 @@ class AirlineLogoScene(object):
             self._label = airlines.name_for_callsign(callsign) or icao
         else:
             code = flight.get("aircraft_code", "")
-            px, w, h, cat = aircraft.icon_for(code)
-            self._icon = (px, w, h)
+            static, anim, w, h, cat = aircraft.icon_for(code)
+            self._icon = (static, anim, w, h)
             if icao in airlines.AIRLINE_DB:      # known operator, just no logo file
                 self._label = airlines.AIRLINE_DB[icao]["name"]
             else:
@@ -84,6 +85,25 @@ class AirlineLogoScene(object):
                                   colours.BLACK, self._label) if self._label else 0
         return font, width, 8
 
+    def _draw_icon(self, top_x, top_y):
+        """Silver aircraft body + a bright spot sweeping the rotor/prop (spin)."""
+        static, anim, w, h = self._icon
+        for (x, y) in static:
+            self.set_pixel(top_x + x, top_y + y, ICON_COLOUR.red,
+                           ICON_COLOUR.green, ICON_COLOUR.blue)
+        if anim:
+            n = len(anim)
+            head = (self._icon_frame * 2) % n
+            for i, (x, y) in enumerate(anim):
+                d = min((i - head) % n, (head - i) % n)
+                if d == 0:
+                    r, g, b = 255, 255, 255
+                elif d == 1:
+                    r, g, b = 150, 160, 180
+                else:
+                    r, g, b = 55, 62, 72
+                self.set_pixel(top_x + x, top_y + y, r, g, b)
+
     @Animator.KeyFrame.add(1)
     def airline_logo(self, count):
         if len(self._data) == 0:
@@ -96,7 +116,7 @@ class AirlineLogoScene(object):
             top_w, top_h = self._logo_rec["w"], self._logo_rec["h"]
             rule_colour = self._brand
         elif self._icon:
-            _, top_w, top_h = self._icon
+            _, _, top_w, top_h = self._icon
             rule_colour = ICON_COLOUR
         else:
             return
@@ -113,9 +133,8 @@ class AirlineLogoScene(object):
             for (x, y, r, g, b) in self._logo_rec["px"]:
                 self.set_pixel(top_x + x, top_y + y, r, g, b)
         else:
-            for (x, y) in self._icon[0]:
-                self.set_pixel(top_x + x, top_y + y, ICON_COLOUR.red,
-                               ICON_COLOUR.green, ICON_COLOUR.blue)
+            self._draw_icon(top_x, top_y)
+        self._icon_frame += 1
 
         # Brand rule.
         rule_y = top_y + top_h + 1
