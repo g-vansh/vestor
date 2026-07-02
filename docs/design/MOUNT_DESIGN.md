@@ -121,15 +121,15 @@ decisions (both researched):
   the corner, then short panel-to-panel daisy-chains 1→16). It's also **simpler in
   software** (direct 1024×32 map — **no "snake"/180° left-half flip**) and uses **1 of
   the bonnet's 3 ports** (2 spare).
-- **Cost:** ~half the refresh of 2×8 (parallel chains refresh together). A 16-long chain
-  (32 k px) is "pushing it" at full color, but **dropping `pwm_bits` to ~8–9 gives
-  ~100 Hz+** — and this is a **static-ish flight board** (text/logos, slow transitions),
-  so ~80–100 Hz is flicker-free and plenty; 8–9-bit color is imperceptible on solid
-  text/logos.
-- **Config change (at wall-build):** `--led-chain=16 --led-parallel=1`, `pwm_bits≈8–9`,
-  and **remove the snake/flip** in `display/__init__.py`. **Keep 2×8 only if you want
-  max refresh — but then the electronics can't cleanly go in the corner.** *(Recommended:
-  1×16. Flagged for owner confirmation since it changes the locked topology + refresh.)*
+- **Cost — MEASURED on the Pi (slowdown=4):** old 2×8 = **150 Hz** @11-bit color; 1×16 =
+  **86 Hz** @11-bit, **111 Hz** @9-bit, 123 Hz @8-bit, 139 Hz @7-bit. All are flicker-free
+  (eye fusion ~60–90 Hz; a monitor is 60–120 Hz). "Color depth" = brightness steps per R/G/B
+  channel: 11-bit=2048, 8-bit=256 (= "true color", what a laptop screen shows). On flat
+  text/logos the difference is **imperceptible** (only smooth photo gradients would band).
+- **CONFIRMED: `--led-chain=16 --led-parallel=1`, `pwm_bits=9` → 111 Hz**, and **remove the
+  snake/flip** in `display/__init__.py` (at wall-build). Could push higher by lowering
+  `gpio_slowdown` (4→3/2) if the signal stays clean. Keep 2×8 only if max refresh mattered
+  (it doesn't for a static board) — and it can't cleanly corner-mount anyway.
 
 ### 2. Power distribution — mind 5 V voltage drop over 5 m
 - 5 V is drop-sensitive (**keep < ~3 % = 0.15 V**). The old plan put **PSU1 behind the
