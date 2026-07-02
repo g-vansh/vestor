@@ -51,46 +51,45 @@ def parts():
     """Return [(name, (x0,x1,y0,y1,z0,z1), rgb), ...]."""
     P = []
     # --- wooden wall feature (grooves are the un-filled gaps) ---
-    # front-wall trim STOPS at the corner (X = ROW_W - PIECE_FRONT) so it butts the
-    # left-wall piece into a clean L instead of crossing it.
-    FE = ROW_W - PIECE_FRONT
-    P.append(("wall",   (0, ROW_W, -120, 0,          Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
-    P.append(("piece",  (0, FE, PIECE_BACK, PIECE_FRONT, Z_BOT, Z_TOP),              C_PIECE))
-    P.append(("bridge", (0, FE, 0, PIECE_BACK,    Z_MID_BOT, Z_MID_TOP),             C_PIECE))  # attach
+    # The panel-hanging wall face is the FULL available space = 201.5" (WALL_USABLE)
+    # measured FROM the corner. Corner (viewer's LEFT) at X = WL. The front trim runs
+    # the WHOLE length to the corner (no truncation → face is 5118 mm, not 5086).
+    WL = WALL_USABLE                              # 5118 mm
+    P.append(("wall",   (0, WL, -120, 0,          Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
+    P.append(("piece",  (0, WL, PIECE_BACK, PIECE_FRONT, Z_BOT, Z_TOP),           C_PIECE))
+    P.append(("bridge", (0, WL, 0, PIECE_BACK,    Z_MID_BOT, Z_MID_TOP),          C_PIECE))  # attach
+    P.append(("tongue", (0, WL, PIECE_BACK - TONGUE_THICK, PIECE_BACK, Z_MID_TOP + 2, Z_TOP), C_BIRCH))
+    P.append(("tab",    (0, WL, -WALL_STEP + 1, -WALL_STEP + 1 + TAB_THICK, Z_BOT, Z_BOT + ENGAGE), C_BIRCH))
 
-    # --- panels (dark body + a thin front "screen") ---
+    # --- panels: 16×320 = 5120 mm, BUTT the corner (X=WL); the +2 mm overshoots
+    # the FAR end (panel 0 sticks ~2 mm past X=0), never the corner ---
+    x0p = WL - ROW_W                              # -2 mm
     for i in range(N_PANELS):
-        x0 = i * PANEL_W + 0.5
-        x1 = (i + 1) * PANEL_W - 0.5
-        P.append((f"panel_{i:02d}", (x0, x1, PANEL_BACK_Y, PANEL_FACE_Y - 1.5, -PANEL_H, 0), C_PANEL))
-        P.append((f"screen_{i:02d}", (x0 + 3, x1 - 3, PANEL_FACE_Y - 1.5, PANEL_FACE_Y, -PANEL_H + 3, -3), C_SCREEN))
+        a = x0p + i * PANEL_W
+        P.append((f"panel_{i:02d}", (a + 0.5, a + PANEL_W - 0.5, PANEL_BACK_Y, PANEL_FACE_Y - 1.5, -PANEL_H, 0), C_PANEL))
+        P.append((f"screen_{i:02d}", (a + 3, a + PANEL_W - 3, PANEL_FACE_Y - 1.5, PANEL_FACE_Y, -PANEL_H + 3, -3), C_SCREEN))
 
-    # --- mount: tongue in TOP groove, tab in BOTTOM groove ---
-    P.append(("tongue", (0, FE, PIECE_BACK - TONGUE_THICK, PIECE_BACK, Z_MID_TOP + 2, Z_TOP), C_BIRCH))
-    P.append(("tab",    (0, FE, -WALL_STEP + 1, -WALL_STEP + 1 + TAB_THICK, Z_BOT, Z_BOT + ENGAGE), C_BIRCH))
-
-    # --- LEFT WALL = the owner's LEFT as they FACE the panels. The panel row runs
-    # off to the viewer's RIGHT; the left wall is at the far (X=ROW_W) end and comes
-    # TOWARD the viewer (+Y), built identically (2 cm piece + top/bottom grooves,
-    # rotated 90°): its surface is at X=ROW_W facing -X, the piece juts -X, grooves face -X.
-    LWY, xw = 520, ROW_W
-    P.append(("corner_solid", (xw, xw + 120, -120, 0, Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
-    P.append(("left_wall",    (xw, xw + 120, 0, LWY, Z_BOT - 120, CEIL_TO_TOP + 20),  C_WALL))
-    P.append(("left_piece",   (xw - PIECE_FRONT, xw - PIECE_BACK, 0, LWY, Z_BOT, Z_TOP), C_PIECE))  # juts -X
-    P.append(("left_bridge",  (xw - PIECE_BACK, xw, 0, LWY, Z_MID_BOT, Z_MID_TOP),      C_PIECE))
-    # electronics HUNG from the LEFT-wall grooves, set DEEPER along the side wall
-    # (larger Y) so they don't break the panel row where it butts the corner
-    P.append(("pi_bonnet", (xw - PIECE_FRONT - 80, xw - PIECE_FRONT, 280, 350, -110, -50),   C_PI))
-    P.append(("psu",       (xw - PIECE_FRONT - 115, xw - PIECE_FRONT, 430, 500, -220, -110), C_PSU))
+    # --- LEFT WALL = the viewer's LEFT as they face the panels: a room corner at
+    # X=WL that comes TOWARD them (+Y), built identically. Its piece butts the FRONT
+    # piece's front plane (Y=PIECE_FRONT) → clean L, no crossing, and the front face
+    # keeps its FULL length. ---
+    LWY, xc = 520, WL
+    P.append(("corner_solid", (xc, xc + 120, -120, 0, Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
+    P.append(("left_wall",    (xc, xc + 120, 0, LWY, Z_BOT - 120, CEIL_TO_TOP + 20),  C_WALL))
+    P.append(("left_piece",   (xc - PIECE_FRONT, xc - PIECE_BACK, PIECE_FRONT, LWY, Z_BOT, Z_TOP), C_PIECE))
+    P.append(("left_bridge",  (xc - PIECE_BACK, xc, PIECE_FRONT, LWY, Z_MID_BOT, Z_MID_TOP),      C_PIECE))
+    # electronics HUNG from the LEFT-wall grooves, deeper along the side wall
+    P.append(("pi_bonnet", (xc - PIECE_FRONT - 80, xc - PIECE_FRONT, 250, 320, -110, -50),   C_PI))
+    P.append(("psu",       (xc - PIECE_FRONT - 115, xc - PIECE_FRONT, 400, 470, -220, -110), C_PSU))
     return P
 
 
 def summary():
     over = ROW_W - WALL_USABLE
-    return (f"row {ROW_W:.0f} mm into {WALL_USABLE:.0f} mm usable ({over:+.0f} mm) | "
-            f"piece {PIECE_PROUD} mm proud | panel face @ Y={PANEL_FACE_Y:.0f} mm | "
-            f"tongue {TONGUE_THICK} mm in {TOP_GRV_GAP} mm top groove | "
-            f"tab {TAB_THICK} mm in {BOT_GRV_GAP} mm bottom groove")
+    return (f"panel wall face = {WALL_USABLE:.0f} mm (201.5\") from the corner | "
+            f"16 panels = {ROW_W:.0f} mm ({over:+.0f} mm at the far end) | "
+            f"piece {PIECE_PROUD} mm proud | tongue {TONGUE_THICK} in {TOP_GRV_GAP} mm groove | "
+            f"tab {TAB_THICK} in {BOT_GRV_GAP} mm groove")
 
 
 if __name__ == "__main__":
