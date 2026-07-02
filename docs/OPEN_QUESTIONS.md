@@ -42,6 +42,23 @@ Anything ambiguous or needing the owner. Everything else was built. Updated 2026
    Pi's `.env`. The app runs fine without them. Add the free keys later, then
    `sudo systemctl restart vestor`. NWS weather + Bluebikes need no key.
 
+## Wall mount — profile captured (owner-confirmed 2026-07-02)
+9. **RESOLVED — how to hang the row.** The top of the wall has a **full-width
+   (~512 cm) structural WOODEN rail** with a continuous **open-top pocket
+   (1.4 cm × 5 cm)** and a **3.4 cm-proud lip**. Plan: **top cleat/tongue (≤1.4 cm)
+   dropped into the pocket** carries the whole row; lip gives standoff; PSUs mount
+   separately. Full spec: `docs/design/WALL_PROFILE.md`. (Supersedes the panel
+   "mounting method TBD" / magnet question — the plastic rear frames don't need
+   magnets if the assembly hangs from a cleat.)
+10. **TO CONFIRM ON-SITE (before building the cleat):**
+    - Depth behind the 3.4 cm lip for the **center Pi + Triple Bonnet stack**
+      (~4–5 cm deep) — may exceed 3.4 cm → recess it or mount the Pi/bonnet just
+      below the row.
+    - **Panel weight** (≈0.5 kg each?) → total hung load (~10–13 kg est.).
+    - Pocket is **uniform/continuous** across the full 512 cm.
+    - Wall material behind (studs?) for a **bottom restraint** fixing.
+    - Desired **height** of the row (pocket puts the top ~22.5 cm below the ceiling).
+
 ## ✅ CONFIRMED on hardware at first light (2026-07-01)
 6. **RGB order / row addressing / slowdown — CONFIRMED, no tweaks needed.**
    `rgb_sequence=RGB` (colors correct, no swap), `row_address_type=0`, `gpio_slowdown=4`

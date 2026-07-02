@@ -4,6 +4,19 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-02 — Wall mount profile captured (full-width wooden cleat rail)
+Owner sketched + confirmed the top-of-wall cross-section (photo `docs/design/wall_top_profile.jpg`).
+It's a **full-width (~512 cm / ~201 in) structural WOODEN rail**: a 2 cm lip standing **3.4 cm
+proud** of the wall, with a continuous **open-top pocket (1.4 cm wide × 5 cm deep)** behind it
+(open from the top, closed at the bottom; piece anchored to the wall at its bottom). Ceiling → top
+of piece = 22.5 cm; piece 14 cm tall. It's load-bearing ("holds a lot of weight"). This is a
+**built-in full-width cleat rail** → the plan to **hang the entire 16-panel row (512 cm × 16 cm,
+~8 kg) from a top cleat/tongue (≤1.4 cm) dropped into the pocket**, with the lip's 3.4 cm giving
+standoff for cabling; PSUs mount separately. Full geometry, panel-row sizing, load path,
+constraints, and on-site checks in **`docs/design/WALL_PROFILE.md`**; summarized in `HARDWARE.md`
+(resolves panel "mounting method TBD") and `OPEN_QUESTIONS.md`. Took 3 sketch-reading passes to get
+the geometry right (was NOT a stepped ledge, and the pocket is open at the TOP not the bottom).
+
 ## 2026-07-02 — Plane-swoop scene transitions + fuller center jet
 A big airliner now swoops left→right on every scene change (flight↔flight, flight↔clock):
 NEW screen reveals to the LEFT of the plane, OLD stays frozen to the RIGHT, with a bright
