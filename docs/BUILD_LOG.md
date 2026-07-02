@@ -4,6 +4,19 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-02 — 3D-printing plan (MIT Hobby Shop: Bambu P2S/H2S + Form 3L)
+Owner joined the MIT Hobby Shop. Confirmed (Charlotte Reiter) 3 printers (Stratasys gone):
+**Bambu P2S** (256³), **Bambu H2S** (340×320×340, 65 °C chamber/350 °C hotend → PLA/PETG/ABS/ASA/PC/CF),
+**Formlabs Form 3L** (resin). **PLA free** (only filament now, more soon); **resin $0.25/mL**. Wrote
+**`docs/FABRICATION.md`** — the printed BOM per part, printer/material assignment, and the load path
+integrating the wooden pocket (`WALL_PROFILE.md`) + the 80/20 spine (`INVENTORY.md` §8). **Key finding:**
+PLA is the worst common filament for **creep** (sags under sustained load) → the ~12–15 kg hang goes
+through METAL; printed parts locate/interface; reprint load-bearing parts (cleat hooks, PSU cradles)
+in PETG/ASA on the H2S when stocked. Resin reserved for small precision/cosmetic (~$10–30 total).
+Parametric CadQuery/build123d workflow proposed (`cad/`) for Claude/Codex-generated parts. Updated
+`MIT_RESOURCES.md` with the confirmed lineup. Next: measure depth behind the 34 mm lip + panel weight,
+then generate CAD for the cleat hook + panel bracket first.
+
 ## 2026-07-02 — Wall mount profile captured (full-width wooden cleat rail)
 Owner sketched + confirmed the top-of-wall cross-section (photo `docs/design/wall_top_profile.jpg`).
 It's a **full-width (~512 cm / ~201 in) structural WOODEN rail**: a 2 cm lip standing **3.4 cm

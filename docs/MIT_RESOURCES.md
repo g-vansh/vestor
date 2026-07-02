@@ -29,10 +29,13 @@ Assoc. instructor **Charlotte Reiter creiter@mit.edu**. **FREE for students.**
   length with staff** (1.6 m is long).
 - **Wall-anchor holes in steel:** Clausing drill press. (Also Bridgeport/Haas mills,
   MIG+TIG welders if needed.)
-- **3D-print the alignment aids (§9.7):** **Stratasys uPrint SE Plus — FDM, prints ABS**
-  (NOT PETG — design end-stops/combs for ABS; fine for these parts). Large SLA (Form 3L) =
-  detail not structural. Also Epilog **120 W laser** (40×28") + Laguna 4×8 CNC router for
-  acrylic/ply jigs.
+- **3D printers — CONFIRMED 2026-07-02 (Charlotte Reiter email). The Stratasys uPrint is
+  GONE.** Now **3 printers: Bambu P2S** (FDM, 256³ mm), **Bambu H2S** (FDM, 340×320×340 mm,
+  65 °C chamber / 350 °C hotend → PLA/PETG/ABS/ASA/PC/CF), **Formlabs Form 3L** (resin SLA,
+  335×200×300). **PLA is FREE** (only filament stocked now; more soon). **Resin = $0.25/mL**
+  (assorted). → Full fabrication plan (parts, printer/material per part, PLA-creep strategy)
+  in **`docs/FABRICATION.md`**. Also Epilog **120 W laser** (40×28") + Laguna 4×8 CNC router
+  for acrylic/ply jigs.
 - **Steel stock = BRING YOUR OWN** (no metal store). Source order: **`reuse@mit.edu`** (free
   scrap + Unistrut) → **MIT Central Machine Shop** ([web.mit.edu/cmshop](https://web.mit.edu/cmshop/services.html), stocks/pulls steel/alu) → OnlineMetals off-campus. Ask Hayami for offcuts.
 - **⚠️ Orientation REQUIRED before any tool use** — Wed 1–2 / Fri 3–4, **first 6 wks of term
