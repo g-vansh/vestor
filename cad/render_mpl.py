@@ -56,10 +56,10 @@ def top():
 
 def top_corner():
     """Zoomed top-down of just the left corner."""
-    P = [p for p in M.parts() if p[1][0] < 900]
+    P = [p for p in M.parts() if p[1][1] > M.ROW_W - 900]
     fig, ax = plt.subplots(figsize=(8, 7))
     _ortho(ax, P, u=0, v=1, depth=2)
-    ax.set_xlim(-140, 780); ax.set_ylim(-130, 380)
+    ax.set_xlim(M.ROW_W - 780, M.ROW_W + 140); ax.set_ylim(-130, 380)
     ax.set_aspect("equal"); ax.grid(alpha=0.25)
     ax.set_xlabel("X — along wall (mm)"); ax.set_ylabel("Y — depth (mm)")
     ax.set_title("Left corner (top view) — equipment bay")

@@ -33,14 +33,28 @@ def overview():
 
 
 def corner():
-    # from inside the room (+X,+Y, above) looking into the corner so the left-wall
-    # face, its grooves, and the hung electronics are all visible
-    pl = _scene((1500, 1250), subset=lambda n, b: b[0] < 950)
-    pl.camera_position = [(1550, 1950, 780), (60, 240, -130), (0, 0, 1)]
+    # look into the corner (now at X=ROW_W) from the room so the left-wall face,
+    # its grooves, and the hung electronics are visible
+    pl = _scene((1500, 1250), subset=lambda n, b: b[1] > M.ROW_W - 950)
+    pl.camera_position = [(M.ROW_W - 1550, 1950, 780), (M.ROW_W - 60, 240, -130), (0, 0, 1)]
     pl.camera.zoom(1.2)
     pl.screenshot(os.path.join(OUT, "pv_corner.png")); print("wrote pv_corner.png")
+
+
+def room_pov():
+    """As YOU stand in the room facing the panels: left wall/corner on your LEFT,
+    coming toward you; the panel row runs off to your right."""
+    xw = M.ROW_W
+    pl = _scene((1800, 1150), subset=lambda n, b: b[1] > xw - 1750)
+    pl.camera_position = [(xw - 850, 3300, -650), (xw - 250, -200, -230), (0, 0, 1)]
+    pl.add_point_labels([(xw - 2, 520, -120)], ["LEFT CORNER (comes toward you)"],
+                        font_size=16, text_color="red", shape=None, show_points=False)
+    pl.add_point_labels([(xw - 1100, 0, -60)], ["PANEL WALL (in front) →"],
+                        font_size=16, text_color="navy", shape=None, show_points=False)
+    pl.screenshot(os.path.join(OUT, "pv_room.png")); print("wrote pv_room.png")
 
 
 if __name__ == "__main__":
     overview()
     corner()
+    room_pov()

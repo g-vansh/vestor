@@ -66,17 +66,18 @@ def parts():
     P.append(("tongue", (0, ROW_W, PIECE_BACK - TONGUE_THICK, PIECE_BACK, Z_MID_TOP + 2, Z_TOP), C_BIRCH))
     P.append(("tab",    (0, ROW_W, -WALL_STEP + 1, -WALL_STEP + 1 + TAB_THICK, Z_BOT, Z_BOT + ENGAGE), C_BIRCH))
 
-    # --- LEFT WALL: a room corner FACING the panel wall, extending INTO the room
-    # (+Y). SAME structure as the front wall (2 cm piece + top/bottom grooves),
-    # rotated 90°: its surface is at X=0, the piece juts +X, grooves face +X.
-    LWY = 520                                    # modeled length along the left wall
-    P.append(("corner_solid", (-120, 0, -120, 0, Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
-    P.append(("left_wall",    (-120, 0, 0, LWY, Z_BOT - 120, CEIL_TO_TOP + 20),  C_WALL))
-    P.append(("left_piece",   (PIECE_BACK, PIECE_FRONT, 0, LWY, Z_BOT, Z_TOP),   C_PIECE))  # juts +X
-    P.append(("left_bridge",  (0, PIECE_BACK, 0, LWY, Z_MID_BOT, Z_MID_TOP),     C_PIECE))
+    # --- LEFT WALL = the owner's LEFT as they FACE the panels. The panel row runs
+    # off to the viewer's RIGHT; the left wall is at the far (X=ROW_W) end and comes
+    # TOWARD the viewer (+Y), built identically (2 cm piece + top/bottom grooves,
+    # rotated 90°): its surface is at X=ROW_W facing -X, the piece juts -X, grooves face -X.
+    LWY, xw = 520, ROW_W
+    P.append(("corner_solid", (xw, xw + 120, -120, 0, Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
+    P.append(("left_wall",    (xw, xw + 120, 0, LWY, Z_BOT - 120, CEIL_TO_TOP + 20),  C_WALL))
+    P.append(("left_piece",   (xw - PIECE_FRONT, xw - PIECE_BACK, 0, LWY, Z_BOT, Z_TOP), C_PIECE))  # juts -X
+    P.append(("left_bridge",  (xw - PIECE_BACK, xw, 0, LWY, Z_MID_BOT, Z_MID_TOP),      C_PIECE))
     # electronics HUNG from the left wall's grooves, tucked into the corner
-    P.append(("pi_bonnet", (PIECE_FRONT, PIECE_FRONT + 80, 150, 215, -110, -50),   C_PI))
-    P.append(("psu",       (PIECE_FRONT, PIECE_FRONT + 115, 280, 315, -220, -110), C_PSU))
+    P.append(("pi_bonnet", (xw - PIECE_FRONT - 80, xw - PIECE_FRONT, 150, 215, -110, -50),   C_PI))
+    P.append(("psu",       (xw - PIECE_FRONT - 115, xw - PIECE_FRONT, 280, 315, -220, -110), C_PSU))
     return P
 
 
