@@ -95,12 +95,51 @@ with thin steel strips**.
 - **If not used (magnet-free):** panels **screw** (M3) to printed brackets on the rails
   — positively located, no steel needed, but service = unscrew from behind (harder once
   wall-mounted).
-- **Recommendation:** **use the magnets** — free, tool-free service, self-aligning — as
-  a steel facing on the aluminum rails + alignment pins, *provided* the connector
-  clearance checks out on a test panel. Keep magnet-free as the clean fallback.
+- **CONFIRMED 2026-07-02 — GO MAGNETIC.** The owner tested it: the 1.1 cm standoff
+  **clears the (barely-protruding) connectors + ribbons**, and the magnet hold is
+  strong. So the plan is **magnetic panel mount**: thin **steel strips** on the flat
+  aluminum rails + the on-hand magnet screws (6/panel × 16 = 96 of the 100) → panels
+  **snap on/off from the front** (tool-free) and **self-align** to the flat steel plane.
+  Add **alignment pins** for lateral (seam) registration. Magnet-free (M3 screws) stays
+  a clean fallback but is no longer needed.
 - **Note:** the magnets do **not** hang the panels from the wall (the grooves are wood,
   non-ferrous). They hold **panel → frame**; the **frame → wall** hang is the wood
   tongue in the grooves.
+
+## The LEFT CORNER changes two electrical things (2026-07-02)
+
+The Pi + Triple Bonnet now live **in the left corner** (see `WALL_PROFILE.md`) — great
+for mounting/depth, but the corner is the **left END** of the row, which forces two
+decisions (both researched):
+
+### 1. Feed topology — recommend a SINGLE CHAIN OF 16 (supersedes the LOCKED 2×8)
+- HUB75 is a high-speed parallel bus: **keep the bonnet→first-panel ribbon < ~50 cm**;
+  long runs cause pixel corruption/noise. The old **center-fed 2×8** kept both feed
+  ribbons short *because the bonnet was in the middle*. From the **corner**, a 2×8 split
+  would need a **~2.5 m ribbon** to reach the middle panel (chain 1's start) — **not OK**.
+- **A single chain of 16 from the corner keeps EVERY ribbon short** (bonnet→panel 1 at
+  the corner, then short panel-to-panel daisy-chains 1→16). It's also **simpler in
+  software** (direct 1024×32 map — **no "snake"/180° left-half flip**) and uses **1 of
+  the bonnet's 3 ports** (2 spare).
+- **Cost:** ~half the refresh of 2×8 (parallel chains refresh together). A 16-long chain
+  (32 k px) is "pushing it" at full color, but **dropping `pwm_bits` to ~8–9 gives
+  ~100 Hz+** — and this is a **static-ish flight board** (text/logos, slow transitions),
+  so ~80–100 Hz is flicker-free and plenty; 8–9-bit color is imperceptible on solid
+  text/logos.
+- **Config change (at wall-build):** `--led-chain=16 --led-parallel=1`, `pwm_bits≈8–9`,
+  and **remove the snake/flip** in `display/__init__.py`. **Keep 2×8 only if you want
+  max refresh — but then the electronics can't cleanly go in the corner.** *(Recommended:
+  1×16. Flagged for owner confirmation since it changes the locked topology + refresh.)*
+
+### 2. Power distribution — mind 5 V voltage drop over 5 m
+- 5 V is drop-sensitive (**keep < ~3 % = 0.15 V**). The old plan put **PSU1 behind the
+  left half, PSU2 behind the right half** so no 5 V run exceeds ~2.5 m.
+- If **both** PSUs go in the corner, the right end is ~5 m away → big drop unless a
+  **heavy 5 V bus** (thick gauge / copper bar, inject every ~1 panel).
+- **Recommended:** Pi/bonnet in the corner; **keep PSU2 out near the right half** (short
+  runs, less copper) — a PSU is just a box, it doesn't need to sit with the Pi. If you'd
+  rather keep *everything* in the corner, run a **heavy 5 V bus + per-panel injection**
+  and size it for < 3 % drop.
 
 ## Why this over the alternatives
 
@@ -139,15 +178,14 @@ The design is robust regardless, but these resolve the exact part geometry. Grou
    (22.5), piece thickness (2), height (14), **top groove** width (1.4) + depth (5),
    **bottom groove** width (1.8) + height (5.7), middle attach (~3.3), wall step (0.4).
    Note the **usable** groove widths (a hair under, after paint/finish).
-2. **Depth in front of the wall** for the panel stack, and **how the top-groove height
-   lines up with where you want the row's top** (top groove sits ~22.5 cm below ceiling).
-   → decides Pi **behind** vs **below**: lip is ~34 mm proud, Pi+bonnet ~40–50 mm.
-   **Recommended: panels ~flush with the lip + Pi/bonnet below** (cleaner, cooler, serviceable).
-3. **Panel back:** how far the **HUB75 connectors + plugged-in ribbon** protrude, and
-   **where** (photo of the back with a ruler). → sets standoff + magnet-strip placement.
-4. **Panel M3 hole grid:** vertical pitch (~144 mm) + horizontal column spacing + positions
-   vs the panel edges. → the bracket/clip CAD.
-5. **Weigh one panel** (confirm ~0.45 kg).
+2. ~~Depth for the Pi behind the panels~~ — **RESOLVED 2026-07-02: the Pi/bonnet go in
+   the LEFT CORNER, not behind the panels**, so no depth-behind constraint. (This was
+   the only thing #2 needed; the flat cross-section already gives the wall geometry.)
+   Still a *preference* to pick: the row's vertical position (top groove ≈ 22.5 cm below
+   ceiling).
+3. **Panel M3 hole grid:** vertical pitch (~144 mm) + horizontal column spacing + positions
+   vs the panel edges. → the bracket/clip + steel-strip CAD.
+4. **(nice-to-have)** confirm panel weight (~0.45 kg) — owner says light, so non-blocking.
 
 ### CHECK (eyes/hands)
 6. **Continuity:** is the piece + both grooves **unbroken across all 512 cm** — any outlets,
@@ -159,10 +197,9 @@ The design is robust regardless, but these resolve the exact part geometry. Grou
 9. **Tongue fit:** cut a short (~10 cm) scrap to the measured groove widths and **slide one
    into the top groove** (seats on the floor ~5 cm down, snug but free) and one into the
    **bottom groove** (1.8). Validates the cleat/tab thickness before making full-length ones.
-10. **Magnet connector-clearance:** screw **one magnet screw** into a panel's edge M3 hole,
-    plug in the ribbon, and see if the **1.1 cm standoff clears** the connectors/ribbon at
-    the edge rows (hold a steel ruler 1.1 cm off the back). → decides **magnetic vs magnet-free**.
-11. **Magnet hold:** stick a magnet screw to a steel scrap — confirm a firm hold (6/panel
+10. ✅ **Magnet connector-clearance — PASSED (owner, 2026-07-02).** The 1.1 cm standoff
+    clears the connectors/ribbons → **go magnetic.**
+11. ✅ **Magnet hold — PASSED.** Firm hold (6/panel
     holds 0.45 kg with big margin, but confirm the magnets aren't weak).
 
 ## Build sequence at the Hobby Shop

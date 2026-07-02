@@ -67,6 +67,21 @@ wall, at the top and bottom:
    ────────wall────────   (piece 14 cm tall, 2 cm thick, ~3.4 proud)
 ```
 
+## Full extent + the LEFT CORNER (owner update 2026-07-02)
+
+- **Usable length: 201.5 in (~5118 mm) end-to-end.** The 16-panel row is 16 × 320 =
+  **5120 mm** → an **essentially exact fit (~2 mm over)**. Plan for **zero spare
+  width**: butt panels tight, **no side frames that add width**; any ~2 mm is
+  absorbed at the corner / in seam tolerance.
+- **The LEFT end is a room corner, and the whole grooved piece TURNS the corner**
+  (continues onto the perpendicular return wall).
+- **→ The left corner is the EQUIPMENT BAY.** The Pi + Triple Bonnet (and optionally
+  a PSU) live **in the corner** — hung there or set on the piece's **3.4 cm ledge** —
+  using the same grooved feature on the return. **This resolves the "where does the
+  Pi go / depth behind the panels" question entirely** (electronics are off to the
+  side, not behind the LED face). The panels themselves sit close to the wall (owner
+  confirms the **rear HUB75 connectors + ribbons barely protrude**).
+
 ## What it must carry — the LED panel row
 
 Wall topology is **LOCKED**: one continuous **16-wide row**, center-fed as 2

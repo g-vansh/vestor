@@ -4,6 +4,18 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-02 — Corner + magnets + length confirmed → feed-topology reconsidered
+Owner updates: usable wall length **201.5 in (~5118 mm)** ≈ 16×320=5120 mm (**exact fit, zero spare**).
+The **left end is a room corner and the grooved piece turns it** → host the **Pi/bonnet (+ maybe a PSU)
+in the corner** (hung or on the 3.4 cm ledge) — **resolves the depth-behind-panels question** (electronics
+off to the side; connectors barely protrude). **Magnets tested → viable → GO MAGNETIC** (steel strips on
+the aluminum rails + on-hand magnet screws, panels snap on/self-align + alignment pins). **Corner forces a
+feed change:** center-fed 2×8 would need a ~2.5 m bonnet ribbon (HUB75 wants <~50 cm, research-backed) →
+**propose a single chain of 16 from the corner** (`--led-chain=16 --led-parallel=1`, pwm_bits≈8–9, ~100 Hz —
+fine for this static board; also removes the snake/180° flip). **Supersedes LOCKED 2×8, pending owner OK.**
+Power: keep PSU2 near the right half (short 5 V runs) or a heavy bus if all-in-corner. Updated WALL_PROFILE,
+MOUNT_DESIGN, HARDWARE.
+
 ## 2026-07-02 — Mount design, clean-slate (hang from the wooden pocket)
 Owner asked to disregard the old §8 mount plan and design fresh given the confirmed wall pocket +
 full Hobby Shop (wood + metal + print). Research: a wood French cleat holds 50–100+ kg and is
