@@ -53,6 +53,10 @@ JOURNEY_BLANK_FILLER = " ? "
 # the board still shows the flight card. Set False for live data.
 DEMO_MODE = False
 
+# Scene transitions: a big jet swoops across (new screen left of it, old to the
+# right) on every flight<->flight / flight<->clock change. Set False for hard cuts.
+TRANSITIONS_ENABLED = True
+
 # ---- Display / hardware (Triple Bonnet, Pi 4) ----
 BRIGHTNESS = 50                 # 0-100
 GPIO_SLOWDOWN = 4               # Pi 4 starting value (try 5 on hardware if garbage)

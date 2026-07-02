@@ -5,6 +5,7 @@ from setup import logos
 from setup import weather
 from utilities.animator import Animator
 from utilities.overhead import Overhead
+from utilities import transition
 
 from scenes.airlinelogo import AirlineLogoScene
 from scenes.flightdetails import FlightDetailsScene
@@ -64,6 +65,7 @@ class Display(
     LoadingLEDScene if LOADING_LED_ENABLED else LoadingPulseScene ,
     PlaneDetailsScene,
     IdleScene,
+    transition.TransitionMixin,
     Animator,
 ):
     def __init__(self):
@@ -114,6 +116,9 @@ class Display(
         # the offset lives in ONE place (SetPixel can't be monkeypatched — it's
         # an immutable method on the C-extension FrameCanvas type).
         self._lane_offset_y = 0
+        # Patch graphics.DrawText/DrawLine for the lane offset + the swoop clip
+        # window (see utilities/transition.py). No-op fast path when not wiping.
+        transition.install(self._lane_offset_y)
         self.canvas.Clear()
 
         # Data to render
@@ -134,15 +139,8 @@ class Display(
         # Animator or Scenes
         self.delay = frames.PERIOD
 
-    def draw_square(self, x0, y0, x1, y1, colour):
-        for x in range(x0, x1):
-            _ = graphics.DrawLine(self.canvas, x, y0, x, y1, colour)
-
-    def set_pixel(self, x, y, r, g, b):
-        # Single entry point for pixel writes so the panel draw-offset is applied
-        # in one place (see self._lane_offset_y). Scenes call this, never
-        # canvas.SetPixel directly.
-        self.canvas.SetPixel(x, y + self._lane_offset_y, r, g, b)
+    # set_pixel / draw_square are provided by transition.TransitionMixin (they
+    # apply the lane offset + honour the swoop clip window).
 
     @Animator.KeyFrame.add(0)
     def clear_screen(self):

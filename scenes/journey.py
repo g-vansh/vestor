@@ -29,31 +29,33 @@ CODE_X = ZONE_X + (PANEL_W - 3 * CHAR_W) // 2   # 3-char code centred in the pan
 ORIGIN_BASELINE = 12
 DEST_BASELINE = 31
 
-PLANE_TOP = 14                    # plane sprite occupies rows 14..18
+PLANE_TOP = 13                    # plane sprite occupies rows 13..18
 TRACK_Y = 16
 TRACK_DOT = graphics.Color(120, 78, 0)
 CODE_COLOUR = graphics.Color(255, 176, 0)          # sodium amber
 CODE_HOME_COLOUR = graphics.Color(255, 214, 120)   # warm pop for home airport
 
-# A right-flying jet in profile (14 wide x 5 tall), pixels as (dx, dy). The
-# vertical tail fin (back-left) + swept wing under the centre + tapered nose read
-# unmistakably as an airliner (vs. the old stick blob). Fuselage sits on dy=2 so
-# it rides the dotted track.
-#    . # # . . . . . . . . . . .     tail fin
-#    . # # # . . . . . . . . # .     fin base + cockpit taper
-#    # # # # # # # # # # # # # #     fuselage (nose at right)
-#    . . . . . . . # # # . . . .     wing root (under centre)
-#    . . . . . # # # . . . . . .     wing (swept down-aft)
+# A right-flying jet in profile (15 wide x 6 tall), pixels as (dx, dy). A TWO-row
+# fuselage (not a 1px stick) + a raised tail fin + a swept wing read as a real
+# airliner. Fuselage sits on dy=2..3 so its belly rides the dotted track.
+#    . # # . . . . . . . . . . . .     tail fin
+#    . # # . . . . . . . . . . . .     tail fin base
+#    # # # # # # # # # # # # # # #     fuselage top (nose at right)
+#    # # # # # # # # # # # # # # .     fuselage belly (on the track)
+#    . . . . . # # # . . . . . . .     wing
+#    . . . . # # # . . . . . . . .     wing (swept down-aft)
 PLANE = [
     (1, 0), (2, 0),
-    (1, 1), (2, 1), (3, 1), (12, 1),
-    (0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (6, 2),
-    (7, 2), (8, 2), (9, 2), (10, 2), (11, 2), (12, 2), (13, 2),
-    (7, 3), (8, 3), (9, 3),
+    (1, 1), (2, 1),
+    (0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (6, 2), (7, 2),
+    (8, 2), (9, 2), (10, 2), (11, 2), (12, 2), (13, 2), (14, 2),
+    (0, 3), (1, 3), (2, 3), (3, 3), (4, 3), (5, 3), (6, 3), (7, 3),
+    (8, 3), (9, 3), (10, 3), (11, 3), (12, 3), (13, 3),
     (5, 4), (6, 4), (7, 4),
+    (4, 5), (5, 5), (6, 5),
 ]
-NOSE = (13, 2)                    # brightened nose tip
-PLANE_W = 14
+NOSE = (14, 2)                    # brightened nose tip
+PLANE_W = 15
 PLANE_SPEED = 0.7                 # px/frame
 
 # Split-flap
