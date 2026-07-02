@@ -163,6 +163,8 @@ class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene):
 
 
 SAMPLE = [
+    {"callsign": "JBU353", "origin": "JFK", "destination": "BOS", "aircraft_code": "A21N",
+     "plane": "Airbus A321neo", "altitude": 4200, "vertical_speed": -900},
     {"callsign": "DAL1180", "origin": "BOS", "destination": "ATL", "aircraft_code": "B739",
      "plane": "Boeing 737-900", "altitude": 8000, "vertical_speed": 1400},
     {"callsign": "RPA5689", "origin": "ORD", "destination": "BOS", "aircraft_code": "E75L",

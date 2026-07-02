@@ -77,15 +77,12 @@ class AirlineLogoScene(object):
             return
         self._resolve()
 
-    def _label_font(self):
-        return fonts.large_bold if len(self._label) <= 7 else fonts.small
-
     def _label_metrics(self):
-        font = self._label_font()
-        h = 13 if font is fonts.large_bold else 8
+        # Always the 5x8 font so logo(<=20) + rule + gap + name(8) fits 32 rows.
+        font = fonts.small
         width = graphics.DrawText(self.canvas, font, screen.WIDTH + 60, 20,
                                   colours.BLACK, self._label) if self._label else 0
-        return font, width, h
+        return font, width, 8
 
     @Animator.KeyFrame.add(1)
     def airline_logo(self, count):

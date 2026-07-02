@@ -30,9 +30,11 @@ except ImportError:                      # graceful: card falls back to text
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 LOGO_DIR = os.path.join(DIR_PATH, "..", "sim", "logos")
 
-BOX_W = 62           # each logo is fit WHOLE within BOX_W x BOX_H (static, no
-BOX_H = 22           # scroll) — sized for the dedicated LEFT panel (64x32), with
-                     # the airline name rendered beneath it
+BOX_W = 56           # each logo is fit WHOLE within BOX_W x BOX_H (static, no
+                     # scroll), leaving a margin inside the 64px panel so wide
+                     # wordmarks (e.g. jetBlue) don't touch/clip at the seam
+BOX_H = 20           # scroll) — sized for the dedicated LEFT panel (64x32) so the
+                     # logo + name group (logo<=20 + rule + name 8) fits 32 rows
 ALPHA_KEEP = 96      # alpha below this is treated as transparent
 MIN_LUM = 6          # drop resulting near-black pixels (faint AA fringe)
 

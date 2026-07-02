@@ -45,17 +45,42 @@ MAX_FLIGHTS = _cfg("MAX_FLIGHTS", 5)
 DEMO_MODE = _cfg("DEMO_MODE", False)
 ZONE_HOME = _cfg("ZONE_HOME", None)
 USE_ZONE_BOX = _cfg("USE_ZONE_BOX", False)
+HOME_AIRPORT = _cfg("JOURNEY_CODE_SELECTED", "BOS")
 
 HOME_LAT, HOME_LON = LOCATION_HOME[0], LOCATION_HOME[1]
 
 # Bounding box (same one FR24 used) — kept only if enabled + defined.
 _BOX = ZONE_HOME if (USE_ZONE_BOX and ZONE_HOME) else None
 
+VS_DIR = 200        # fpm; above = climbing/departing, below -VS_DIR = descending
+
 
 def _in_box(lat, lon):
     if _BOX is None:
         return True
     return (_BOX["br_y"] <= lat <= _BOX["tl_y"]) and (_BOX["tl_x"] <= lon <= _BOX["br_x"])
+
+
+def _plausible_route(origin, destination, vertical_speed):
+    """Sanity-check a callsign->route lookup for a flight near HOME.
+
+    We only track low-altitude traffic near HOME_AIRPORT, so such a flight almost
+    always departs or arrives HOME. Free route databases (adsbdb/hexdb) key on
+    flight number and often carry a STALE scheduled route (e.g. AAL909 -> ORD-MSP
+    when it's really BOS-DFW today). If the looked-up route omits HOME, it's
+    almost certainly stale — anchor HOME by climb/descent and blank the unreliable
+    endpoint rather than show a wrong route.
+    """
+    if not origin and not destination:
+        return origin, destination
+    if HOME_AIRPORT in (origin, destination):
+        return origin, destination                 # HOME present -> trust it
+    vs = vertical_speed or 0
+    if vs > VS_DIR:
+        return HOME_AIRPORT, ""                     # climbing out -> departing HOME
+    if vs < -VS_DIR:
+        return "", HOME_AIRPORT                     # descending -> arriving HOME
+    return "", ""                                  # unsure -> don't show a wrong route
 
 AIRPLANES_URL = "https://api.airplanes.live/v2/point/{lat}/{lon}/{radius}"
 ADSBDB_URL = "https://api.adsbdb.com/v0/callsign/{callsign}"
@@ -154,10 +179,11 @@ class Overhead:
         data = []
         for ac in candidates:
             callsign = (ac.get("flight") or "").strip()
-            origin, destination = self._route(callsign) if callsign else ("", "")
             vs = ac.get("baro_rate")
             if vs is None:
                 vs = ac.get("geom_rate") or 0
+            origin, destination = self._route(callsign) if callsign else ("", "")
+            origin, destination = _plausible_route(origin, destination, vs)
             data.append({
                 "plane": "",
                 "aircraft_code": (ac.get("t") or "").strip(),
