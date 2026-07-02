@@ -51,9 +51,12 @@ def parts():
     """Return [(name, (x0,x1,y0,y1,z0,z1), rgb), ...]."""
     P = []
     # --- wooden wall feature (grooves are the un-filled gaps) ---
+    # front-wall trim STOPS at the corner (X = ROW_W - PIECE_FRONT) so it butts the
+    # left-wall piece into a clean L instead of crossing it.
+    FE = ROW_W - PIECE_FRONT
     P.append(("wall",   (0, ROW_W, -120, 0,          Z_BOT - 120, CEIL_TO_TOP + 20), C_WALL))
-    P.append(("piece",  (0, ROW_W, PIECE_BACK, PIECE_FRONT, Z_BOT, Z_TOP),           C_PIECE))
-    P.append(("bridge", (0, ROW_W, 0, PIECE_BACK,    Z_MID_BOT, Z_MID_TOP),          C_PIECE))  # attach
+    P.append(("piece",  (0, FE, PIECE_BACK, PIECE_FRONT, Z_BOT, Z_TOP),              C_PIECE))
+    P.append(("bridge", (0, FE, 0, PIECE_BACK,    Z_MID_BOT, Z_MID_TOP),             C_PIECE))  # attach
 
     # --- panels (dark body + a thin front "screen") ---
     for i in range(N_PANELS):
@@ -63,8 +66,8 @@ def parts():
         P.append((f"screen_{i:02d}", (x0 + 3, x1 - 3, PANEL_FACE_Y - 1.5, PANEL_FACE_Y, -PANEL_H + 3, -3), C_SCREEN))
 
     # --- mount: tongue in TOP groove, tab in BOTTOM groove ---
-    P.append(("tongue", (0, ROW_W, PIECE_BACK - TONGUE_THICK, PIECE_BACK, Z_MID_TOP + 2, Z_TOP), C_BIRCH))
-    P.append(("tab",    (0, ROW_W, -WALL_STEP + 1, -WALL_STEP + 1 + TAB_THICK, Z_BOT, Z_BOT + ENGAGE), C_BIRCH))
+    P.append(("tongue", (0, FE, PIECE_BACK - TONGUE_THICK, PIECE_BACK, Z_MID_TOP + 2, Z_TOP), C_BIRCH))
+    P.append(("tab",    (0, FE, -WALL_STEP + 1, -WALL_STEP + 1 + TAB_THICK, Z_BOT, Z_BOT + ENGAGE), C_BIRCH))
 
     # --- LEFT WALL = the owner's LEFT as they FACE the panels. The panel row runs
     # off to the viewer's RIGHT; the left wall is at the far (X=ROW_W) end and comes
@@ -75,9 +78,10 @@ def parts():
     P.append(("left_wall",    (xw, xw + 120, 0, LWY, Z_BOT - 120, CEIL_TO_TOP + 20),  C_WALL))
     P.append(("left_piece",   (xw - PIECE_FRONT, xw - PIECE_BACK, 0, LWY, Z_BOT, Z_TOP), C_PIECE))  # juts -X
     P.append(("left_bridge",  (xw - PIECE_BACK, xw, 0, LWY, Z_MID_BOT, Z_MID_TOP),      C_PIECE))
-    # electronics HUNG from the left wall's grooves, tucked into the corner
-    P.append(("pi_bonnet", (xw - PIECE_FRONT - 80, xw - PIECE_FRONT, 150, 215, -110, -50),   C_PI))
-    P.append(("psu",       (xw - PIECE_FRONT - 115, xw - PIECE_FRONT, 280, 315, -220, -110), C_PSU))
+    # electronics HUNG from the LEFT-wall grooves, set DEEPER along the side wall
+    # (larger Y) so they don't break the panel row where it butts the corner
+    P.append(("pi_bonnet", (xw - PIECE_FRONT - 80, xw - PIECE_FRONT, 280, 350, -110, -50),   C_PI))
+    P.append(("psu",       (xw - PIECE_FRONT - 115, xw - PIECE_FRONT, 430, 500, -220, -110), C_PSU))
     return P
 
 

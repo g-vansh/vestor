@@ -33,9 +33,10 @@ def front():
     ax.set_xlim(-160, M.ROW_W + 40); ax.set_ylim(-190, 40)
     ax.set_aspect("equal"); ax.axis("off")
     ax.annotate("", (0, 22), (M.ROW_W, 22), arrowprops=dict(arrowstyle="<->", color="crimson", lw=1.2))
-    ax.text(M.ROW_W / 2, 34, f"16 panels = {M.ROW_W:.0f} mm into {M.WALL_USABLE:.0f} mm usable "
-            f"({M.ROW_W - M.WALL_USABLE:+.0f} mm)", ha="center", color="crimson", fontsize=10)
-    ax.set_title("FRONT elevation — the LED face (blue) across the wall; left corner at X≈0", fontsize=11)
+    ax.text(M.ROW_W / 2, 34, f"16 panels = {M.ROW_W:.0f} mm, measured FROM THE CORNER "
+            f"into {M.WALL_USABLE:.0f} mm usable ({M.ROW_W - M.WALL_USABLE:+.0f} mm at the far end)",
+            ha="center", color="crimson", fontsize=10)
+    ax.set_title("FRONT elevation — the LED face (blue); 201.5\" datum at the LEFT corner", fontsize=11)
     fig.savefig(os.path.join(OUT, "front.png"), dpi=130, bbox_inches="tight"); plt.close(fig)
     print("wrote front.png")
 
