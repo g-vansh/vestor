@@ -11,6 +11,8 @@ truth: the labeled wiring diagram in the design session. Companion: `INVENTORY.m
 ground at one point, keep the positives isolated → trim each PSU to ~5.15 V.**
 Data is independent: a single HUB75 chain of 16 from the corner.
 
+![wiring diagram](design/wiring_diagram.png)
+
 ## The decisions, with the numbers
 
 ### 1. Fuses — YES (per panel, 16 total). Value depends on the pigtail gauge.
@@ -73,6 +75,18 @@ Budget <3 % of 5 V (<0.15 V). Per-branch (4 panels ≈ 16 A) over ~2 m round-tri
   (solder creep loosens screw terminals). **Anti-oxidant paste** (Noalox-type) on the aluminum,
   and **re-torque the terminals after a few days** of thermal cycling. Keep pigtails as short as
   they ship (~55 cm); land them into crimped copper trunk — don't extend the CCA.
+
+### 6. AC input + Pi/Bonnet power (the low-current side)
+- **AC mains:** each LRS-350-5 has bare **L / N / ⏚ screw terminals** → each needs an **AC cord**
+  (2 total; C13/hardwired to a plug). Set the **115 V** input switch. Each PSU on its **own outlet**
+  (inrush). Land **⏚ (earth) → the PSU FG terminal**.
+- **Pi power — separate.** Power the Pi 4 from its **own official USB-C brick** (the Phase-0 supply),
+  NOT the panel 5 V rail — a 60 A rail's spikes can brown-out / corrupt the Pi. Keep it independent.
+- **Bonnet 5 V:** the Triple Bonnet's level-shifters need 5 V — feed its **5 V terminal from PSU-L**
+  via one fuse-block slot (tiny, ~0.1 A). Its GND is common with everything (below).
+- **Ground bond:** a **~16 AWG wire from PSU-L V− ↔ PSU-R V−** (runs the wall length) makes the single
+  common reference; the Pi/Bonnet GND ties to PSU-L V−. It carries only reference/imbalance current, so
+  16 AWG is plenty — but it must be present and solid (this is the "where goes data, so goes V−" link).
 
 ## Are the pigtails long enough? Yes — because the blocks are distributed
 ~55 cm reaches ±1.7 panels, so **one fuse block per 4-panel group** (blocks A/B/C/D at panels
