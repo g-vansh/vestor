@@ -256,6 +256,13 @@ sudo ./demo --led-cols=64 --led-rows=32 --led-chain=1 --led-parallel=1 \
 
 ## 8. MOUNTING & FRAME — how the wall physically hangs  (researched 2026-06-21)
 
+> ⛔ **SUPERSEDED 2026-07-02 by `docs/design/MOUNT_DESIGN.md`.** This §8 plan (80/20
+> backbone lag-bolted into wall studs) predates knowing the wall has a **built-in
+> full-width structural wooden pocket** (`docs/design/WALL_PROFILE.md`) and predates
+> Hobby Shop access. The new plan **hangs from that pocket** (a pre-built French cleat,
+> ~10× margin) instead of drilling studs. Kept below for the still-valid panel facts
+> (dims, 6× M3 holes, ~0.45 kg, depth budget, "won't free-stand").
+
 > 🏗️ **Build it at MIT for free/cheap:** the owner is an MIT grad student — see
 > **`docs/MIT_RESOURCES.md`** for where to cut/weld/3D-print on campus (Hobby Shop,
 > MITERS, Project Manus), free materials (`reuse@mit.edu`, Swapfest), and a $500

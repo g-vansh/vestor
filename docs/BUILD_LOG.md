@@ -4,6 +4,20 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-02 — Mount design, clean-slate (hang from the wooden pocket)
+Owner asked to disregard the old §8 mount plan and design fresh given the confirmed wall pocket +
+full Hobby Shop (wood + metal + print). Research: a wood French cleat holds 50–100+ kg and is
+limited by its anchoring — but our pocket IS solid structural wood spanning the full width, and the
+assembly is only ~10 kg → **~5–10× margin, hang straight from the pocket** (no stud lags/toggles).
+The hard part is coplanarity over 5 m, not weight. New design in **`docs/design/MOUNT_DESIGN.md`**:
+**wood ½″ Baltic-birch tongue-cleat in the pocket (hang) + two continuous aluminum T-slot rails
+(flatness, top+bottom at the 144 mm M3 rows) + 3D-printed adjustable clips (per-panel micro-adjust)
++ bottom spacer (anti-swing, no new holes) + Pi/bonnet below the row + PSUs separate/vented.** Every
+sustained-load link is metal or structural wood; prints only locate (no PLA creep). Honest
+alternative documented: all-Baltic-birch modular cassettes (4×4 panels, CNC'd) — cheaper/in-house,
+marginally less stable. Gating measurement: clear depth wall→lip-front + pocket-to-panel height
+(decides Pi behind vs below). Marked `INVENTORY.md` §8 SUPERSEDED; pointed `FABRICATION.md` at it.
+
 ## 2026-07-02 — 3D-printing plan (MIT Hobby Shop: Bambu P2S/H2S + Form 3L)
 Owner joined the MIT Hobby Shop. Confirmed (Charlotte Reiter) 3 printers (Stratasys gone):
 **Bambu P2S** (256³), **Bambu H2S** (340×320×340, 65 °C chamber/350 °C hotend → PLA/PETG/ABS/ASA/PC/CF),

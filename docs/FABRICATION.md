@@ -45,6 +45,11 @@ permanent ~12–15 kg hang:
 
 ## Mounting architecture (updated by the wooden pocket)
 
+> **The authoritative mount design is now `docs/design/MOUNT_DESIGN.md`** (clean-slate,
+> 2026-07-02: wood tongue-cleat in the pocket + aluminum rails + printed adjustable
+> clips). The summary below is consistent with it; the printed-parts BOM here still
+> applies (clips, Pi/bonnet enclosure, PSU cradles, cable clips).
+
 The full-width **structural wooden pocket** (1.4 cm × 5 cm, open-top, ~512 cm long —
 see `WALL_PROFILE.md`) is a **built-in continuous cleat rail**. It **replaces the
 lag-screws-into-studs / toggle-bolt wall anchoring** from `INVENTORY.md` §8, and being
