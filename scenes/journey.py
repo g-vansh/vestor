@@ -35,10 +35,25 @@ TRACK_DOT = graphics.Color(120, 78, 0)
 CODE_COLOUR = graphics.Color(255, 176, 0)          # sodium amber
 CODE_HOME_COLOUR = graphics.Color(255, 214, 120)   # warm pop for home airport
 
-# A small right-pointing plane (7 wide x 5 tall), pixels as (dx, dy).
-PLANE = [(2, 0), (0, 1), (2, 1), (0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2),
-         (6, 2), (0, 3), (2, 3), (2, 4)]
-PLANE_W = 7
+# A right-flying jet in profile (14 wide x 5 tall), pixels as (dx, dy). The
+# vertical tail fin (back-left) + swept wing under the centre + tapered nose read
+# unmistakably as an airliner (vs. the old stick blob). Fuselage sits on dy=2 so
+# it rides the dotted track.
+#    . # # . . . . . . . . . . .     tail fin
+#    . # # # . . . . . . . . # .     fin base + cockpit taper
+#    # # # # # # # # # # # # # #     fuselage (nose at right)
+#    . . . . . . . # # # . . . .     wing root (under centre)
+#    . . . . . # # # . . . . . .     wing (swept down-aft)
+PLANE = [
+    (1, 0), (2, 0),
+    (1, 1), (2, 1), (3, 1), (12, 1),
+    (0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2), (6, 2),
+    (7, 2), (8, 2), (9, 2), (10, 2), (11, 2), (12, 2), (13, 2),
+    (7, 3), (8, 3), (9, 3),
+    (5, 4), (6, 4), (7, 4),
+]
+NOSE = (13, 2)                    # brightened nose tip
+PLANE_W = 14
 PLANE_SPEED = 0.7                 # px/frame
 
 # Split-flap
@@ -103,6 +118,11 @@ class JourneyScene(object):
         for (dx, dy) in PLANE:
             self.set_pixel(px + dx, PLANE_TOP + dy,
                            self._route_brand.red, self._route_brand.green, self._route_brand.blue)
+        # brighter nose tip — a bit of forward "glint" so direction reads clearly
+        self.set_pixel(px + NOSE[0], PLANE_TOP + NOSE[1],
+                       min(255, self._route_brand.red + 90),
+                       min(255, self._route_brand.green + 90),
+                       min(255, self._route_brand.blue + 90))
         self._plane_x += PLANE_SPEED
 
     @Animator.KeyFrame.add(1)

@@ -20,11 +20,12 @@ ICAO_TO_IATA = {
     "AAL": "AA", "DAL": "DL", "UAL": "UA", "SWA": "WN", "JBU": "B6",
     "ASA": "AS", "NKS": "NK", "FFT": "F9", "AAY": "G4", "HAL": "HA",
     "SCX": "SY", "MXY": "MX", "VXP": "XP",
-    # US regionals (operate for the majors)
-    "RPA": "YX", "EDV": "9E", "SKW": "OO", "ENY": "MQ", "PDT": "PT",
+    # US regionals (operate for the majors). ENY (Envoy) keys its OWN wordmark,
+    # not "MQ" (which is American Eagle) — Envoy is a distinct operator brand.
+    "RPA": "YX", "EDV": "9E", "SKW": "OO", "ENY": "ENY", "PDT": "PT",
     "ASH": "YV", "GJS": "G7", "AWI": "ZW", "JIA": "OH",
     # Canada
-    "ACA": "AC", "JZA": "QK", "WJA": "WS", "POE": "PD", "TSC": "TS",
+    "ACA": "AC", "JZA": "QK", "WJA": "WS", "POE": "PD", "TSC": "TS", "PVL": "PB",
     # Europe / UK / Ireland
     "BAW": "BA", "AFR": "AF", "DLH": "LH", "KLM": "KL", "VIR": "VS",
     "ICE": "FI", "TAP": "TP", "EIN": "EI", "SWR": "LX", "IBE": "IB",
@@ -36,7 +37,7 @@ ICAO_TO_IATA = {
     "QFA": "QF", "AMX": "AM", "AVA": "AV", "LAN": "LA", "CMP": "CM",
     "TAM": "JJ", "ELY": "LY",
     # Business / commuter (BOS-area)
-    "KAP": "9K",
+    "KAP": "9K", "EJA": "1I",
     # Cargo (common at BOS)
     "FDX": "FX", "UPS": "5X", "GTI": "5Y", "ABX": "GB",
 }
@@ -57,7 +58,8 @@ AIRLINE_DB = {
     "RPA": {"name": "REPUBLIC",   "color": (80, 140, 235)},
     "EDV": {"name": "ENDEAVOR",   "color": (235, 60, 75)},
     "SKW": {"name": "SKYWEST",    "color": (120, 160, 235)},
-    "ENY": {"name": "ENVOY",      "color": (230, 55, 70)},
+    "ENY": {"name": "ENVOY",      "color": (120, 110, 235)},
+    "PVL": {"name": "PAL",        "color": (255, 140, 0)},
     "ASH": {"name": "MESA",       "color": (120, 160, 235)},
     "ACA": {"name": "AIR CANADA", "color": (235, 55, 60)},
     "JZA": {"name": "AIR CANADA", "color": (235, 55, 60)},
@@ -79,9 +81,9 @@ AIRLINE_DB = {
     "KAP": {"name": "CAPE AIR",   "color": (235, 70, 70)},
     "FDX": {"name": "FEDEX",      "color": (120, 90, 200)},
     "UPS": {"name": "UPS",        "color": (170, 110, 40)},
-    # Common bizjet operators near KBOS (no logo file — shown as name + icon)
-    "EJA": {"name": "NETJETS",    "color": (120, 160, 230)},
-    "LXJ": {"name": "FLEXJET",    "color": (200, 170, 110)},
+    # Common bizjet operators near KBOS
+    "EJA": {"name": "NETJETS",    "color": (190, 198, 210)},   # has a wordmark logo (1I)
+    "LXJ": {"name": "FLEXJET",    "color": (200, 170, 110)},   # no logo file — name + icon
 }
 
 GENERIC_BRAND = (255, 176, 0)   # sodium amber (#FFB000) — Solari departure-board

@@ -127,10 +127,14 @@ VERIFY = _SYS_CA if os.path.exists(_SYS_CA) else True
 USER_AGENT = "Vestor-LED-FlightTracker/1.0 (+https://github.com/g-vansh/vestor)"
 HTTP_TIMEOUT = 8
 FR24_MIN_INTERVAL = 20        # s — cap FR24 feed queries to stay well under throttle
-ROUTE_TTL = 1800             # s — a route is cached only ~30 min: long enough to
+ROUTE_TTL = 1800             # s — a COMPLETE route is cached ~30 min: long enough to
                              # survive one overhead pass, short enough that a reused
                              # callsign (a different leg later) re-fetches. Never
                              # persisted to disk; pruned each grab.
+INCOMPLETE_TTL = 25          # s — a PARTIAL route (one endpoint missing, e.g. FR24
+                             # gave BOS but the destination lagged) is cached only
+                             # briefly so the next FR24 scan (refreshed every 20s) can
+                             # complete it, instead of locking BOS->??? in for 30 min.
 BLANK_FIELDS = {"", "N/A", "NONE"}
 
 # Sample flights for DEMO_MODE — realistic KBOS routes across airlines with logos
@@ -265,9 +269,13 @@ class Overhead:
         return dlat * dlat + dlon * dlon
 
     def _cached_route(self, callsign):
-        """Return a still-fresh cached route for a callsign, or None."""
+        """Return a still-fresh cached route for a callsign, or None.
+
+        Cache entries are (route, timestamp, ttl); partial routes carry a short
+        ttl so they don't linger, complete ones the full ROUTE_TTL.
+        """
         entry = self._route_cache.get(callsign)
-        if entry and (monotonic() - entry[1]) < ROUTE_TTL:
+        if entry and (monotonic() - entry[1]) < entry[2]:
             return entry[0]
         return None
 
@@ -275,22 +283,42 @@ class Overhead:
         """Drop expired route-cache entries (keeps the dict small; TTL-bounded)."""
         now = monotonic()
         self._route_cache = {
-            k: v for k, v in self._route_cache.items() if now - v[1] < ROUTE_TTL
+            k: v for k, v in self._route_cache.items() if now - v[1] < v[2]
         }
+
+    @staticmethod
+    def _merge_route(fr24_route, adsbdb_route):
+        """Complete a PARTIAL FR24 route from adsbdb — but only where adsbdb agrees
+        with the endpoint FR24 already knows. adsbdb often carries a stale, DIFFERENT
+        leg (e.g. ENY4047 -> PHX-SLC when it's really BOS-DCA today), so if it doesn't
+        corroborate FR24's known endpoint we don't trust its other endpoint either."""
+        fo, fd = fr24_route
+        ao, ad = adsbdb_route
+        o, d = fo, fd
+        agrees = (fo and fo == ao) or (fd and fd == ad)
+        if agrees:
+            o = o or ao
+            d = d or ad
+        return (o, d)
 
     def _resolve_route(self, callsign, vs, fr24_map):
         """callsign -> (origin, destination), FR24 first (accurate current route),
-        else adsbdb + BOS plausibility. Cached for ROUTE_TTL (not permanent)."""
+        else adsbdb + BOS plausibility. A complete route is cached for ROUTE_TTL; a
+        partial one only briefly (INCOMPLETE_TTL) so a later scan can complete it."""
         if not callsign:
             return ("", "")
         cached = self._cached_route(callsign)
         if cached is not None:
             return cached
-        if callsign in fr24_map:                 # FR24 has the real current route
-            route = fr24_map[callsign]
-        else:                                    # fall back to the stale DB, fixed up
+        fr = fr24_map.get(callsign)
+        if fr and fr[0] and fr[1]:               # FR24 has the full current route
+            route = fr
+        elif fr:                                 # FR24 partial -> complete via adsbdb
+            route = _plausible_route(*self._merge_route(fr, self._adsbdb_route(callsign)), vs)
+        else:                                    # FR24 absent -> stale DB, fixed up
             route = _plausible_route(*self._adsbdb_route(callsign), vs)
-        self._route_cache[callsign] = (route, monotonic())
+        ttl = ROUTE_TTL if (route[0] and route[1]) else INCOMPLETE_TTL
+        self._route_cache[callsign] = (route, monotonic(), ttl)
         return route
 
     def _fr24_zone_routes(self):

@@ -55,11 +55,12 @@ ICAO_TO_IATA = {
     "AAL": "AA", "DAL": "DL", "UAL": "UA", "SWA": "WN", "JBU": "B6",
     "ASA": "AS", "NKS": "NK", "FFT": "F9", "AAY": "G4", "HAL": "HA",
     "SCX": "SY", "MXY": "MX", "VXP": "XP",
-    # US regionals (operate for the majors)
-    "RPA": "YX", "EDV": "9E", "SKW": "OO", "ENY": "MQ", "PDT": "PT",
+    # US regionals (operate for the majors). ENY (Envoy) is a SPECIAL_LOGO below —
+    # it keys its OWN wordmark, not "MQ" (American Eagle).
+    "RPA": "YX", "EDV": "9E", "SKW": "OO", "PDT": "PT",
     "ASH": "YV", "GJS": "G7", "AWI": "ZW", "JIA": "OH",
     # Canada
-    "ACA": "AC", "JZA": "QK", "WJA": "WS", "POE": "PD", "TSC": "TS",
+    "ACA": "AC", "JZA": "QK", "WJA": "WS", "POE": "PD", "TSC": "TS", "PVL": "PB",
     # Europe / UK / Ireland
     "BAW": "BA", "AFR": "AF", "DLH": "LH", "KLM": "KL", "VIR": "VS",
     "ICE": "FI", "TAP": "TP", "EIN": "EI", "SWR": "LX", "IBE": "IB",
@@ -75,6 +76,58 @@ ICAO_TO_IATA = {
     # Cargo (common at BOS)
     "FDX": "FX", "UPS": "5X", "GTI": "5Y", "ABX": "GB",
 }
+
+
+# Carriers whose wordmark is missing from (or wrong on) pics.avs.io. Sourced from
+# alternative CDNs, processed the SAME way (crop to content, scale to STORE_HEIGHT)
+# and saved under their own key. `icao` lists the operator codes that map to them;
+# `white_key` (optional) treats near-white pixels as transparent (for logos served
+# on a solid white background rather than an alpha channel).
+SPECIAL_LOGOS = {
+    # NetJets — avs.io has no NetJets mark; kiwi serves a clean wordmark on WHITE.
+    "1I": {"icao": ["EJA"], "white_key": 228,
+           "url": "https://images.kiwi.com/airlines/128/1I.png"},
+    # Envoy Air's OWN brand (not "American Eagle"/MQ): the Wikimedia SVG, already
+    # rasterised to PNG by the MediaWiki thumbnailer (transparent background).
+    "ENY": {"icao": ["ENY"],
+            "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/"
+                   "c/cc/Envoy_air_logo.svg/960px-Envoy_air_logo.svg.png"},
+}
+
+
+def _fit(im: Image.Image, code: str) -> tuple[int, int] | None:
+    """Crop to opaque bbox, scale to STORE_HEIGHT, save sim/logos/<code>.png."""
+    bbox = im.getchannel("A").getbbox()
+    if not bbox:
+        print(f"  - {code}: empty / no logo on file")
+        return None
+    im = im.crop(bbox)
+    cw, ch = im.size
+    if ch == 0:
+        return None
+    tw = max(1, round(cw * STORE_HEIGHT / ch))
+    im = im.resize((tw, STORE_HEIGHT), Image.LANCZOS)
+    im.save(os.path.join(OUT_DIR, f"{code}.png"), optimize=True)
+    return (tw, STORE_HEIGHT)
+
+
+def process_special(code: str, spec: dict) -> tuple[int, int] | None:
+    try:
+        req = urllib.request.Request(spec["url"], headers=UA)
+        data = urllib.request.urlopen(req, timeout=20).read()
+        im = Image.open(io.BytesIO(data)).convert("RGBA")
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! {code}: fetch failed ({e})")
+        return None
+    wk = spec.get("white_key")
+    if wk:                                   # key a solid white background -> alpha
+        px = im.load()
+        for y in range(im.height):
+            for x in range(im.width):
+                r, g, b, a = px[x, y]
+                if min(r, g, b) > wk:
+                    px[x, y] = (r, g, b, 0)
+    return _fit(im, code)
 
 
 def fetch_png(iata: str) -> Image.Image | None:
@@ -126,8 +179,20 @@ def main() -> int:
             ok += 1
         time.sleep(0.05)  # be polite to the CDN
 
+    # Special-source logos (non-avs) + their ICAO->key mappings.
+    icao_to_iata = dict(ICAO_TO_IATA)
+    for code, spec in SPECIAL_LOGOS.items():
+        size = process_special(code, spec)
+        if size:
+            manifest[code] = {"w": size[0], "h": size[1], "icao": spec["icao"]}
+            for icao in spec["icao"]:
+                icao_to_iata[icao] = code
+            print(f"  + {code:3s} {size[0]:3d}x{size[1]:2d}  <- {','.join(spec['icao'])} (special)")
+            ok += 1
+        time.sleep(0.05)
+
     with open(os.path.join(OUT_DIR, "manifest.json"), "w") as f:
-        json.dump({"icaoToIata": ICAO_TO_IATA, "logos": manifest}, f, indent=1)
+        json.dump({"icaoToIata": icao_to_iata, "logos": manifest}, f, indent=1)
     print(f"\n{ok}/{len(iata_to_icao)} logos saved to {OUT_DIR}")
     print(f"manifest.json written ({len(manifest)} entries)")
     return 0
