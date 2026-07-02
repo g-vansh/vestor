@@ -4,6 +4,25 @@ Never record secret values — only that a secret was set.
 
 ---
 
+## 2026-07-02 — Mount hardware designed (all 6 parts) → `cad/parts/`
+Built the whole mount as real CadQuery solids on ONE shared parameter set
+(`cad/parts/mount_params.py`) so parts can't drift: **(1)** top cleat, **(2)**
+anti-swing foot (base + slide-up tab), **(3)** panel rest shoe, **(4)** two alu bars
++ steel strip (cut list), **(5)** corner Pi/Bonnet enclosure, **(6)** PSU cradle.
+Each exports STL + STEP + a fit-check PNG; `assembly.py` unions them all and renders
+the full cross-section + a 3D section. Manifest: **`docs/design/MOUNT_PARTS.md`**.
+Design calls: two independently wall-referenced rails (no ladder stiles); coplanarity
+via the adjustable magnet screws (bars only need to be roughly straight); panels
+self-space in X by butting from the corner; bottom capture is a SEPARATE slide-up
+motion (kinematic constraint — the bottom groove opens up, a rigid drop-in tab would
+hit the solid attach band). **Verified:** an automated boolean `collide_check()` — no
+bracket shares volume with a panel or the piece. It CAUGHT a real 2 mm upright/piece
+interference → fixed (upright now bears flush on the piece front, sharing the forward
+load). Dropped from the earlier brief: the machined continuous T-slot rail (magnet
+adjust makes it unnecessary) + the seam-alignment key (butting self-registers). Next:
+owner review, then print PLA test coupons (one cleat + one foot) to check the
+tongue/tab fit against the real grooves before batch-printing.
+
 ## 2026-07-02 — Corner + magnets + length confirmed → feed-topology reconsidered
 Owner updates: usable wall length **201.5 in (~5118 mm)** ≈ 16×320=5120 mm (**exact fit, zero spare**).
 The **left end is a room corner and the grooved piece turns it** → host the **Pi/bonnet (+ maybe a PSU)

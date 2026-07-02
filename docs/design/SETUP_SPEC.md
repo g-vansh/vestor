@@ -83,7 +83,7 @@ groove (open at bottom) takes an anti-swing tab pushed up into it → the assemb
 
 ---
 
-## 5. Mount — LOCKED (full detail in `MOUNT_DESIGN.md`)
+## 5. Mount — LOCKED (rationale in `MOUNT_DESIGN.md`; **buildable parts in `MOUNT_PARTS.md`**)
 
 1. **Hang from the wall's built-in grooves — zero new holes.** A **½″ (12 mm) Baltic-birch
    tongue-cleat** drops into the **TOP groove** (carries the load) + a **tab** up into the

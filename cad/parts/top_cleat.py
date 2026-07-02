@@ -1,92 +1,73 @@
 #!/usr/bin/env python3
 """
-top_cleat.py — PART 1: the TOP CLEAT BRACKET.
+top_cleat.py — PART 1: TOP CLEAT BRACKET.  (rebuilt on mount_params)
 
-It hangs the top rail from the wall's TOP groove. Profile (side view, Y=depth,
-Z=vertical, 0 = piece top):
-  - a TONGUE drops into the top groove (Y 1.5..12.5, i.e. 11 mm in the 14 mm slot),
-    ~46 mm deep so it rests near the 50 mm groove floor → carries load in COMPRESSION
-    into the solid wood;
-  - a SADDLE bridges forward and rests on the piece top (Z=0) → shares the load +
-    resists the front-down moment;
-  - a FRONT UPRIGHT sits just proud of the piece (front face Y=40, clear of the
-    piece front Y=34) → a flat face to bolt the steel strip / rail. Panels magnet
-    on 11 mm in front of it (panel back Y=51, face Y=66).
+Hangs the whole assembly from the wall's TOP groove and carries the TOP bar.
+An upside-down hook straddling the wooden piece:
+  • TONGUE  drops into the top groove (Y 1.5..12.5 in the 14 mm slot, 46 mm deep) →
+    rests near the 50 mm floor → all load in COMPRESSION into solid wood.
+  • SADDLE  bridges forward, sits on the piece top (Z 0..8) → resists the panels'
+    forward-tip moment.
+  • UPRIGHT drops down the piece front (Y 32..40) → flat FACE_Y face to bolt the
+    top aluminium bar (2× M4 at the bar centre) + a leveling set-screw through the saddle.
 
-Printed PLA now → PETG/ASA later. Placed every ~400–600 mm along the top rail.
-Exports STL (print) + STEP (Fusion) + a cross-section fit-check PNG.
+Print: PLA now (over-built), PETG/ASA later. ~N_STATIONS of them along the top groove.
 """
 import os, sys
-import cadquery as cq
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mount_params as P
+from util import box, cut_cyl, export, draw_wall, bar_patch, IMG
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, ".."))
-OUT = os.path.join(HERE, "..", "out"); os.makedirs(OUT, exist_ok=True)
-IMG = os.path.join(OUT, "img"); os.makedirs(IMG, exist_ok=True)
-
-# --- interface dims (mm) from the wall (docs/design/SETUP_SPEC.md) ---
-GRV_GAP = 14           # top groove width (wall→piece back)
-GRV_H = 50             # top groove depth (open top)
-PIECE_FRONT = 34
-WIDTH = 50             # bracket width along the wall (X)
-TONGUE_THK = 11        # in the 14 mm groove (1.5 mm clearance each side)
-TONGUE_DEEP = 46       # rests near the 50 mm floor
-FRONT_Y = 40           # front face (steel/rail) — 6 mm proud of the piece front
-SADDLE_TOP = 8         # saddle thickness above the piece top
-UPRIGHT_BOT = -40      # upright reaches down past the top M3 row (Z=-8)
-
-# cross-section profile (Y, Z), closed
-PROFILE = [(1.5, -TONGUE_DEEP), (1.5, SADDLE_TOP), (FRONT_Y, SADDLE_TOP),
-           (FRONT_Y, UPRIGHT_BOT), (FRONT_Y - 8, UPRIGHT_BOT),
-           (FRONT_Y - 8, 0), (12.5, 0), (12.5, -TONGUE_DEEP)]
+WIDTH = 50.0          # bracket width along the wall (X)
+TONGUE_Y0, TONGUE_Y1 = 1.5, 12.5      # 11 mm blade in the 14 mm groove
+TONGUE_DEEP = 46.0    # rests near the 50 mm floor
+SADDLE_TOP = 8.0
+UPRIGHT_BOT = -40.0
+UPRIGHT_BACK = P.PIECE_FRONT_Y        # 34 — upright bears FLUSH on the piece front
+#                                       (so the piece face shares the forward load).
+#   Bar bolts: M4 short heat-set inserts from the FRONT face (6 mm upright), bolt
+#   head on the bar side — the upright back is against the piece, so no rear nut.
 
 
-def build():
-    b = (cq.Workplane("YZ").polyline(PROFILE).close().extrude(WIDTH))
-    # two M4 clearance holes through the front upright (bolt the steel strip / rail)
-    for z in (-10, -30):
-        b = (b.faces(">Y").workplane(centerOption="CenterOfMass")
-             .pushPoints([(-(WIDTH/2 - 12), z + 20), (WIDTH/2 - 12, z + 20)])
-             .hole(4.5)) if False else b
-    # simpler: drill along -Y at the two rail-bolt spots
-    b = b.faces(">Y").workplane().pushPoints([(-14, 15), (14, 15)]).hole(4.5)
-    # a leveling set-screw hole down through the saddle onto the piece top
-    b = b.faces(">Z").workplane().pushPoints([(0, -20)]).hole(4.2)
-    b = b.edges("|X").fillet(1.5)
+def build(x0=0.0):
+    xc = x0 + WIDTH / 2
+    tongue  = box(x0, x0 + WIDTH, TONGUE_Y0, TONGUE_Y1, -TONGUE_DEEP, 0)
+    saddle  = box(x0, x0 + WIDTH, TONGUE_Y0, P.FACE_Y, 0, SADDLE_TOP)
+    upright = box(x0, x0 + WIDTH, UPRIGHT_BACK, P.FACE_Y, UPRIGHT_BOT, 0)
+    b = tongue.union(saddle).union(upright)
+    # 2× M4 through the upright → bolt the TOP bar (at its centre Z)
+    for dx in (-P.BOLT_DX, P.BOLT_DX):
+        b = cut_cyl(b, xc + dx, P.FACE_Y, P.TOP_BAR_CZ, P.M4_CLR, axis="Y")
+    # leveling set-screw down through the saddle onto the piece top
+    b = cut_cyl(b, xc, 24, 4.0, 4.2, axis="Z", length=40)
     return b
-
-
-def export(b):
-    cq.exporters.export(b, os.path.join(OUT, "top_cleat.stl"))
-    cq.exporters.export(b, os.path.join(OUT, "top_cleat.step"))
-    print("wrote top_cleat.stl + .step")
 
 
 def fit_section():
     import matplotlib; matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.patches import Rectangle, Polygon
-    fig, ax = plt.subplots(figsize=(8.5, 9))
-    # wall + piece + grooves (from the wall model)
-    ax.add_patch(Rectangle((-25, -190), 25, 250, facecolor=(.66, .52, .35), ec="k", lw=.5))  # wall
-    ax.add_patch(Rectangle((14, -140), 20, 140, facecolor=(.55, .41, .26), ec="k", lw=.7))    # piece
-    ax.add_patch(Rectangle((0, -83), 14, 33, facecolor=(.55, .41, .26), ec="k", lw=.5))       # bridge
-    ax.add_patch(Polygon(PROFILE, closed=True, facecolor=(.90, .80, .55), ec="k", lw=1.1))    # CLEAT
-    ax.add_patch(Rectangle((40, -25), 5, 29, facecolor=(.75, .78, .82), ec="k", lw=.6))        # steel strip
-    ax.add_patch(Rectangle((51, -160), 15, 160, facecolor=(.11, .11, .14), ec="k", lw=.7))     # panel
-    ax.plot([40, 51], [-8, -8], color="orange", lw=3)                                          # magnet screw (top row)
-    ax.annotate("tongue in TOP groove", (7, -35), (75, -35), fontsize=8, arrowprops=dict(arrowstyle="->"))
-    ax.annotate("saddle rests on piece top", (25, 4), (75, 15), fontsize=8, arrowprops=dict(arrowstyle="->"))
-    ax.annotate("steel strip + magnet screw", (45, -8), (78, -70), fontsize=8, arrowprops=dict(arrowstyle="->"))
-    ax.annotate("panel (face @ Y=66)", (58, -90), (78, -110), fontsize=8, arrowprops=dict(arrowstyle="->"))
-    ax.set_xlim(-30, 120); ax.set_ylim(-190, 30); ax.set_aspect("equal"); ax.grid(alpha=.3)
+    from matplotlib.patches import Polygon
+    fig, ax = plt.subplots(figsize=(8, 9))
+    draw_wall(ax)
+    # cleat cross-section (YZ) as a polygon
+    prof = [(TONGUE_Y0, -TONGUE_DEEP), (TONGUE_Y0, SADDLE_TOP), (P.FACE_Y, SADDLE_TOP),
+            (P.FACE_Y, UPRIGHT_BOT), (UPRIGHT_BACK, UPRIGHT_BOT), (UPRIGHT_BACK, 0),
+            (TONGUE_Y1, 0), (TONGUE_Y1, -TONGUE_DEEP)]
+    ax.add_patch(Polygon(prof, closed=True, facecolor=(.90, .80, .55), ec="k", lw=1.2, zorder=5))
+    bar_patch(ax, P.TOP_BAR_CZ, "top bar + steel")
+    ax.plot([P.STEEL_Y, P.PANEL_BACK_Y], [P.M3_TOP_Z, P.M3_TOP_Z], color="orange", lw=3, zorder=6)
+    ax.annotate("tongue in TOP groove", (7, -35), (80, -35), fontsize=8, arrowprops=dict(arrowstyle="->"))
+    ax.annotate("saddle on piece top", (25, 6), (80, 18), fontsize=8, arrowprops=dict(arrowstyle="->"))
+    ax.annotate("magnet screw → panel", (P.PANEL_BACK_Y, P.M3_TOP_Z), (80, -70), fontsize=8, arrowprops=dict(arrowstyle="->"))
+    ax.set_xlim(-30, 130); ax.set_ylim(-190, 30); ax.set_aspect("equal"); ax.grid(alpha=.3)
     ax.set_xlabel("Y — depth into room (mm)"); ax.set_ylabel("Z — vertical (mm, 0 = piece top)")
-    ax.set_title("TOP CLEAT — fit check (drops into top groove, carries rail out front)")
+    ax.set_title("PART 1 · TOP CLEAT — drops into top groove, carries the top bar")
     fig.savefig(os.path.join(IMG, "top_cleat_fit.png"), dpi=130, bbox_inches="tight")
-    print("wrote top_cleat_fit.png")
+    print("  wrote top_cleat_fit.png")
 
 
 if __name__ == "__main__":
-    b = build(); export(b); fit_section()
-    bb = b.val().BoundingBox()
-    print(f"cleat bbox: X{bb.xlen:.0f} × Y{bb.ylen:.0f} × Z{bb.zlen:.0f} mm")
+    b = build()
+    print("PART 1 · top_cleat")
+    export(b, "top_cleat")
+    fit_section()
