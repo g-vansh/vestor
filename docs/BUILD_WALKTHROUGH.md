@@ -67,10 +67,13 @@ Order matters: **fabricate → QC → hang the frame flat → panels → power �
 - [ ] **Coplanarity trim:** the flat rail does most of it — set each panel's 6 magnet screws to a uniform
       depth with a gauge, then nudge any proud corner. Sight down the face under raking light.
 
-## STAGE 7 · Power + data → first light of the full wall
-- [ ] Mount the PSUs (near the halves for short 5 V runs, or in the corner). Land each panel's power
-      pigtail on its fuse block. **Star-point ground bond** (PSU1 V− ↔ PSU2 V− ↔ Pi GND); **never parallel
-      the two V+.** (`INVENTORY.md` §9.5)
+## STAGE 7 · Power + data → first light of the full wall  (full spec: `ELECTRICAL.md`)
+- [ ] **Split the PSUs — one per half**, each on its **own AC outlet** (inrush ~60 A). Mount with 10–15 cm
+      vent clearance; tie each **FG to earth**. Trim each to **~5.15 V** (measured at the farthest panel).
+- [ ] Distribute the **4 fuse blocks** (one per 4-panel group). Feed each block its own **10 AWG** copper
+      run straight from the PSU (**star**). Land each panel's pigtail on **its own 5 A fuse** (16 total —
+      **NOT the 7.5 A**, too high for the thin CCA pigtails). Crimp CCA + anti-oxidant paste; re-torque.
+- [ ] **Ground:** bond both PSU **V−** + the Pi GND at ONE point (a negative bus bar). **Never tie the two V+.**
 - [ ] Connect the Bonnet's HUB75 output → panel 0; power up the Pi. **Full-wall first light.**
 
 ## STAGE 8 · Software
