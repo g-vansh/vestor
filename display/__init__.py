@@ -2,19 +2,17 @@ import sys
 
 from setup import frames
 from setup import logos
+from setup import weather
 from utilities.animator import Animator
 from utilities.overhead import Overhead
 
-from scenes.weather import WeatherScene
 from scenes.airlinelogo import AirlineLogoScene
 from scenes.flightdetails import FlightDetailsScene
 from scenes.journey import JourneyScene
 from scenes.loadingpulse import LoadingPulseScene
 from scenes.loadingled import LoadingLEDScene
-from scenes.clock import ClockScene
+from scenes.idle import IdleScene
 from scenes.planedetails import PlaneDetailsScene
-from scenes.day import DayScene
-from scenes.date import DateScene
 
 from rgbmatrix import graphics
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
@@ -60,15 +58,12 @@ except (ModuleNotFoundError, NameError, ImportError):
 
 
 class Display(
-    WeatherScene,
     AirlineLogoScene,
     FlightDetailsScene,
     JourneyScene,
     LoadingLEDScene if LOADING_LED_ENABLED else LoadingPulseScene ,
     PlaneDetailsScene,
-    ClockScene,
-    DayScene,
-    DateScene,
+    IdleScene,
     Animator,
 ):
     def __init__(self):
@@ -128,6 +123,9 @@ class Display(
         # Start Looking for planes
         self.overhead = Overhead()
         self.overhead.grab_data()
+
+        # Start the weather feed (for the idle screen)
+        weather.start()
 
         # Initalise animator and scenes
         super().__init__()

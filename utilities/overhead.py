@@ -69,6 +69,31 @@ def _in_box(lat, lon):
     return (_BOX["br_y"] <= lat <= _BOX["tl_y"]) and (_BOX["tl_x"] <= lon <= _BOX["br_x"])
 
 
+_COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
+
+def _dist_bearing(lat, lon):
+    """(distance_miles, compass) from HOME to a point — small-area planar approx."""
+    dlat = lat - HOME_LAT
+    dlon = (lon - HOME_LON) * math.cos(math.radians(HOME_LAT))
+    miles = math.sqrt(dlat * dlat + dlon * dlon) * 69.0     # ~69 mi per degree
+    brg = (math.degrees(math.atan2(dlon, dlat)) + 360) % 360
+    return round(miles, 1), _COMPASS[int((brg + 22.5) // 45) % 8]
+
+
+def _interest_tier(ac):
+    """Higher = more display-worthy: commercial (has airline) + arriving low."""
+    try:
+        from setup import airlines
+        commercial = 1 if airlines.iata_for_callsign((ac.get("flight") or "").strip()) else 0
+    except Exception:
+        commercial = 0
+    vs = ac.get("baro_rate") or 0
+    alt = ac.get("alt_baro") if isinstance(ac.get("alt_baro"), (int, float)) else 99999
+    arriving = 1 if (vs < -200 and alt < 6000) else 0
+    return commercial + arriving
+
+
 def _plausible_route(origin, destination, vertical_speed):
     """Sanity-check a callsign->route lookup for a flight near HOME.
 
@@ -188,8 +213,9 @@ class Overhead:
                 continue
             candidates.append(ac)
 
-        # Nearest first, keep the closest MAX_FLIGHTS.
-        candidates.sort(key=lambda a: self._dist2(a["lat"], a["lon"]))
+        # Smart order: most interesting first (commercial + arriving), then
+        # nearest. So the board leads with — and lingers on — the best flight.
+        candidates.sort(key=lambda a: (-_interest_tier(a), self._dist2(a["lat"], a["lon"])))
         candidates = candidates[:MAX_FLIGHTS]
 
         self._prune_routes()
@@ -209,6 +235,8 @@ class Overhead:
             if vs is None:
                 vs = ac.get("geom_rate") or 0
             origin, destination = self._resolve_route(callsign, vs, fr24_map)
+            miles, bearing = _dist_bearing(ac["lat"], ac["lon"])
+            gs = ac.get("gs")
             data.append({
                 "plane": "",
                 "aircraft_code": (ac.get("t") or "").strip(),
@@ -217,6 +245,12 @@ class Overhead:
                 "vertical_speed": vs,
                 "altitude": ac.get("alt_baro") or 0,
                 "callsign": callsign,
+                "ground_speed": int(gs) if isinstance(gs, (int, float)) else None,
+                "heading": ac.get("track"),
+                "squawk": (ac.get("squawk") or "").strip(),
+                "registration": (ac.get("r") or "").strip(),
+                "distance_mi": miles,
+                "bearing": bearing,
             })
 
         with self._lock:

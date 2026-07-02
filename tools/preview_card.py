@@ -134,10 +134,16 @@ class Canvas:
 from scenes.airlinelogo import AirlineLogoScene       # noqa: E402
 from scenes.journey import JourneyScene               # noqa: E402
 from scenes.flightdetails import FlightDetailsScene   # noqa: E402
+from scenes.idle import IdleScene                       # noqa: E402
+from setup import weather as _weather                   # noqa: E402
 from rgbmatrix import graphics                          # noqa: E402
 
+# Mock weather so the idle preview shows conditions (no network / thread).
+_weather._state = {"temp_c": 22, "temp_f": 72, "code": 2, "condition": "PARTLY",
+                   "category": "partly", "wind_mph": 8, "is_day": True}
 
-class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene):
+
+class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene, IdleScene):
     def __init__(self, data):
         self._data = data
         self._data_index = 0
@@ -159,6 +165,7 @@ class Card(AirlineLogoScene, JourneyScene, FlightDetailsScene):
         self.airline_logo(frame)
         self.journey(frame)
         self.flight_details(frame)
+        self.idle_screen(frame)
         return self.canvas.img.copy()
 
 
@@ -190,9 +197,25 @@ def _add_panel_dividers(img, scale):
 
 
 def main():
-    frames_to_grab = [3, 14, 70]            # split-flap progressing -> settled
     scale = 6
     pad = 8
+    # --- idle screen (no aircraft overhead) ---
+    idle = Card([])
+    idle.reset_scene()
+    isheet = Image.new("RGB", (3 * (WIDTH * scale + pad) + pad, HEIGHT * scale + 2 * pad),
+                       (25, 25, 30))
+    f = 0
+    for ci, target in enumerate([4, 14, 44]):
+        while f <= target:
+            iimg = idle.render_frame(f)
+            f += 1
+        big = iimg.resize((WIDTH * scale, HEIGHT * scale), Image.NEAREST)
+        _add_panel_dividers(big, scale)
+        isheet.paste(big, (pad + ci * (WIDTH * scale + pad), pad))
+    isheet.save(os.path.join(HERE, "preview_idle.png"))
+    print("wrote idle preview")
+
+    frames_to_grab = [3, 14, 70]            # split-flap progressing -> settled
     cols = len(frames_to_grab)
     rows = len(SAMPLE)
     sheet = Image.new(
