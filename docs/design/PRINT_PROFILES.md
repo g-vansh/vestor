@@ -22,6 +22,19 @@ distortion** — wrong trade for precision brackets) · 0.28 mm layers "for stre
 
 ---
 
+## ▶ Ready-made profile files (just load these)
+`cad/print_profiles/Vestor_Structural_H2S.3mf` and `..._P2S.3mf` — built from the shop's own
+Medium profile with every value below already applied.
+
+**To load:** Bambu Studio → **File → Import → Import Configs…** → pick the `.3mf`. That imports the
+*settings only* (no model). Then import the STLs from `cad/print_stl/` as usual.
+*(If you open the `.3mf` as a project instead, it will also bring the shop's placeholder model —
+just delete it and import ours.)*
+
+⚠️ **After importing, always check the plate:** parts must be **lying down**, not standing.
+Use **Arrange (`A`)** to shuffle in XY — never **Auto orient**, which re-picks the resting face.
+If a part is upright: select it → **Place on face** → choose the big flat profile face.
+
 ## ▶ "VESTOR STRUCTURAL" — for `01_top_cleat`, `07_gap_hanger`, `02_foot_base`, `02_foot_tab`
 Start from the shop's **H2S Medium** profile, then change:
 
