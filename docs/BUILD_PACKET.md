@@ -10,12 +10,38 @@ all electronics + wiring hidden in the ~22.5 cm ceiling gap behind a vented vala
 
 ---
 
-## ▢ PHASE 0 — MEASURE FIRST (at the wall, before you cut steel)
-- ▢ **Top groove:** width + depth at ~5 points along the 5.1 m (expected 14 × 50 mm). Note the min width.
-- ▢ **Bottom groove:** width + depth (expected 18 × 57 mm).
-- ▢ **One panel's M3 holes:** the two rows' vertical spacing (expected 144 mm) + the 3 columns' X spacing + edge offsets.
-- ▢ **Confirm** grooves are uniform + unbroken (no outlets/nails); note the AC outlet at the right end.
-- → Send me the groove widths + M3 positions; I tune the tongue/tab clearances and the rail drill layout, then you cut.
+## ▢ PHASE 0 — MEASURE + FIT-TEST (at the wall, before you cut steel or batch-print)
+
+### A. Measure the printed coupon itself (do this first — it separates printer error from wall variance)
+- ▢ **Tongue blade thickness** with calipers, 2–3 spots → **should be 11.0 mm.**
+  If it reads 11.2–11.4, the printer is running oversize (normal: elephant foot / over-extrusion)
+  and I compensate in CAD rather than blaming the groove.
+- ▢ **Tab thickness** → should be **13.0 mm** (nominal, before clearance).
+
+### B. Measure the actual grooves (calipers, or feeler gauges)
+- ▢ **Top groove WIDTH at ≥5 points** along the 5.1 m → record the **narrowest** (that's what governs).
+- ▢ **Top groove DEPTH** (how far a probe drops before bottoming) — expected ~50 mm.
+- ▢ **Bottom groove width + depth** — expected 18 × 57 mm.
+- ▢ Confirm grooves are unbroken (no outlets/nails); note the AC outlet at the right end.
+
+### C. Fit-test the TONGUE coupon in the TOP groove (the real answer)
+1. ▢ **Drop it in.** It should seat **under its own weight** — no forcing, no hammering.
+2. ▢ **Saddle contact:** does the flat saddle land on the piece top, or is there a **gap under it**?
+   A gap = the tongue is bottoming on the groove floor first (groove shallower than 50 mm) → the
+   saddle can't bear, and I shorten the tongue. **This is the most important single observation.**
+3. ▢ **Spine contact:** is the front face flush against the piece front, or held off it?
+4. ▢ **Play:** seated, rock it front-to-back. **Target ~0.5–1.5 mm total.**
+   *No feeler gauges?* Printer paper ≈ 0.1 mm, business card ≈ 0.3 mm — slide them in the gap and count.
+5. ▢ **Repeat at 2–3 spots** along the wall (grooves vary; the tightest one governs).
+
+### D. Fit-test the TAB in the BOTTOM groove
+- ▢ Slide it **UP** into the groove: should go smoothly, not forced. Falling back out is **fine**
+  (a set-screw pinches it in the real build) — **binding is not.**
+
+### ▢ Report back these six things
+`printed tongue thickness` · `narrowest top-groove width + depth` · `bottom-groove width + depth` ·
+`fit verdict (forced / slight play / loose)` · `saddle sits flat? Y/N` · `spine flush? Y/N`
+→ I retune the tongue/tab clearances + the rail drill layout, then you cut steel and batch-print.
 
 ---
 
