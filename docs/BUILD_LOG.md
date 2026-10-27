@@ -1442,6 +1442,28 @@ add airline branding.
 - Next: create the SmartThings OAuth-In app and connect it from the phone page.
   On the Samsung, turn Auto Power Off off and Input Signal Plus on for HDMI 1.
 
+### 2026-10-27: Lucent 2.0, third round (e-bike forecast, two docks, Samsung remote, Ask Lucent)
+- Did: an e-bike forecast for Westgate (Vassar St) and Erie St together, built from
+  31 months of Bluebikes trips, the status logs, NOAA weather and MIT's calendar:
+  when the e-bikes will run out, when the next one comes, and the evening's chance at
+  7:30, 8:30 and 9:30. Causal estimates for MIT's term, finals, rain and cold, and
+  backtests with leave-one-day-out calibration (lucent/analysis/bikes). Bike finder
+  rings for the first e-bike at either dock. The Samsung's own remote over Wi-Fi
+  (pinned certificate, private addresses only) and a Remote tab on the phone. The
+  Trader Joe's and Whole Foods shuttle on its days. Ask Lucent: Claude on the TV and
+  the phone, with web search, a fixed set of checked tools, daily automations and a
+  monthly spending cap. The installer can hand the Claude key to the TV over ADB.
+- Verified: both compiles pass. Desktop suites pass, including the forecast against
+  the Python reference (59 checks) and the assistant against a stand-in API (67).
+  Ask Lucent tested live against the Claude API from the build machine (a fact
+  question, "play Better Call Saul" resolving to Netflix 80021955, an automation,
+  a web search), a few cents each. Signed build verified (certificate 9ba0dd17).
+- Changed from brief: VIZIO soundbar EQ and modes stay in VIZIO's app (Bluetooth only,
+  undocumented, one controller at a time). Lucent controls its volume and mute through
+  the Fire TV. The Claude key was set in a private file only, never committed.
+- Next: run `./install.sh --claude-key claude-key.txt`, pair the Samsung remote from
+  the phone (Settings, Samsung remote), and check "play" links on the real stick.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
