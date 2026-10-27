@@ -21,6 +21,12 @@ Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
 - **Bike alarm.** When bike finder sees an e-bike it rings at full volume until you press any
   button, over whatever is playing, and your phones buzz with a link to reserve it in Bluebikes.
   Any Echo can start it: "Alexa, turn on bike finder".
+- **Two docks and a forecast.** Westgate's dock on Vassar Street and the Erie Street dock outside
+  Flour, as one pool: bike finder rings for the first e-bike at either. The card says when the
+  e-bikes will likely be gone, when the next one should turn up, and tonight's chance of one at
+  7:30 AM, from 31 months of Bluebikes trips, MIT's calendar and the weather.
+- **The Samsung's remote on your phone.** A Remote tab with the TV's own keys, menus and
+  settings, over your Wi-Fi, so the Samsung remote can stay in the drawer.
 - **A Glare button.** One press switches the Samsung to its brightest picture for a sunny
   afternoon, from the remote, a phone or Alexa. The evening picture comes back at sunset.
 - **Rain in the next two hours** for Westgate, from NOAA's 15-minute HRRR forecast: "Rain from
@@ -71,8 +77,12 @@ bar is the reminder that Down brings them up.
 The top row, left to right: **Fire TV Home** (the exit: Amazon's home until you open an app),
 **Mirror a Screen**, **Phone Control** (pair a phone), **Sound** and **Settings**.
 
-Fire TV keeps four buttons for itself in every app, so no home screen can use them: HOME, the
-microphone (Alexa), volume and the app shortcut buttons. Alexa voice commands work as before.
+**HOME always comes back here.** Press HOME in Netflix or any app and Fire TV starts to open
+Amazon's home, then Lucent's home button service replaces it, behind a frosted cover so you see
+the glass settle rather than Amazon's rows. "Alexa, go home" lands here too. Holding HOME still
+opens Fire TV's quick menu (sleep, settings, mirroring), and the Fire TV Home tile on the top row
+is the way into Amazon's home on purpose. The microphone, volume and the app shortcut buttons stay
+Fire TV's own in every app.
 
 Focus an item in the info bar and it grows into a card with the detail. OK grows the card
 into a full panel: the weather's next six hours with the chance of rain, the three nearest docks,
@@ -184,6 +194,38 @@ httpbin.org once and is useless without the secret. Samsung drops a sign-in nobo
 a month, so Lucent renews it every 20 days. To withdraw it from Samsung's side, run
 `smartthings apps:delete`.
 
+## The Samsung TV from your phone
+
+The Remote tab on the phone page is the Samsung's own remote: arrows and OK, Back, Home, Menu,
+Source, volume, mute, power, numbers and play controls. Menu opens the Samsung's settings, so
+every picture, sound and general setting is reachable from the phone. Picture mode, sound mode,
+input and apps also have buttons of their own.
+
+It reaches the TV two ways, and works with either or both:
+
+- **Over your Wi-Fi (the keys).** The same channel Samsung's SmartThings app uses for its remote:
+  instant, with no limit on presses. Set up once on the phone: Settings › Samsung Remote, type
+  the TV's address (on the TV: Settings › General › Network › Network Status › IP Settings) and
+  tap Pair. The TV asks once whether to allow Lucent. Choose Allow with the Samsung remote, or,
+  if SmartThings is connected, with the Left, Right and OK buttons the phone shows, which go
+  through Samsung's cloud. To turn the TV on from the phone too, switch on **Power On with
+  Mobile** (Settings › General › Network › Expert Settings). The Fire TV already turns it on
+  through HDMI whenever you use the stick.
+- **Through SmartThings (the modes).** The Glare setup above. It adds picture mode, sound mode,
+  input and app launches, and reports whether the TV is on. Samsung allows 12 commands a minute,
+  so the keys go over Wi-Fi.
+
+**Safe by design.** Lucent dials only the TV's address, which must be a private home address,
+and only the TV's two remote ports. The TV's certificate is remembered the first time and any
+other is refused before the TV's key is sent, so nothing on the network can pose as the TV. The
+key stays on the TV, never on a phone. If a Samsung update changes the certificate, the phone
+says so and Trust the TV Again pairs afresh. If you ever choose Deny by mistake, allow Lucent on
+the TV: Settings › General › External Device Manager › Device Connection Manager › Device List.
+
+**What I need from you: nothing in chat.** Please do not send passwords or keys here. SmartThings
+is set up on the phone page with your own app ID, and the sign-in goes straight from your phone
+to Samsung and back to the TV. The Wi-Fi remote needs no account at all.
+
 ## Staying on all day, dimming, bedtime
 
 Between the awake hours (7:00 to 0:30 unless you change them on the phone) the home screen
@@ -211,17 +253,36 @@ Samsung can, so change one setting on it:
 
 1. Press Up once from the dock, move to the bikes card and press OK. Or tap Find on the phone,
    or ask Alexa.
-2. Lucent reads the Westgate dock's live status every 5 seconds. The card shows a radar and how
-   long it has been looking. Go and watch something.
-3. When an e-bike can be rented, the alarm rings and a card says "E-bike ready at Westgate",
-   over whatever is playing. It rings until you press any button on the remote, or tap Silence
-   on the phone, or for at most ten minutes (Settings › Alarm Rings For). "When an E-Bike Is
-   Found: Chime Once" gives the old single chime instead.
+2. Lucent reads the live status of Westgate's dock and the Erie Street dock outside Flour every
+   5 seconds. The card shows a radar and how long it has been looking. Go and watch something.
+3. When an e-bike can be rented at either dock, the alarm rings and a card names the dock ("E-bike
+   ready at Westgate" or "at Erie St"), over whatever is playing. If both have one, Westgate wins.
+   It rings until you press any button on the remote, or tap Silence on the phone, or for at
+   most ten minutes (Settings › Alarm Rings For). "When an E-Bike Is Found: Chime Once" gives
+   the old single chime instead.
 4. It gives up after 30 minutes (Settings › Bike Finder Gives Up, up to 2 hours).
 
 Only bikes the station will actually rent count. Westgate's dock is the one MIT opened in front
-of the Westgate low-rise buildings on Vassar Street ("MIT Vassar St" in the feed). Lucent finds
-it by name or position, so a rename does not break it. Settings › Bike Station follows another.
+of the Westgate low-rise buildings on Vassar Street ("MIT Vassar St" in the feed). The second is
+the Erie Street dock by Flour in Cambridgeport. Lucent finds both by name or position, so a
+rename does not break them. Settings › Bike Station follows another first dock, and Settings ›
+Also Watch (on the TV or the phone) picks the second, or none.
+
+### The forecast
+
+With e-bikes at either dock, the card says when they will likely all be gone ("Likely all gone by
+8:46 AM (8:14 to 9:53)") and when Westgate alone will be. With none, when the next one should
+turn up at either. In the evening it gives the chance of one at 7:30 the next morning. The
+middle time is the likeliest, the range covers four times in five.
+
+It comes from every Bluebikes trip at these docks since March 2024, the MIT Registrar's calendar
+(class days, finals, IAP, breaks, holidays), the hour's chance of rain and the temperature, and
+Lyft's restock patterns, and runs on the TV in a fraction of a second. Tested on 34 days of real
+mornings it had never seen, the range caught the real time 81% to 93% of the time, except
+weekend run-outs (71%), which come sooner than it expects. `analysis/bikes/README.md` has the
+data, the method, MIT's measured effects (33% more e-bike trips on class days, 17% fewer in a wet
+hour) and every test.
+
 
 The alarm rings at one steady level from the first second, a little under full scale so the
 soundbar never clips, and the soundbar's volume decides how loud that is.
@@ -333,16 +394,27 @@ on the big screen.
 
 ## Music, surround sound and headphones
 
-- **Spotify** streams in stereo on every device, so there is no surround music to unlock there.
-  Spotify Connect from your phone to the Fire TV's Spotify app works well.
-- **YouTube Music** is stereo too. Ordinary YouTube videos play in 5.1 on Fire TV when the video
-  has it.
-- **Dolby Atmos music** on this stick comes from **Amazon Music Unlimited** (turn on HD and
-  Spatial Audio in its settings). Apple Music on Fire TV plays stereo.
-- **To make stereo music fill the room**, put the VIZIO in **Music** mode with **Virtual:X on**
-  and the surround level up. If music still sounds front-heavy, compare Fire TV's Surround Sound
-  set to Best Available with Dolby Digital Plus: in some setups the Dolby MAT stream Best
-  Available produces keeps the soundbar from spreading stereo out.
+**Spotify and YouTube Music have no Dolby Atmos or surround music**, on any device, so neither
+can send the VIZIO Atmos. What each does at its best here:
+
+- **Spotify:** Premium includes Lossless (FLAC up to 24-bit/44.1 kHz) since September 2025, on
+  phones, computers and some Connect speakers. Spotify does not list TV apps, and I found no
+  confirmation that the Fire TV app plays lossless, so expect its Very High setting there. Play
+  from the phone with Spotify Connect to the Fire TV, which keeps the sound on HDMI into the
+  soundbar. Skip Bluetooth from the phone straight to the soundbar: it compresses the sound again.
+- **YouTube Music:** Premium tops out at 256 kbps. Turn on Always High in its audio quality
+  setting. Ordinary YouTube videos play in 5.1 on Fire TV when the video has it, which some
+  concerts and live sets do.
+- **Honestly, the soundbar sets the ceiling.** VIZIO rates the 5.1 SE from 50 Hz to 16 kHz, so
+  the step from Spotify's 320 kbps to lossless falls mostly above what it plays. Room placement
+  and the settings below change the sound far more.
+- **For real Atmos music**, the one service whose Fire TV app plays Dolby Atmos on this stick is
+  **Amazon Music Unlimited**: in its settings turn on Ultra HD and Spatial Audio. The soundbar
+  decodes it and creates the height virtually, since it has no up-firing speakers.
+- **To make stereo fill the room**, put the VIZIO in **Music** mode with **Virtual:X on** and the
+  surround level up. If music still sounds front-heavy, compare Fire TV's Surround Sound set to
+  Best Available with Dolby Digital Plus: in some setups the Dolby MAT stream Best Available
+  produces keeps the soundbar from spreading stereo out.
 
 The Now Playing card shows what is playing in any app with a media session (Spotify, YouTube,
 Amazon Music, Plex), with the time left. Play/Pause on the remote and the phone control it.
@@ -354,6 +426,15 @@ round it: an iPhone's Share Audio (for something playing on the iPhone), or a du
 transmitter on the TV's optical output, which feeds two pairs at once while the soundbar rests.
 
 ## Getting the best sound from the VIZIO
+
+**What Lucent can change on the soundbar: volume and mute.** Up, down and mute from the remote
+or the phone go from the Fire TV to the TV and on to the VIZIO over HDMI. The 5.1 SE has no
+Wi-Fi and came without a remote of its own. Its modes, bass, treble, center, surround, height and
+Virtual:X are set only in VIZIO's phone app, over Bluetooth, and VIZIO publishes nothing about
+that connection. It also takes one controlling device at a time, so a TV app holding it would
+lock your phone out. No account or key from you would change that, so Lucent leaves those to the
+VIZIO app. Set them once, below, and they stay.
+
 
 The home screen never touches audio. Each streaming app negotiates its own format, and on this
 stick Amazon transcodes streaming audio to **Dolby MAT**, which is why the VIZIO app shows
@@ -592,6 +673,10 @@ device you approved on the TV with the remote, and nothing anyone sends it can t
 - Shuttle times are tracked buses only. A line with no tracked bus shows its hours instead,
   from MIT's published schedules (or, for the 85, the MBTA timetable).
 - Plain HTTP on the home network, as explained under Security.
+- The e-bike forecast is least sure about weekend run-outs, which tend to come sooner than it
+  says. Lyft can change its restock rounds at any time, and the next-e-bike forecast learns that
+  only when the model is refitted (`analysis/bikes`).
+- The soundbar's modes and EQ stay in VIZIO's app (see Getting the best sound from the VIZIO).
 
 ## Rebuilding
 
