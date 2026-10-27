@@ -15,6 +15,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 PKG=tv.lucent.home
 GUARD=$PKG/$PKG.Guard
+LISTENER=$PKG/$PKG.Listener
 LABEL="Lucent home button"
 OTHER_GUARDS=(
   tv.dumbtv.home/tv.dumbtv.home.Guard
@@ -27,11 +28,15 @@ APK=${APK:-lucent.apk}
 adb_() { "$ADB" ${ADB_SERIAL:+-s "$ADB_SERIAL"} "$@"; }
 # adb shell joins its arguments and the TV's shell parses the line again, so every argument is
 # single-quoted here: nothing read from the TV can turn into a command.
+# The quote characters are held in variables: inside ${a//...}, bash 3.2 (macOS) and bash 5 read
+# escaped quotes differently, and this form means the same thing to both.
 sh_() {
-  local cmd= a
-  for a in "$@"; do cmd+=" '${a//\'/\'\\\'\'}'"; done
+  local cmd= a q="'" bs='\'
+  for a in "$@"; do cmd+=" '${a//$q/$q$bs$q$q}'"; done
   adb_ shell "$cmd" </dev/null | tr -d '\r'
 }
+# Text from the TV shown on your terminal: plain characters only, so it cannot send escape codes.
+plain() { printf '%s' "$1" | LC_ALL=C tr -cd '[:alnum:] ._,:()/+-' | cut -c1-120; }
 
 # Lucent's signing key as Android reports it (dumpsys package). A copy signed with anything else
 # did not come from this key and is never given the HOME button. If you sign your own build with
@@ -71,7 +76,7 @@ fi
 model=$(sh_ getprop ro.product.model)
 sdk=$(sh_ getprop ro.build.version.sdk)
 fireos=$(sh_ getprop ro.build.version.name)
-echo "device: $model, Android API $sdk, ${fireos:-Fire OS}"
+echo "device: $(plain "$model"), Android API $(plain "$sdk"), $(plain "${fireos:-Fire OS}")"
 case $sdk in ''|*[!0-9]*) sdk=0 ;; esac
 if [[ $mode == install && $sdk -lt 28 ]]; then
   echo "error: Lucent needs Fire OS 7 or 8 (Android 9+). This device reports API $sdk." >&2
@@ -98,7 +103,7 @@ set_guard() {
   orig=$(sh_ settings get secure enabled_accessibility_services)
   [[ $orig == null ]] && orig=
   if ! [[ $orig =~ $COMPONENTS ]]; then
-    echo "error: the TV's list of accessibility services looks unusual, so nothing was changed: $orig" >&2
+    echo "error: the TV's list of accessibility services looks unusual, so nothing was changed: $(printf '%q' "$orig")" >&2
     exit 1
   fi
   cur=$orig
@@ -122,14 +127,26 @@ set_guard() {
 # Android delays alarms by 5 s unless min_futurity is 0; the HOME switch needs them at once.
 # Android 11 (Fire OS 8) reads it from settings global alarm_manager_constants. A value someone
 # set before (or "none") is kept in lucent_min_futurity and put back by --undo.
-constants() { local v; v=$(sh_ settings get global alarm_manager_constants); [[ $v == null ]] && v=; printf '%s' "$v"; }
+# Values read back from the TV are only ever plain key=value lists; anything else stops the script
+# before it writes, rather than being passed along.
+SETTING='^[A-Za-z0-9_.=,:-]*$'
+constants() {
+  local v
+  v=$(sh_ settings get global alarm_manager_constants)
+  [[ $v == null ]] && v=
+  if ! [[ $v =~ $SETTING ]]; then
+    echo "error: the TV's alarm_manager_constants looks unusual, so nothing was changed: $(printf '%q' "$v")" >&2
+    exit 1
+  fi
+  printf '%s' "$v"
+}
 set_futurity() {
   local cur rest old saved
   cur=$(constants)
   old=$(printf '%s' "$cur" | tr ',' '\n' | sed -n 's/^min_futurity=//p' | head -1)
   rest=$(printf '%s' "$cur" | tr ',' '\n' | { grep -v '^min_futurity=' || true; } | { grep -v '^$' || true; } | paste -sd, -)
   saved=$(sh_ settings get global lucent_min_futurity)
-  [[ $saved == null ]] && saved=
+  [[ $saved =~ ^([0-9]+|none)$ ]] || saved=
   if [[ $1 == on ]]; then
     # Remember what was there before the first install, even a 0 another launcher set, or
     # "none". A reinstall finds the record and keeps it.
@@ -171,6 +188,10 @@ if [[ $mode != install ]]; then
   fi
   set_futurity off
   sh_ dumpsys deviceidle whitelist -$PKG >/dev/null 2>&1 || true
+  # The two grants this script gave: re-enabling its own HOME service after updates, and seeing
+  # what is playing. Without them nothing can switch HOME back on behind your back.
+  sh_ pm revoke $PKG android.permission.WRITE_SECURE_SETTINGS >/dev/null 2>&1 || true
+  sh_ cmd notification disallow_listener "$LISTENER" >/dev/null 2>&1 || true
   sh_ input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
   sh_ am start -a android.intent.action.MAIN -c android.intent.category.HOME >/dev/null 2>&1 || true
   if [[ $mode == remove ]]; then
@@ -183,13 +204,25 @@ if [[ $mode != install ]]; then
 fi
 
 [[ -f $APK ]] || { echo "error: $APK not found next to this script" >&2; exit 1; }
+# With Android's apksigner on this computer, the APK's full certificate fingerprint is checked
+# before anything is installed (the TV-side check below only sees a short hash).
+CERT=9ba0dd174f8348d9acabf9f71e4ff128b0bb03821871adc56dada9a1aaacbd7f
+if [[ -z ${LUCENT_SIG:-} ]] && command -v apksigner >/dev/null 2>&1; then
+  certs=$(apksigner verify --print-certs "$APK" 2>/dev/null || true)
+  if [[ $certs != *"SHA-256 digest: $CERT"* ]]; then
+    echo "error: $APK is not signed with Lucent's key, so nothing was installed. Check where it came from." >&2
+    exit 1
+  fi
+fi
 # Checked before anything is changed: set_guard refuses such a list, and nothing else may have
 # been touched by then.
 current=$(sh_ settings get secure enabled_accessibility_services)
 if [[ $current != null ]] && ! [[ $current =~ $COMPONENTS ]]; then
-  echo "error: the TV's list of accessibility services looks unusual, so nothing was changed: $current" >&2
+  echo "error: the TV's list of accessibility services looks unusual, so nothing was changed: $(printf '%q' "$current")" >&2
   exit 1
 fi
+# The same goes for the alarm timings this script rewrites: checked before the APK goes in.
+checked=$(constants)
 install_apk() { adb_ install -r "$APK" 2>&1 | grep -m1 -E 'Success|Failure|failed' || true; }
 
 # Android lets an update in only if it carries the same signature, which is what stops anyone
@@ -233,9 +266,9 @@ fi
 # What is there now, so a failed install can put back exactly this, including the records an
 # earlier install left for --undo.
 had_fut=$(sh_ settings get global lucent_min_futurity)
-[[ $had_fut == null ]] && had_fut=
+[[ $had_fut =~ ^([0-9]+|none)$ ]] || had_fut=
 had_prev=$(sh_ settings get global lucent_prev_guards)
-[[ $had_prev == null ]] && had_prev=
+{ [[ $had_prev != null ]] && [[ $had_prev =~ $COMPONENTS ]]; } || had_prev=
 before_services=$(sh_ settings get secure enabled_accessibility_services)
 [[ $before_services == null ]] && before_services=
 before_enabled=$(sh_ settings get secure accessibility_enabled)
@@ -290,9 +323,30 @@ if [[ $bound == 0 ]]; then
   exit 1
 fi
 
+# Two one-time grants Fire OS has no screen for. The first lets Lucent put its own HOME service
+# back after a Fire OS update or a restart switches it off (Boot.java, nothing else). The second
+# lets it see which app is playing for Now Playing and the remote's play key; it reads no
+# notifications. --undo takes both back.
+if sh_ pm grant $PKG android.permission.WRITE_SECURE_SETTINGS >/dev/null 2>&1; then
+  echo "granted: Lucent can switch its HOME service back on after a Fire OS update"
+else
+  echo "note: this Fire OS refused the self-repair grant. After an update, run ./install.sh again if HOME goes back to Amazon."
+fi
+if sh_ cmd notification allow_listener "$LISTENER" >/dev/null 2>&1; then
+  echo "granted: Now Playing (Lucent sees which app plays music, not your notifications)"
+else
+  echo "note: Now Playing was not granted, so the music card stays hidden. Everything else works."
+fi
+
 sh_ input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
 sh_ am start -n $PKG/.Home >/dev/null 2>&1 || true
+# Starting the activity also starts the control center: its address is on the TV under the phone icon.
+ip=$(sh_ ip -4 -o addr show wlan0 2>/dev/null | sed -n 's/.* inet \([0-9.]*\)\/.*/\1/p' | head -1)
+[[ -n $ip ]] || ip=$(sh_ ip -4 -o addr show eth0 2>/dev/null | sed -n 's/.* inet \([0-9.]*\)\/.*/\1/p' | head -1)
 echo "done: press HOME on the remote. Lucent should appear in under half a second."
+if [[ -n $ip ]]; then
+  echo "phone control: on the TV choose the phone icon (top right) and scan the code, or open http://$ip:8686 on your home Wi-Fi"
+fi
 echo "undo any time: ./install.sh --undo"
 # ADB is the one way in from the network: once HOME works, it should be off.
 ans=n

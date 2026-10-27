@@ -1406,6 +1406,23 @@ add airline branding.
   short project description and the repo link. Feeding adsb.fi or adsb.lol with
   a receiver later raises their limits and is how adsb.lol plans to hand out API keys.
 
+### 2026-10-27: Lucent 2.0 (the Fire TV home screen) on branch `lucent`
+- Did: imported Lucent 1.1 into `lucent/` and built 2.0 on top: a control
+  center the TV serves on the home network (pairing by QR code plus OK on the
+  remote), drawn notes and hearts, a photo album decoded in an isolated process,
+  day and night looks, awake hours with idle dimming and bedtime, a bike alarm
+  that rings until stopped, an Alexa trigger through ntfy, a shared calendar from
+  iCal links (own RFC 5545 reader), Now Playing, a Mirror button, headphone cards,
+  a per-host rate governor with conditional requests and plane-source failover,
+  and the 85 labelled 85A Assembly and 85B BU.
+- Verified: whole tree compiles with javac `--release 8 -Werror` against the
+  Android 11 jar; desktop suites pass (feeds, hostile input, calendar, QR, remote
+  fuzz); screenshots rendered from the real scene code. Not yet run on the stick.
+- Changed from brief: Lucent is a separate app from the LED wall, so it lives in
+  its own folder and branch and touches none of the wall's code.
+- Next: install on the Fire TV with `lucent/install.sh`, pair a phone, add the
+  calendars and the MBTA key.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

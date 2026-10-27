@@ -13,9 +13,12 @@ HOME guard
   notice and this permission notice shall be included in all copies or substantial portions of
   the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 
-Typeface
-  Inter and Inter Display, Copyright (c) 2016 The Inter Project Authors, SIL Open Font License
-  1.1 (assets/fonts/OFL.txt). Subsetted to Latin.
+Typefaces, all under the SIL Open Font License 1.1 (text in assets/fonts/OFL.txt)
+  Inter and Inter Display, Copyright (c) 2016 The Inter Project Authors. Subsetted to Latin.
+  Newsreader Display (Light, Regular and Italic, static 72 pt instances), Copyright 2020 The
+    Newsreader Project Authors, https://github.com/productiontype/Newsreader
+  Geist Mono Medium, Copyright 2024 The Geist Project Authors, https://github.com/vercel/geist-font
+  The control center's page serves the same files to your phone.
 
 Photographs (assets/wallpapers), all CC0 1.0, from Wikimedia Commons, as collected and checked
 by Glass Home (https://github.com/victaphu/glass-home-samsung-tv, MIT):
@@ -32,22 +35,34 @@ by Glass Home (https://github.com/victaphu/glass-home-samsung-tv, MIT):
   nature-11  The Matterhorn at sunset, Switzerland              Sam Ferrara
   nature-12  Blue Mountains, New South Wales                    Matthew Kane
 
-Live data (public feeds, no keys)
-  Weather data by Open-Meteo, https://open-meteo.com, CC BY 4.0 (credited in the weather panel).
+Live data (public feeds)
+  Weather and air quality by Open-Meteo, https://open-meteo.com, CC BY 4.0 (credited in the
+    weather panel).
+  Weather alerts from the US National Weather Service, https://www.weather.gov (public domain).
   Bike data from Bluebikes' GBFS feed (https://bluebikes.com/system-data), provided under the
     Bluebikes Data License Agreement.
   MIT shuttle data from MIT's Passio GO GTFS-realtime feed. Bus predictions and timetables from
     the MBTA V3 API (https://www.mbta.com/developers), under the MBTA's developer terms. Lucent
     is not endorsed by the MBTA.
-  Aircraft positions from adsb.lol (ODbL), routes and airports from hexdb.io.
+  Aircraft positions from adsb.fi, https://adsb.fi (open data for non-commercial use, credited
+    in the planes panel), with adsb.lol (ODbL) as the fallback. Flight routes from adsbdb,
+    https://www.adsbdb.com, and hexdb.io.
+  Calendars are read from the private iCal links you give it (Google Calendar, iCloud, Outlook).
+  The Alexa link uses ntfy, https://ntfy.sh (the public server), as a relay.
   Stops, routes, station choices and counting rules follow Vestor (github.com/g-vansh/vestor).
+
+Code written for Lucent 2.0
+  The control center's server, pairing, QR encoder (ISO/IEC 18004 byte mode), iCalendar reader
+  (RFC 5545 recurrence rules), rate governor and photo sandbox are original to this project and
+  use no libraries.
 
 Glyphs and marks
   Every glyph (weather, bikes, docks, shuttle, aircraft, radar) and the Lucent mark are original
   drawings made for this project.
 
 Trademarks
-  Fire TV, Fire OS, Alexa and Prime Video are Amazon's; Apple and Liquid Glass are Apple's;
-  Samsung, VIZIO, Bluebikes, Lyft, MIT, the MBTA and BU belong to their owners. Lucent is not affiliated
-  with any of them and draws no third-party logos: dock tiles show the banner each app provides,
-  or a tile composed from that app's own icon.
+  Fire TV, Fire OS, Alexa and Prime Video are Amazon's. Apple, AirPlay, AirPods, FaceTime,
+  iCloud and Liquid Glass are Apple's. Google Calendar and YouTube are Google's. Samsung,
+  VIZIO, Spotify, WhatsApp, Tailscale, Bluebikes, Lyft, MIT, the MBTA and BU belong to their
+  owners. Lucent is not affiliated with any of them and draws no third-party logos: dock tiles
+  show the banner each app provides, or a tile composed from that app's own icon.

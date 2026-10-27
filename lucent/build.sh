@@ -10,8 +10,8 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 unset JAVA_TOOL_OPTIONS
 
-VERSION_CODE=${VERSION_CODE:-2}
-VERSION_NAME=${VERSION_NAME:-1.1}
+VERSION_CODE=${VERSION_CODE:-3}
+VERSION_NAME=${VERSION_NAME:-2.0}
 MIN_SDK=28
 TARGET_SDK=28
 
@@ -26,22 +26,36 @@ done
 APKSIGNER=$BT/apksigner
 [[ -x $APKSIGNER ]] || APKSIGNER=$(command -v apksigner)
 
-# The signing key and its password live in two files beside this script. Keep both private:
-# an update installs only if it is signed by the same key.
-KEYSTORE=${LUCENT_KEYSTORE:-$PWD/release.keystore}
-if [[ -z ${LUCENT_KEYPASS:-} && -f $KEYSTORE.pass ]]; then LUCENT_KEYPASS=$(cat "$KEYSTORE.pass"); fi
-if [[ -z ${LUCENT_KEYPASS:-} ]]; then
-  LUCENT_KEYPASS=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
-  (umask 077; printf '%s' "$LUCENT_KEYPASS" > "$KEYSTORE.pass")
+# The signing key lives outside this folder (default ~/.lucent/release.keystore), so it can never
+# be zipped or committed with the source. Its password comes from LUCENT_KEYPASS, else the macOS
+# Keychain (service "lucent-keystore"), else release.keystore.pass beside the key. An update
+# installs only if it is signed by the same key: keep both private.
+KEYSTORE=${LUCENT_KEYSTORE:-$HOME/.lucent/release.keystore}
+case $KEYSTORE in "$PWD"/*) echo "warning: the signing key is inside the project folder. Keep it outside, for example in ~/.lucent/" >&2 ;; esac
+pass=${LUCENT_KEYPASS:-}
+if [[ -z $pass ]] && command -v security >/dev/null 2>&1; then
+  pass=$(security find-generic-password -s lucent-keystore -w 2>/dev/null || true)
 fi
-# Handed to the tools through the environment, never on a command line where other programs on
-# the computer could read it from the process list.
-export LUCENT_KEYPASS
+if [[ -z $pass && -f $KEYSTORE.pass ]]; then pass=$(cat "$KEYSTORE.pass"); fi
 if [[ ! -f $KEYSTORE ]]; then
-  (umask 077; keytool -genkeypair -keystore "$KEYSTORE" -alias lucent -keyalg RSA -keysize 4096 -validity 10000 \
-    -storepass:env LUCENT_KEYPASS -keypass:env LUCENT_KEYPASS -dname "CN=Lucent home" >/dev/null)
+  # A new key means the TV refuses updates over the old app, so it is never made by accident.
+  if [[ ${LUCENT_NEW_KEY:-} != 1 ]]; then
+    echo "error: no signing key at $KEYSTORE. Unzip signing-key-keep-private.zip there, or set LUCENT_KEYSTORE." >&2
+    echo "  (LUCENT_NEW_KEY=1 makes a new key, but then the TV needs the old app removed first.)" >&2
+    exit 1
+  fi
+  mkdir -p "$(dirname "$KEYSTORE")"
+  chmod 700 "$(dirname "$KEYSTORE")" 2>/dev/null || true
+  [[ -n $pass ]] || pass=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
+  (umask 077; printf '%s' "$pass" > "$KEYSTORE.pass")
+  (umask 077; LUCENT_KEYPASS=$pass keytool -genkeypair -keystore "$KEYSTORE" -alias lucent -keyalg RSA -keysize 4096 \
+    -validity 10000 -storepass:env LUCENT_KEYPASS -keypass:env LUCENT_KEYPASS -dname "CN=Lucent home" >/dev/null)
   echo "created signing key $KEYSTORE (keep it: updates must be signed with the same key)"
 fi
+[[ -n $pass ]] || { echo "error: no password for $KEYSTORE (set LUCENT_KEYPASS or put it in $KEYSTORE.pass)" >&2; exit 1; }
+# The password reaches only keytool and apksigner, through their environment: never a command
+# line (which other programs can read from the process list), and never javac, d8 or aapt2.
+unset LUCENT_KEYPASS
 
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/lucent.XXXXXX")
 trap 'rm -rf "$WORK"' EXIT
@@ -68,7 +82,7 @@ fi
 "$BT/zipalign" -f -p 4 "$WORK/app.apk" "$WORK/aligned.apk"
 # v2 and v3 signatures. Fire OS 8 checks them over the whole file, so a changed byte anywhere
 # in the APK makes it refuse to install.
-"$APKSIGNER" sign --ks "$KEYSTORE" --ks-pass env:LUCENT_KEYPASS --key-pass env:LUCENT_KEYPASS \
+LUCENT_KEYPASS=$pass "$APKSIGNER" sign --ks "$KEYSTORE" --ks-pass env:LUCENT_KEYPASS --key-pass env:LUCENT_KEYPASS \
   --v1-signing-enabled false --v2-signing-enabled true --v3-signing-enabled true \
   --out build/lucent.apk "$WORK/aligned.apk"
 "$APKSIGNER" verify build/lucent.apk
@@ -77,7 +91,7 @@ printf 'built build/lucent.apk  %s bytes\n' "$(wc -c < build/lucent.apk | tr -d 
 # The signature as Android reports it (Java's Arrays.hashCode of the certificate), which
 # install.sh checks before it hands over the HOME button. Only a new key changes it.
 sig=1
-for b in $(keytool -exportcert -keystore "$KEYSTORE" -alias lucent -storepass:env LUCENT_KEYPASS 2>/dev/null | od -An -v -td1); do
+for b in $(LUCENT_KEYPASS=$pass keytool -exportcert -keystore "$KEYSTORE" -alias lucent -storepass:env LUCENT_KEYPASS 2>/dev/null | od -An -v -td1); do
   sig=$(( (31 * sig + b) & 0xFFFFFFFF ))
 done
 sig=$(printf '%x' "$sig")
