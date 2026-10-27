@@ -2137,6 +2137,7 @@ a.btn { text-decoration: none; }
 .ask-send .ico { width: 20px; height: 20px; }
 .ask-send.busy .ico { display: none; }
 .ask-hint { color: var(--text-3); font-size: 12.5px; padding-left: 6px; }
+@media (hover: hover) and (pointer: fine) { .ask-hint { display: none; } }
 .ask-nokey { display: grid; gap: 12px; justify-items: start; }
 .ask-nokey-text { font: 400 22px/1.25 var(--font-serif); letter-spacing: -.01em; color: var(--text-2); }
 .card-ask .amber-note { margin: 0; }
