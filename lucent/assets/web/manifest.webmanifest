@@ -1,0 +1,14 @@
+{
+  "name": "Lucent",
+  "short_name": "Lucent",
+  "description": "The control center for Lucent, the home screen on the living room TV.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0E0D0C",
+  "theme_color": "#0E0D0C",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
