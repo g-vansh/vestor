@@ -9,7 +9,7 @@ import java.util.TimeZone;
  * When the watched docks will run out of e-bikes, and when the next one will turn up, from the
  * model in assets/bikes_model.json (fitted on every Bluebikes trip at these docks since March
  * 2024, the community status log of autumn 2026, MIT's academic calendar and Logan's weather; the
- * analysis is in docs/BIKES_MODEL.md).
+ * analysis is in analysis/bikes/README.md).
  *
  * The stock at Vassar St and at Erie St moves minute by minute as a pair: riders take e-bikes at
  * each dock's demand rate (for this day type, time, month, rain and temperature), riders bring

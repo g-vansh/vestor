@@ -350,20 +350,37 @@ Lucent is in front, never over a film) and on the phone.
 web page in a question it only plays titles and opens apps: a change to the TV or a new automation
 needs you to ask for it on its own, so nothing a web page says can steer the TV.
 
-**Cost.** It uses Claude Opus 5.5. A plain question costs about 1 to 4 cents, one with a web
-search 5 to 10 cents, and a search answer takes 10 to 20 seconds. Lucent prices every answer as it
-arrives and stops for the month at your cap (40 dollars unless you change it on the phone, up to
-100), with at most 150 questions a day. The phone shows the month's total.
+**Cost.** Every question starts on Claude Haiku 5.5, the cheapest model. Haiku asks Opus 5.5,
+Anthropic's most capable model, for advice only when a question needs real reasoning, and Lucent
+retries on Sonnet 5.5 if Haiku stumbles. Measured on this build:
+
+| Kind of question | Cost | Time |
+|---|---|---|
+| Plain question or command ("15% of 84", "start the bike finder") | 0.02 to 0.08 cents | about 2 s |
+| Long plan, comparison or explanation | about 0.1 cents | 8 to 15 s |
+| Needs the web, including finding a title to play | about 1.2 cents (1 cent is the search fee) | 5 to 10 s |
+| Hard question where Haiku consults Opus (it rarely needs to) | 4 to 8 cents | 10 to 20 s |
+
+So a dollar covers more than a thousand everyday questions. If you would rather pay more for the
+strongest model every time, choose "Always the best model" on the phone under Settings › Claude:
+each answer then runs on Opus 5.5, about 1 to 4 cents, or 5 to 10 with a search. Lucent prices
+every answer as it arrives and stops for the month at your cap (40 dollars unless you change it on
+the phone, up to 100), with at most 150 questions a day and 6 a minute. The phone shows the
+month's total and each answer's model and cost.
 
 **Setup, once.** Either run the installer with the key in a file: `./install.sh --claude-key
 claude-key.txt` (or `LUCENT_CLAUDE_KEY=claude-key.txt ./install.sh` while updating), or paste it
 on the phone page under Settings › Claude. The key then lives only in Lucent's private storage on
 the TV and goes only to Anthropic. Phones see its last four characters, never the key.
 
-**Privacy.** Each question goes to Anthropic with a few lines of what the TV shows: the time, the
-bikes and their forecast, the weather, the shuttles, your next few calendar entries by title and
-time, what's playing, the apps and the Samsung's modes. Nothing else from the TV, and nothing
-from your phones.
+**Privacy.** When you ask, the TV sends Anthropic your question, the last few questions and
+answers, and what the TV knows right now: the time, both docks' bike counts and forecast, the
+finder's state, the weather, shuttle times, your next few calendar entries by title and time,
+what's playing, your installed app names, the Samsung's inputs and picture and sound modes, your
+automations and the wallpaper look. Questions asked from any phone or the TV share that same short
+memory. Web searches use your rough location (Cambridge, MA). Nothing from your phones themselves
+goes out. Anthropic does not train on API traffic and deletes it within 30 days
+([Anthropic privacy center](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data)).
 
 **Spoken questions without a phone in hand.** If your stick has Alexa+ (free on supported Fire TVs
 in the US since August), the remote's microphone already answers general questions. Ask Lucent is
