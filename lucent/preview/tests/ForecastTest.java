@@ -48,6 +48,13 @@ public final class ForecastTest {
                 }
             }
         }
+        // An older model without the empty-dock restock calibration falls back to the general one.
+        checks++;
+        Forecast old = Forecast.parse(model.replaceFirst(",\"restockNext\":[0-9.]+", ""));
+        if (old.calRestockNext != old.calRestock) {
+            failures++;
+            System.out.println("FAIL restockNext fallback: " + old.calRestockNext + " vs " + old.calRestock);
+        }
         refuses("not json", "{");
         refuses("wrong version", model.replace("\"version\":1", "\"version\":2"));
         refuses("a rate out of range", model.replaceFirst("\"wet\":(-?[0-9.]+)", "\"wet\":99"));
