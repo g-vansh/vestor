@@ -106,8 +106,8 @@ final class Catalog {
                 ResolveInfo ri = pm.resolveActivity(launch, 0);
                 if (ri == null || ri.activityInfo == null) continue;
                 found.put(pkg, new Entry(pkg, label(ri.loadLabel(pm), pkg), launch, ri.activityInfo, true));
-            } catch (RuntimeException ignored) {
-                // not installed
+            } catch (RuntimeException | OutOfMemoryError | StackOverflowError ignored) {
+                // not installed, or a label that cannot be loaded
             }
         }
         return new ArrayList<>(found.values());
@@ -120,7 +120,12 @@ final class Catalog {
             ActivityInfo ai = ri.activityInfo;
             if (ai == null || ai.packageName.equals(self) || found.containsKey(ai.packageName)) continue;
             Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(category).setClassName(ai.packageName, ai.name);
-            found.put(ai.packageName, new Entry(ai.packageName, label(ri.loadLabel(pm), ai.packageName), launch, ai, leanback));
+            try {
+                found.put(ai.packageName, new Entry(ai.packageName, label(ri.loadLabel(pm), ai.packageName), launch, ai, leanback));
+            } catch (RuntimeException | OutOfMemoryError | StackOverflowError e) {
+                // An app whose name cannot be loaded (a huge or looping label resource) is left
+                // off the dock rather than taking the whole list down with it.
+            }
         }
     }
 

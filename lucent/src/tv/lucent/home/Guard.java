@@ -14,12 +14,16 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Takes the HOME button back from Amazon's launcher. Adapted from dumbtv's Guard
@@ -74,12 +78,27 @@ public final class Guard extends AccessibilityService {
     };
     private long lastLaunch;
     private boolean onAmazonHome;
+    private final List<PopView> pops = new ArrayList<>();
+    private final Runnable recheck = new Runnable() {
+        @Override
+        public void run() {
+            if (!paused && onAmazonHome && takeover(Guard.this) && !Crash.tooMany(Guard.this)) launchWhenCovered();
+        }
+    };
     private final BroadcastReceiver screenOn = new BroadcastReceiver() {
         @Override
         public void onReceive(Context c, Intent i) {
-            if (!paused && onAmazonHome && !Crash.tooMany(c)) launchWhenCovered();
+            if (!paused && onAmazonHome && takeover(c) && !Crash.tooMany(c)) launchWhenCovered();
+            // Fire OS often puts its own home up a moment after waking: look again shortly.
+            handler.removeCallbacks(recheck);
+            handler.postDelayed(recheck, 600);
         }
     };
+
+    /** Whether Lucent should take HOME at all ("Lucent off" in Settings says no). */
+    private static boolean takeover(Context c) {
+        return !"off".equals(c.getSharedPreferences("lucent", MODE_PRIVATE).getString(Prefs.TAKEOVER, "on"));
+    }
 
     /** Lets Amazon's home stay on screen until the user leaves it. */
     static void pause() {
@@ -134,7 +153,8 @@ public final class Guard extends AccessibilityService {
             if (notice != null && notice.showing()) notice.hide();
             return;
         }
-        if (f.state == Model.Finder.FOUND) showNotice(Notice.found(f, s), 30000);
+        // A ringing alarm has its own, bigger card.
+        if (f.state == Model.Finder.FOUND && !Alarm.ringing()) showNotice(Notice.found(f, s), 30000);
         else if (f.state == Model.Finder.TIMED_OUT) showNotice(Notice.timedOut(f, s), 12000);
         else if (f.state == Model.Finder.STOPPED && notice != null) notice.hide();
     }
@@ -187,6 +207,141 @@ public final class Guard extends AccessibilityService {
         handler.postDelayed(noticeDone, forMs);
     }
 
+    // ---- Moments over other apps -------------------------------------------------------------
+
+    /** Hub news, on the main thread. The home screen shows its own when it is in front. */
+    static void hub(int what, Object detail) {
+        Guard g = running;
+        if (g == null) return;
+        if (what == Hub.ALARM) {
+            if (Boolean.TRUE.equals(detail)) {
+                if (!Home.inFront) g.showAlarm();
+            } else {
+                g.dropPops(PopView.ALARM);
+            }
+            return;
+        }
+        if (Home.inFront) {
+            g.dropPops(0);
+            return;
+        }
+        if (what == Hub.NOTE && detail instanceof Notes.Note) g.showNote((Notes.Note) detail);
+        else if (what == Hub.HEARTS && detail instanceof String[]) g.showHearts(((String[]) detail)[0]);
+    }
+
+    private void showNote(Notes.Note n) {
+        dropPops(PopView.NOTE);
+        float d = getResources().getDisplayMetrics().density;
+        float[] size = Pop.noteSize(n, PopView.NOTE_DRAW);
+        PopView v = new PopView(this, PopView.NOTE, 20000, Hub.get(this).is24h(), popDone);
+        v.note(n);
+        addPop(v, Math.round((size[0] + 56) * d), Math.round((size[1] + 70) * d), Gravity.TOP | Gravity.END, false);
+    }
+
+    private void showHearts(String kind) {
+        dropPops(PopView.HEARTS);
+        float d = getResources().getDisplayMetrics().density;
+        PopView v = new PopView(this, PopView.HEARTS, 6000, false, popDone);
+        v.hearts(kind);
+        addPop(v, Math.round(380 * d), WindowManager.LayoutParams.MATCH_PARENT, Gravity.TOP | Gravity.END, false);
+    }
+
+    private void showAlarm() {
+        for (PopView p : pops) if (p.kind == PopView.ALARM) return;
+        if (notice != null) notice.hide();
+        float d = getResources().getDisplayMetrics().density;
+        PopView v = new PopView(this, PopView.ALARM, Long.MAX_VALUE / 4, false, popDone);
+        v.alarm(Finder.get().snapshot(), Finder.get().station());
+        addPop(v, Math.round((Pop.ALARM_W + 80) * d), Math.round((Pop.ALARM_H + 90) * d), Gravity.TOP | Gravity.CENTER_HORIZONTAL, true);
+        v.requestFocus();
+    }
+
+    private final PopView.Done popDone = new PopView.Done() {
+        @Override
+        public void done(final PopView v) {
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    removePop(v);
+                }
+            });
+        }
+    };
+
+    /**
+     * An accessibility overlay: needs no "draw over apps" grant. Notes and hearts are not
+     * focusable or touchable, so the film keeps the remote. The alarm alone is focusable, so a
+     * press of any button reaches it and stops it.
+     */
+    private void addPop(PopView v, int w, int h, int gravity, boolean focusable) {
+        int flags = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
+        if (!focusable) flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(w, h, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                flags, PixelFormat.TRANSLUCENT);
+        lp.gravity = gravity;
+        lp.windowAnimations = 0;
+        lp.setTitle("Lucent");
+        try {
+            ((WindowManager) getSystemService(WINDOW_SERVICE)).addView(v, lp);
+            pops.add(v);
+        } catch (RuntimeException ignored) {
+            // the moment is missed, nothing else
+        }
+    }
+
+    private void removePop(PopView v) {
+        pops.remove(v);
+        try {
+            ((WindowManager) getSystemService(WINDOW_SERVICE)).removeView(v);
+        } catch (IllegalArgumentException ignored) {
+            // already gone
+        }
+    }
+
+    /** Lets every pop of {@code kind} leave (0: all but the alarm). */
+    private void dropPops(int kind) {
+        for (PopView p : new ArrayList<>(pops)) {
+            if (kind == 0 ? p.kind != PopView.ALARM : p.kind == kind) p.leave();
+        }
+    }
+
+    // ---- Waking and sleeping ------------------------------------------------------------------
+
+    /**
+     * Wakes the Fire TV (which turns the TV on over HDMI-CEC when the TV allows it) and, with
+     * {@code toFront}, brings Lucent to the front. Used by Alexa's "find an e-bike" and, if chosen,
+     * by a new note.
+     */
+    @SuppressWarnings("deprecation")
+    static void wake(Context c, boolean toFront) {
+        try {
+            PowerManager pm = (PowerManager) c.getSystemService(Context.POWER_SERVICE);
+            if (pm != null && !pm.isInteractive()) {
+                PowerManager.WakeLock w = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                        "lucent:wake");
+                w.acquire(5000);
+            }
+        } catch (RuntimeException ignored) {
+            // waking is a courtesy
+        }
+        if (toFront && !Home.inFront) {
+            paused = false;
+            home(c);
+        }
+    }
+
+    /** Puts the Fire TV to sleep, as its own Sleep does. Needs the HOME service running. */
+    static boolean sleep() {
+        Guard g = running;
+        if (g == null) return false;
+        try {
+            return g.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     private static PendingIntent launch(Context c) {
         Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
                 .setClass(c, Home.class)
@@ -212,6 +367,12 @@ public final class Guard extends AccessibilityService {
     protected void onServiceConnected() {
         Crash.watch(this);
         running = this;
+        // The hub (and with it the control center's server) lives as long as this service.
+        try {
+            Hub.get(this);
+        } catch (RuntimeException ignored) {
+            // the home screen starts it instead
+        }
         View view = new View(this);
         view.setVisibility(View.GONE);
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
@@ -246,6 +407,8 @@ public final class Guard extends AccessibilityService {
             }
         }
         notice = null;
+        for (PopView p : new ArrayList<>(pops)) removePop(p);
+        handler.removeCallbacks(recheck);
         if (running == this) running = null;
         super.onDestroy();
     }
@@ -265,7 +428,7 @@ public final class Guard extends AccessibilityService {
         // Only the package and class the system attaches to the event are read. They name the
         // window's owner, which another app cannot fake; no text or screen content is touched.
         onAmazonHome = cls != null && AMAZON_HOME.contentEquals(cls);
-        if (paused || !onAmazonHome) return;
+        if (paused || !onAmazonHome || !takeover(this)) return;
         long now = SystemClock.uptimeMillis();
         if (now - lastLaunch < REPEAT_MS) return;
         lastLaunch = now;
