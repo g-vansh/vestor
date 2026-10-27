@@ -19,6 +19,8 @@ final class Json {
      * list, has about 15,000 values) are refused, so a hostile answer cannot fill the memory.
      */
     private static final int MAX_VALUES = 250000, MAX_STRING = 16 * 1024;
+    /** The most {@link #objectWith} parses after an entry's opening brace. */
+    private static final int MAX_ENTRY = 16 * 1024;
 
     private Json(String s, int start) {
         this.s = s;
@@ -42,8 +44,9 @@ final class Json {
      * whose strings hold no braces (GBFS status does not); returns null when not found.
      *
      * The work is bounded whatever the input: a station's entry is a few hundred bytes, so the
-     * search back for its opening brace stops after 8 KB, and only the first 64 places the value
-     * appears are tried.
+     * search back for its opening brace stops after 8 KB, the parse reads at most 16 KB past that
+     * brace, and only the first 64 places the value appears are tried. The first parse that
+     * fails ends the search: in a well-formed feed none does.
      */
     static Map<String, Object> objectWith(String text, String key, String value) {
         if (text == null) return null;
@@ -72,15 +75,15 @@ final class Json {
             }
             if (open < 0) return null;
             try {
-                Json p = new Json(text, open);
+                Json p = new Json(text.substring(open, Math.min(text.length(), open + 1 + MAX_ENTRY)), 0);
                 Object v = p.value();
                 if (v instanceof Map) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> m = (Map<String, Object>) v;
                     if (value.equals(m.get(key))) return m;
                 }
-            } catch (IllegalArgumentException ignored) {
-                // keep looking
+            } catch (IllegalArgumentException malformed) {
+                return null;
             }
         }
         return null;

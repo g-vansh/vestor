@@ -1,12 +1,15 @@
 package tv.lucent.home;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -19,6 +22,9 @@ import java.util.zip.ZipOutputStream;
  */
 public final class Hostile {
     private static int checks, failures;
+    /** The stops Live asks the realtime feed for. */
+    private static final java.util.Set<String> MIT_STOPS =
+            new java.util.HashSet<>(java.util.Arrays.asList(Transit.STOP_GRAD_JUNCTION_W, Transit.STOP_W98_VASSAR));
 
     public static void main(String[] args) throws Exception {
         Path dir = Paths.get(args.length > 0 ? args[0] : "preview/fixtures");
@@ -73,6 +79,7 @@ public final class Hostile {
         archiveRejects("traversal names read as data only", traversal(), false);
 
         budgets();
+        amplifiers(dir);
         allowlist();
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
@@ -135,6 +142,7 @@ public final class Hostile {
 
     private static void protobuf(byte[] b) {
         run("Gtfs.tripUpdates", () -> Gtfs.tripUpdates(b));
+        run("Gtfs.tripUpdates at MIT's stops", () -> Gtfs.tripUpdates(b, MIT_STOPS));
     }
 
     private static void protobufRejects(String what, byte[] b) {
@@ -269,6 +277,284 @@ public final class Hostile {
             failures++;
             System.out.println("FAIL Text.clean: " + cleaned.substring(0, Math.min(40, cleaned.length())));
         }
+    }
+
+    /**
+     * Answers that cost far more than their size (from the October 2026 audit): a timetable whose
+     * every row became a map of all its columns, a station lookup that parsed the whole document
+     * once for each place the id appears, and a realtime feed kept whole whatever stops it names.
+     */
+    private static void amplifiers(Path dir) throws Exception {
+        timetableHeap();
+        timetableBudget();
+        lookupBounded();
+        lookupAsParsed(dir);
+        realtimeKept(dir);
+    }
+
+    /**
+     * Hostile timetables read in a JVM with the TV's heap ({@link Heap}): each must be kept or
+     * refused there, never run it out of memory.
+     */
+    private static void timetableHeap() throws Exception {
+        String java = Paths.get(System.getProperty("java.home"), "bin", "java").toString();
+        ProcessBuilder pb = new ProcessBuilder(java, "-Xmx192m", "-cp", System.getProperty("java.class.path"),
+                Heap.class.getName());
+        pb.environment().remove("JAVA_TOOL_OPTIONS");
+        pb.redirectErrorStream(true);
+        Process p = pb.start();
+        int seen = 0;
+        StringBuilder other = new StringBuilder();
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = r.readLine()) != null) {
+                if (line.startsWith("ok ") || line.startsWith("FAIL ")) {
+                    checks++;
+                    seen++;
+                    if (line.startsWith("FAIL ")) {
+                        failures++;
+                        System.out.println(line);
+                    }
+                } else {
+                    other.append("    ").append(line).append('\n');
+                }
+            }
+        }
+        int code = p.waitFor();
+        checks++;
+        if (code != 0 || seen != Heap.CASES) {
+            failures++;
+            System.out.print("FAIL timetables at -Xmx192m: exit " + code + ", " + seen + " of " + Heap.CASES + " cases\n" + other);
+        }
+    }
+
+    /** Reads each hostile timetable with the heap its JVM was given, one line per case. */
+    public static final class Heap {
+        static final int CASES = 4;
+
+        public static void main(String[] args) throws IOException {
+            StringBuilder named = new StringBuilder("stop_id,stop_name");
+            for (int c = 2; c < 48; c++) named.append(",c").append(c);
+            String commas = repeat(",", 47) + "\n";
+            read("the audit's 7 KB zip, 48 named columns over 50,000 rows of 47 commas",
+                    zip("stops.txt", named + "\n" + repeat(commas, 50000)));
+            StringBuilder wide = new StringBuilder(named).append('\n');
+            for (int i = 0; i < 50000; i++) wide.append(i).append(",Stop ").append(i).append(repeat(",", 46)).append('\n');
+            read("50,000 distinct stops, 48 columns each", zip("stops.txt", wide.toString()));
+            read("three tables of 190,000 distinct rows", distinct(190000));
+            byte[] fifteen = new byte[15 << 20];
+            java.util.Arrays.fill(fifteen, (byte) ',');
+            read("15 MB of commas", zip("stops.txt", new String(fifteen, StandardCharsets.US_ASCII)));
+        }
+
+        private static void read(String what, byte[] zip) {
+            long t0 = System.nanoTime();
+            try {
+                Gtfs.Static st = Gtfs.readStatic(zip);
+                int kept = st.tripRoute.size() + st.routeLong.size() + st.routeShort.size() + st.stopName.size();
+                System.out.println("ok " + what + ": " + zip.length + " B zip, kept " + kept + ", "
+                        + (System.nanoTime() - t0) / 1000000 + " ms");
+            } catch (IOException | IllegalArgumentException refused) {
+                System.out.println("ok " + what + ": " + zip.length + " B zip, refused (" + refused.getMessage() + "), "
+                        + (System.nanoTime() - t0) / 1000000 + " ms");
+            } catch (Throwable t) {
+                System.out.println("FAIL " + what + ": " + t);
+            }
+        }
+
+        /** All three tables, {@code n} rows each, every key different. */
+        static byte[] distinct(int n) throws IOException {
+            StringBuilder trips = new StringBuilder("trip_id,route_id\n");
+            StringBuilder routes = new StringBuilder("route_id,route_long_name,route_short_name\n");
+            StringBuilder stops = new StringBuilder("stop_id,stop_name\n");
+            for (int i = 0; i < n; i++) {
+                trips.append('t').append(i).append(",r").append(i).append('\n');
+                routes.append('r').append(i).append(",Long ").append(i).append(",S").append(i).append('\n');
+                stops.append(i).append(",Stop ").append(i).append('\n');
+            }
+            return zip("trips.txt", trips.toString(), "routes.txt", routes.toString(), "stops.txt", stops.toString());
+        }
+
+        static byte[] zip(String... nameThenText) throws IOException {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ZipOutputStream z = new ZipOutputStream(out);
+            for (int i = 0; i + 1 < nameThenText.length; i += 2) {
+                z.putNextEntry(new ZipEntry(nameThenText[i]));
+                z.write(nameThenText[i + 1].getBytes(StandardCharsets.UTF_8));
+                z.closeEntry();
+            }
+            z.close();
+            return out.toByteArray();
+        }
+    }
+
+    static String repeat(String s, int n) {
+        StringBuilder b = new StringBuilder(s.length() * n);
+        for (int i = 0; i < n; i++) b.append(s);
+        return b.toString();
+    }
+
+    /**
+     * Far more rows than MIT's few hundred are refused rather than kept, and a timetable many
+     * times MIT's size is still kept whole.
+     */
+    private static void timetableBudget() throws IOException {
+        StringBuilder trips = new StringBuilder("trip_id,route_id\n");
+        for (int i = 0; i < 150000; i++) trips.append("trip-").append(i).append(",63220\n");
+        archiveRejects("150,000 distinct trips", Heap.zip("trips.txt", trips.toString()));
+        checks++;
+        try {
+            Gtfs.Static st = Gtfs.readStatic(Heap.distinct(5000));
+            if (st.tripRoute.size() != 5000 || st.routeLong.size() != 5000 || st.stopName.size() != 5000
+                    || !"Long 4999".equals(st.name("r4999"))) {
+                failures++;
+                System.out.println("FAIL 5,000-row timetable: " + st.tripRoute.size() + " trips, " + st.stopName.size() + " stops");
+            }
+        } catch (Throwable t) {
+            fail("5,000-row timetable", t);
+        }
+    }
+
+    /**
+     * The id at 64 places at the top level, 6 MB of stations, then an error: the lookup must cost
+     * a small multiple of one parse of the whole document, not one parse per place.
+     */
+    private static void lookupBounded() {
+        StringBuilder b = new StringBuilder("{");
+        for (int i = 0; i < 64; i++) b.append("\"station_id\":\"x\",");
+        b.append("\"stations\":[");
+        String station = "{\"name\":\"" + repeat("Westgate ", 12) + "\"},";
+        while (b.length() < 6 * 1024 * 1024) b.append(station);
+        b.append("{}]!");
+        String doc = b.toString();
+        long parse = Long.MAX_VALUE, lookup = Long.MAX_VALUE;
+        Map<String, Object> found = null;
+        for (int i = 0; i < 4; i++) {
+            long t0 = System.nanoTime();
+            try {
+                Json.parse(doc);
+            } catch (IllegalArgumentException expected) {
+                // the trailing error
+            }
+            long t1 = System.nanoTime();
+            found = Json.objectWith(doc, "station_id", "x");
+            long t2 = System.nanoTime();
+            parse = Math.min(parse, t1 - t0);
+            lookup = Math.min(lookup, t2 - t1);
+        }
+        checks++;
+        if (lookup > 4 * parse + 20000000L || found != null) {
+            failures++;
+            System.out.printf("FAIL lookup with 64 top-level ids: %.1f ms against %.1f ms for one parse, found %s%n",
+                    lookup / 1e6, parse / 1e6, found);
+        }
+    }
+
+    /** Every station a real status document holds is found exactly as a full parse reads it. */
+    private static void lookupAsParsed(Path dir) throws IOException {
+        for (String name : new String[] {"gbfs_status.json", "gbfs_status_found.json"}) {
+            String doc = new String(Files.readAllBytes(dir.resolve(name)), StandardCharsets.UTF_8);
+            List<Object> stations = Json.arr(Json.obj(Json.obj(Json.parse(doc)), "data"), "stations");
+            int differ = 0;
+            for (Object o : stations) {
+                Map<String, Object> want = Json.obj(o);
+                Map<String, Object> got = Json.objectWith(doc, "station_id", Json.str(want, "station_id", ""));
+                checks++;
+                if (!want.equals(got)) {
+                    failures++;
+                    if (differ++ < 3) System.out.println("FAIL lookup in " + name + ": want " + want + ", got " + got);
+                }
+            }
+            checks++;
+            if (stations.size() < 500 || Json.objectWith(doc, "station_id", "no-such-station") != null) {
+                failures++;
+                System.out.println("FAIL lookup in " + name + ": " + stations.size() + " stations, or an unknown id found");
+            }
+        }
+    }
+
+    /**
+     * A 6 MB realtime feed keeps at most the cap, however many predictions it holds, and asking
+     * for MIT's two stops changes none of the lines shown.
+     */
+    private static void realtimeKept(Path dir) throws IOException {
+        byte[] ours = bigFeed(Transit.STOP_W98_VASSAR, 6 * 1024 * 1024);
+        byte[] theirs = bigFeed("1", 6 * 1024 * 1024);
+        int cap = Gtfs.MAX_UPDATES;
+        kept("6 MB feed at a stop Lucent shows, every stop", Gtfs.tripUpdates(ours), cap, cap);
+        kept("6 MB feed at another stop, every stop", Gtfs.tripUpdates(theirs), cap, cap);
+        kept("6 MB feed at a stop Lucent shows, MIT's stops", Gtfs.tripUpdates(ours, MIT_STOPS), cap, cap);
+        kept("6 MB feed at another stop, MIT's stops", Gtfs.tripUpdates(theirs, MIT_STOPS), 0, 0);
+        timed("700,000 predictions at another stop", 1000, () -> Gtfs.tripUpdates(theirs, MIT_STOPS));
+
+        byte[] pb = Files.readAllBytes(dir.resolve("mit_trips.pb"));
+        Gtfs.Static st = Gtfs.readStatic(Files.readAllBytes(dir.resolve("mit_gtfs.zip")));
+        long now = 1793124300000L;
+        Model.Line[] all = {Transit.tech(), Transit.tech2(), Transit.saferide()};
+        Model.Line[] some = {Transit.tech(), Transit.tech2(), Transit.saferide()};
+        Transit.mit(Gtfs.tripUpdates(pb), st, now, all[0], all[1], all[2]);
+        List<Gtfs.Update> mine = Gtfs.tripUpdates(pb, MIT_STOPS);
+        Transit.mit(mine, st, now, some[0], some[1], some[2]);
+        for (int i = 0; i < 3; i++) {
+            checks++;
+            if (all[i].minutes.isEmpty() || !all[i].minutes.equals(some[i].minutes)) {
+                failures++;
+                System.out.println("FAIL " + all[i].id + " from MIT's stops: " + some[i].minutes + ", every stop " + all[i].minutes);
+            }
+        }
+        checks++;
+        for (Gtfs.Update u : mine) {
+            if (!MIT_STOPS.contains(u.stopId)) {
+                failures++;
+                System.out.println("FAIL kept a prediction at stop " + u.stopId);
+                break;
+            }
+        }
+    }
+
+    private static void kept(String what, List<Gtfs.Update> got, int min, int max) {
+        checks++;
+        if (got.size() < min || got.size() > max) {
+            failures++;
+            System.out.println("FAIL " + what + ": kept " + got.size() + ", want " + min + " to " + max);
+        }
+    }
+
+    /**
+     * A TripUpdates feed of about {@code size} bytes: one trip whose every stop-time update is an
+     * arrival at {@code stop} (9 bytes each for a one-character stop, so about 700,000 in 6 MB).
+     */
+    static byte[] bigFeed(String stop, int size) {
+        byte[] id = stop.getBytes(StandardCharsets.UTF_8);
+        ByteArrayOutputStream update = new ByteArrayOutputStream();
+        // TripUpdate.trip { trip_id: "T-1" }, then StopTimeUpdate { arrival { time: 1 }, stop_id }.
+        field(update, 1, new byte[] {0x0A, 3, 'T', '-', '1'});
+        ByteArrayOutputStream one = new ByteArrayOutputStream();
+        field(one, 2, new byte[] {0x10, 0x01});
+        field(one, 4, id);
+        byte[] stu = one.toByteArray();
+        while (update.size() < size) field(update, 2, stu);
+        ByteArrayOutputStream entity = new ByteArrayOutputStream();
+        field(entity, 1, new byte[] {'e'});
+        field(entity, 3, update.toByteArray());
+        ByteArrayOutputStream feed = new ByteArrayOutputStream();
+        field(feed, 2, entity.toByteArray());
+        return feed.toByteArray();
+    }
+
+    /** A length-delimited protobuf field. */
+    private static void field(ByteArrayOutputStream out, int number, byte[] body) {
+        varint(out, number << 3 | 2);
+        varint(out, body.length);
+        out.write(body, 0, body.length);
+    }
+
+    private static void varint(ByteArrayOutputStream out, long v) {
+        while ((v & ~0x7FL) != 0) {
+            out.write((int) (v & 0x7F) | 0x80);
+            v >>>= 7;
+        }
+        out.write((int) v);
     }
 
     /** Must end, by any of the expected exceptions or none, within {@code ms}. */
