@@ -283,10 +283,7 @@
           init.body = JSON.stringify(opts.body);
         }
         const res = await fetch(path, init);
-        if (opts.blob) {
-          const blob = res.ok ? await res.blob() : null;
-          return { status: res.status, ok: res.ok, data: blob };
-        }
+        if (opts.blob && res.ok) return { status: res.status, ok: true, data: await res.blob() };
         let data = {};
         try {
           const text = await res.text();
@@ -335,7 +332,7 @@
         throw new Error(netMessage(e));
       }
       if (r.status === 401) {
-        toPairing();
+        toPairing(str(r.data.error));
         throw new Error('This device is no longer paired.');
       }
       if (r.status === 429 && attempt === 0) {
@@ -348,9 +345,16 @@
       }
       const err = new Error(opts.errors && opts.errors[r.status] ? opts.errors[r.status] : errorText(r.status, r.data));
       err.status = r.status;
+      err.data = r.data;
       throw err;
     }
     throw new Error(errorText(429));
+  }
+
+  // The TV's own words for an error when it sent some, else the general message.
+  function serverError(e) {
+    const said = e && e.data ? str(obj(e.data).error) : '';
+    return said && !/^\d+$/.test(said) ? said : (e && e.message) || 'That didn’t go through.';
   }
 
   function setSetting(key, value) {
@@ -389,7 +393,7 @@
       const r = await api('/api/state', { timeout: 9000 });
       if (r.status === 401) {
         poller.inflight = false;
-        toPairing();
+        toPairing(str(r.data.error));
         return;
       }
       if (r.status === 429) {
@@ -565,28 +569,37 @@
     return { el: sw, set: function (v) { if (!busy) { on = !!v; paint(); } }, get value() { return on; } };
   }
 
-  // First tap arms the button, a second tap within a few seconds does it.
+  // First tap arms the button, a second tap within a few seconds does it. A button with a
+  // data-fk key stays armed when a fresh state redraws it between the two taps.
+  const armedKeys = {};
   function confirmTap(btn, prompt, fn) {
     let armed = false;
     let timer = 0;
+    const key = btn.getAttribute('data-fk');
     const original = Array.prototype.slice.call(btn.childNodes);
+    function arm(ms) {
+      armed = true;
+      btn.classList.add('armed');
+      btn.replaceChildren(document.createTextNode(prompt));
+      timer = setTimeout(reset, ms);
+    }
     function reset() {
       armed = false;
       clearTimeout(timer);
+      if (key) delete armedKeys[key];
       btn.classList.remove('armed');
       btn.replaceChildren.apply(btn, original);
     }
     btn.addEventListener('click', function () {
       if (!armed) {
-        armed = true;
-        btn.classList.add('armed');
-        btn.replaceChildren(document.createTextNode(prompt));
-        timer = setTimeout(reset, 3500);
+        if (key) armedKeys[key] = Date.now() + 3500;
+        arm(3500);
         return;
       }
       reset();
       fn();
     });
+    if (key && armedKeys[key] > Date.now()) arm(armedKeys[key] - Date.now());
   }
 
   let cardSeq = 0;
@@ -711,12 +724,14 @@
     retry.addEventListener('click', function () { retry.hidden = true; boot(); });
     $('#boot-text').textContent = 'Finding the TV…';
     let hello = null;
+    let signedOut = false;
     const first = api('/api/hello', { timeout: 8000 });
     loadFonts();
     for (let attempt = 0; attempt < 3 && !hello; attempt++) {
       try {
         const r = attempt === 0 ? await first : await api('/api/hello', { timeout: 8000 });
         if (r.ok) hello = r.data;
+        else if (r.status === 401 && str(r.data.error) === 'reused') { signedOut = true; hello = { paired: false }; }
         else if (r.status === 429) await sleep(2000);
         else break;
       } catch (e) {
@@ -734,11 +749,122 @@
     boot.key = '';
     if (hello.paired === true) startApp();
     else showPairing(key, typeof hello.pairing === 'boolean' ? hello.pairing : null);
+    if (signedOut) signedOutMessage();
+  }
+
+  /* ------------------------------------------------------------------ pairing proof */
+
+  // BEGIN pairing proof
+  // The QR secret never leaves the phone. The page proves it knows the secret with
+  // HMAC-SHA256 over a fresh nonce from the TV and a random value of its own. Plain http has
+  // no crypto.subtle, so SHA-256 is written out here. The test suite checks it against RFC 4231.
+  const SHA_K = (function () {
+    const k = new Uint32Array(64);
+    let n = 0;
+    for (let c = 2; n < 64; c++) {
+      let prime = true;
+      for (let d = 2; d * d <= c; d++) if (c % d === 0) { prime = false; break; }
+      if (!prime) continue;
+      k[n++] = Math.floor((Math.cbrt(c) % 1) * 4294967296);
+    }
+    return k;
+  })();
+  const SHA_H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+
+  function ror(x, n) { return (x >>> n) | (x << (32 - n)); }
+
+  function sha256(bytes) {
+    const len = bytes.length;
+    const total = ((len + 72) >> 6) << 6;
+    const m = new Uint8Array(total);
+    m.set(bytes);
+    m[len] = 0x80;
+    const view = new DataView(m.buffer);
+    view.setUint32(total - 8, Math.floor(len / 0x20000000));
+    view.setUint32(total - 4, (len << 3) >>> 0);
+    const H = Uint32Array.from(SHA_H);
+    const W = new Uint32Array(64);
+    for (let off = 0; off < total; off += 64) {
+      for (let i = 0; i < 16; i++) W[i] = view.getUint32(off + i * 4);
+      for (let i = 16; i < 64; i++) {
+        const x = W[i - 15], y = W[i - 2];
+        W[i] = (W[i - 16] + (ror(x, 7) ^ ror(x, 18) ^ (x >>> 3)) + W[i - 7] + (ror(y, 17) ^ ror(y, 19) ^ (y >>> 10))) >>> 0;
+      }
+      let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], hh = H[7];
+      for (let i = 0; i < 64; i++) {
+        const t1 = (hh + (ror(e, 6) ^ ror(e, 11) ^ ror(e, 25)) + ((e & f) ^ (~e & g)) + SHA_K[i] + W[i]) >>> 0;
+        const t2 = ((ror(a, 2) ^ ror(a, 13) ^ ror(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+        hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+      H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + hh) >>> 0;
+    }
+    const out = new Uint8Array(32);
+    const ov = new DataView(out.buffer);
+    for (let i = 0; i < 8; i++) ov.setUint32(i * 4, H[i]);
+    return out;
+  }
+
+  function hmacSha256(key, msg) {
+    if (key.length > 64) key = sha256(key);
+    const inner = new Uint8Array(64 + msg.length);
+    const outer = new Uint8Array(64 + 32);
+    for (let i = 0; i < 64; i++) {
+      const k = i < key.length ? key[i] : 0;
+      inner[i] = k ^ 0x36;
+      outer[i] = k ^ 0x5c;
+    }
+    inner.set(msg, 64);
+    outer.set(sha256(inner), 64);
+    return sha256(outer);
+  }
+
+  function utf8(text) { return new TextEncoder().encode(text); }
+  function toHex(bytes) { let s = ''; for (const b of bytes) s += (b < 16 ? '0' : '') + b.toString(16); return s; }
+
+  // n random bytes as base64url with no padding. getRandomValues works on plain http.
+  function randomToken(n) {
+    const bytes = new Uint8Array(n);
+    crypto.getRandomValues(bytes);
+    let bin = '';
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function pairProof(k, nonce, c, name) {
+    return toHex(hmacSha256(utf8(k), utf8('lucent-pair:' + nonce + ':' + c + ':' + name)));
+  }
+  // END pairing proof
+
+  // Checks the hash against RFC 4231 test case 2 once, so a broken engine falls back to the PIN.
+  let proofOk = null;
+  function proofWorks() {
+    if (proofOk === null) {
+      try {
+        proofOk = typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function' && typeof TextEncoder === 'function' &&
+          toHex(hmacSha256(utf8('Jefe'), utf8('what do ya want for nothing?'))) === '5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843';
+      } catch (e) {
+        proofOk = false;
+      }
+    }
+    return proofOk;
+  }
+
+  // Asks the TV for its current nonce and signs it with the key from the QR code. Null when no pairing window is open.
+  async function keyProof(name) {
+    if (!proofWorks()) throw new Error('no proof');
+    let r = await api('/api/hello', { timeout: 8000 });
+    // A signed out key gets one 401 that clears the cookie. Ask again for the nonce.
+    if (r.status === 401) r = await api('/api/hello', { timeout: 8000 });
+    const nonce = r.ok ? str(r.data.nonce) : '';
+    if (!nonce) return null;
+    const c = randomToken(16);
+    return { proof: pairProof(pairing.key, nonce, c, name), c: c, name: name };
   }
 
   /* ------------------------------------------------------------------ pairing */
 
-  const pairing = { step: 'code', key: '', pin: '', name: '', gen: 0, busy: false, lockUntil: 0, open: null, msg: '', kind: '', helloTimer: 0, ctl: null };
+  const pairing = { step: 'code', key: '', pin: '', name: '', gen: 0, busy: false, lockUntil: 0, open: null, msg: '', kind: '', helloTimer: 0, ctl: null, match: '' };
 
   function guessName() {
     const ua = navigator.userAgent || '';
@@ -776,11 +902,33 @@
     renderPairing();
     scheduleHello(key ? 8000 : 4000);
   }
-  function toPairing() {
-    if (!$('#pair').hidden) return;
+  // A 401 on a paired page. "reused" means the TV saw this key used from two places and signed it out.
+  function toPairing(reason) {
+    if (!$('#pair').hidden) {
+      if (reason === 'reused') signedOutMessage();
+      return;
+    }
     showPairing('', null);
+    if (reason === 'reused') { signedOutMessage(); return; }
     setPairMsg('This device isn’t paired with the TV any more. Pair it again to carry on.', 'warn');
     renderPairing();
+  }
+  // Signed out by the TV: forget what this page kept on the device and say so.
+  function signedOutMessage() {
+    forgetLocal();
+    setPairMsg('This ' + deviceNoun() + ' was signed out. Pair it again from the TV.', 'alert');
+    if (pairing.step === 'wait' || pairing.step === 'done') return;
+    renderPairing();
+  }
+  function forgetLocal() {
+    for (const k of ['draft', 'tab', 'paper']) {
+      try { window.localStorage.removeItem('lucent.' + k); } catch (e) { /* nothing stored */ }
+    }
+    const d = views.draw;
+    if (d && d.built) {
+      d.text.value = '';
+      d.pad.reset();
+    }
   }
 
   function scheduleHello(ms) {
@@ -792,6 +940,7 @@
     if (pairing.step === 'wait' || pairing.step === 'done' || document.hidden) { scheduleHello(5000); return; }
     try {
       const r = await api('/api/hello', { timeout: 8000 });
+      if (r.status === 401 && str(r.data.error) === 'reused') signedOutMessage();
       if (r.ok) {
         if (r.data.paired === true) { startApp(); return; }
         const open = typeof r.data.pairing === 'boolean' ? r.data.pairing : null;
@@ -828,7 +977,7 @@
   }
 
   function pairStatusLine() {
-    if (pairing.open === null || Date.now() < pairing.lockUntil) return h('p', { class: 'pair-status', id: 'pair-status' });
+    if (pairing.open === null || (pairing.step !== 'key' && Date.now() < pairing.lockUntil)) return h('p', { class: 'pair-status', id: 'pair-status' });
     return h('p', { class: 'pair-status ' + (pairing.open ? 'open' : 'shut'), id: 'pair-status' },
       h('span', { class: 'pair-status-dot', 'aria-hidden': 'true' }),
       pairing.open ? 'Pairing is open on the TV right now' : 'Pairing isn’t open on the TV yet');
@@ -836,7 +985,7 @@
 
   function pairFormView(noun) {
     const isKey = pairing.step === 'key';
-    const locked = Date.now() < pairing.lockUntil;
+    const locked = !isKey && Date.now() < pairing.lockUntil;
     const nameInput = h('input', { class: 'input', id: 'pair-name', 'data-fk': 'pair-name', type: 'text', autocomplete: 'off', autocapitalize: 'words', maxLength: 40, value: pairing.name, enterkeyhint: isKey ? 'go' : 'next', spellcheck: 'false' });
     nameInput.addEventListener('input', function () { pairing.name = nameInput.value; });
     const pin = isKey ? null : pinInput(function () { pairSubmit(); });
@@ -894,23 +1043,46 @@
   }
 
   async function pairSubmit() {
-    if (pairing.busy || Date.now() < pairing.lockUntil) return;
+    const isKey = pairing.step === 'key' && !!pairing.key;
+    // A lock turns off the six-digit code only. Scanning the QR code still works.
+    if (pairing.busy || (!isKey && Date.now() < pairing.lockUntil)) return;
     const name = (pairing.name || '').trim().slice(0, 40) || guessName();
-    const isKey = pairing.step === 'key' && pairing.key;
     if (!isKey && !/^\d{6}$/.test(pairing.pin)) {
       setPairMsg('Type all six digits from the TV.', 'warn');
       showPairMsg();
       return;
     }
-    const body = isKey ? { k: pairing.key, name: name } : { pin: pairing.pin, name: name };
     pairing.busy = true;
     pairing.name = name;
     setPairMsg('', '');
     renderPairing();
+    let body = { pin: pairing.pin, name: name };
     let r;
     try {
-      r = await api('/api/pair', { body: body, timeout: 12000 });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        if (isKey) {
+          body = await keyProof(name);
+          if (!body) {
+            pairing.busy = false;
+            pairing.open = false;
+            setPairMsg('Pairing isn’t open on the TV. On the TV, open Settings and choose Pair a phone, then try again.', 'warn');
+            renderPairing();
+            return;
+          }
+        }
+        r = await api('/api/pair', { body: body, timeout: 12000 });
+        // A wrong proof costs the window nothing, so try once more with a fresh nonce and c.
+        if (!(isKey && r.status === 403 && str(r.data.error) === 'wrong')) break;
+      }
     } catch (e) {
+      if (e && e.message === 'no proof') {
+        pairing.busy = false;
+        pairing.key = '';
+        pairing.step = 'code';
+        setPairMsg('This browser can’t use the QR code. Type the 6-digit code from the TV instead.', 'warn');
+        renderPairing();
+        return;
+      }
       pairing.busy = false;
       setPairMsg(netMessage(e), 'alert');
       renderPairing();
@@ -919,6 +1091,7 @@
     pairing.busy = false;
     if (r.status === 202 && str(r.data.wait)) {
       save('name', name);
+      pairing.match = /^\d{1,6}$/.test(str(r.data.match)) ? str(r.data.match) : '';
       pairWait(str(r.data.wait));
       return;
     }
@@ -957,7 +1130,7 @@
   function lockText() {
     const left = pairing.lockUntil - Date.now();
     if (left <= 0) return 'You can try again now.';
-    return 'Too many tries, so pairing is locked for ' + fmtClock(left) + '. Then try again with a fresh code.';
+    return 'Too many tries, so the code is off for ' + fmtClock(left) + '. Scan the QR code on the TV instead, or try again then.';
   }
   function pairLockTick() {
     if (!pairing.lockUntil || $('#pair').hidden || pairing.kind !== 'lock') return;
@@ -1020,14 +1193,26 @@
   }
 
   function pairWaitView(noun) {
+    const match = pairing.match;
+    const asking = h('p', { class: 'pair-lede' }, 'The TV is asking ', h('span', { class: 'strong', text: '“Allow ' + pairing.name + '?”' }));
+    const cancel = h('button', { class: 'btn btn-quiet btn-block', type: 'button', on: { click: cancelPairWait } }, 'Cancel');
+    if (match) {
+      return [
+        h('p', { class: 'eyebrow', text: 'One more step' }),
+        h('div', { class: 'match', 'aria-hidden': 'true' }, match.split('').map(function (d) { return h('span', { class: 'match-digit', text: d }); })),
+        h('h1', { class: 'pair-title pair-title-sm', role: 'status', text: 'Check the TV shows ' + match + ', then press OK on the remote' }),
+        asking,
+        cancel
+      ];
+    }
     return [
       h('div', { class: 'wait-rings', 'aria-hidden': 'true' },
         h('span', { class: 'ring' }), h('span', { class: 'ring' }), h('span', { class: 'ring' }),
         h('span', { class: 'wait-ok', text: 'OK' })),
       h('p', { class: 'eyebrow', text: 'One more step' }),
       h('h1', { class: 'pair-title pair-title-sm', role: 'status', text: 'Press OK on the remote to allow this ' + noun }),
-      h('p', { class: 'pair-lede' }, 'The TV is asking ', h('span', { class: 'strong', text: '“Allow ' + pairing.name + '?”' })),
-      h('button', { class: 'btn btn-quiet btn-block', type: 'button', on: { click: cancelPairWait } }, 'Cancel')
+      asking,
+      cancel
     ];
   }
   function pairDoneView() {
@@ -1201,7 +1386,8 @@
       fill(v, [this.head.el, grid]);
       this.room = buildRoom(c.room);
       this.mediaMain = h('div', { class: 'media-main' });
-      fill(c.media.body, [this.mediaMain, this.room.tvRow]);
+      this.glare = h('div', { class: 'glare-wrap', hidden: true });
+      fill(c.media.body, [this.mediaMain, this.glare, this.room.tvRow]);
     },
     render: function () {
       const c = this.c;
@@ -1227,6 +1413,10 @@
       const m = obj(S.media);
       if (changed('h.media', [m.active, m.app, m.title, m.artist, m.album, m.playing, m.duration, m.canNext, m.canPrev, S.audio])) renderMedia(c.media, m, obj(S.audio), this.mediaMain);
       mediaSync(m);
+      if (changed('h.glare', [S.samsung, obj(S.display).advice])) renderGlare(this.glare, S.samsung, obj(S.display));
+      // The TV buttons sit in whichever card is shorter, so the two cards stay level on wide screens.
+      const host = obj(S.samsung).connected === true ? c.room.body : c.media.body;
+      if (this.room.tvRow.parentNode !== host) host.appendChild(this.room.tvRow);
       this.room.render(tv);
     }
   };
@@ -1400,6 +1590,7 @@
           icon(wxKind(w.code, w.day), 'wx-icon'),
           h('p', { class: 'wx-second', text: (cFirst ? Math.round(tf) : Math.round(tc)) + '°' + (cFirst ? 'F' : 'C') }))),
       h('p', { class: 'wx-cond', text: str(w.condition) || ' ' }),
+      rainLine(obj(w.rain)),
       h('dl', { class: 'facts' }, facts.map(function (f) { return h('div', { class: 'fact' }, h('dt', { text: f[0] }), h('dd', { text: f[1] })); })),
       hours.length ? h('ol', { class: 'hours', 'aria-label': 'Next hours' }, hours.map(function (hr) {
         const t = cFirst ? (num(hr.c) !== null ? hr.c : toC(num(hr.f))) : num(hr.f);
@@ -1409,8 +1600,17 @@
           icon(wxKind(hr.code, hr.day), 'hour-ico'),
           h('span', { class: 'hour-temp', text: deg(t) }),
           h('span', { class: 'hour-rain' + (rain !== null && rain >= 30 ? ' wet' : ''), text: rain !== null && rain >= 10 ? Math.round(rain) + '%' : '' }));
-      })) : null
+      })) : null,
+      h('p', { class: 'wx-credit', text: 'Open-Meteo' + (str(w.model) ? ', ' + str(w.model).replace(/\s*\([^)]*\)\s*$/, '') : '') })
     ]);
+  }
+
+  // "Rain from 3:45 PM" or "Dry for the next 2 hours". Rain is coming when it has a time, or when the summary says so.
+  function rainLine(rain) {
+    const text = str(rain.summary);
+    if (!text) return null;
+    const wet = (num(rain.at) || 0) > 0 || !/^dry\b/i.test(text);
+    return h('p', { class: 'wx-rain' + (wet ? ' wet' : '') }, icon(wet ? 'wx-rain' : 'wx-cloud', 'wx-rain-ico'), h('span', { text: text }));
   }
 
   function moonGlyph(phase, lit) {
@@ -1667,6 +1867,58 @@
         back.classList.toggle('btn-primary', tv.front === false);
       }
     };
+  }
+
+  /* glare: the Samsung picture switch on the home screen */
+
+  function renderGlare(el, raw, display) {
+    const kids = [];
+    if (raw && typeof raw === 'object') {
+      const sam = obj(raw);
+      if (sam.connected === true) {
+        const on = sam.glare === true;
+        const bright = str(sam.glareMode) || 'bright';
+        const btn = h('button', { class: 'glare-btn' + (on ? ' on' : ''), type: 'button', role: 'switch', 'aria-checked': on ? 'true' : 'false', 'data-fk': 'glare' },
+          h('span', { class: 'glare-ico', 'aria-hidden': 'true' }, icon('wx-sun')),
+          h('span', { class: 'glare-text' },
+            h('span', { class: 'glare-title', text: 'Glare' }),
+            h('span', { class: 'glare-sub', text: on ? 'On. The ' + bright + ' picture beats the sun' : 'Sun on the screen? Switch to ' + bright })),
+          h('span', { class: 'glare-switch', 'aria-hidden': 'true' }));
+        btn.addEventListener('click', function () { glareDo(!on); });
+        kids.push(btn);
+        kids.push(h('p', { class: 'picture-mode' }, 'Picture ', h('span', { class: 'strong', text: str(sam.mode) || 'unknown' }), str(sam.device) ? ' · ' + str(sam.device) : ''));
+        if (str(sam.error)) kids.push(h('p', { class: 'amber-note', text: str(sam.error) }));
+      } else {
+        kids.push(h('button', { class: 'quiet-link', type: 'button', on: { click: openSamsungSettings } }, h('span', { text: 'Control the Samsung picture from here. Set it up in Settings' }), icon('chevron')));
+      }
+    }
+    if (str(display.advice)) kids.push(h('p', { class: 'amber-note', text: str(display.advice) }));
+    fill(el, kids);
+    el.hidden = !kids.length;
+  }
+  function openSamsungSettings() {
+    show('settings');
+    requestAnimationFrame(function () {
+      const target = $('#set-samsung');
+      if (target) target.scrollIntoView({ block: 'start' });
+    });
+  }
+  async function glareDo(on) {
+    const sam = obj(S.samsung);
+    const was = { glare: sam.glare, mode: sam.mode };
+    sam.glare = on;
+    if (on && str(sam.glareMode)) sam.mode = sam.glareMode;
+    S.samsung = sam;
+    if (views.home.built) views.home.render();
+    try {
+      await act('samsung', { do: 'glare', on: on });
+      toast(on ? 'Glare picture on' : 'Back to the usual picture');
+    } catch (e) {
+      sam.glare = was.glare;
+      sam.mode = was.mode;
+      if (views.home.built) views.home.render();
+      toast(serverError(e), 'alert');
+    }
   }
 
   function burst(btn, kind) {
@@ -1947,7 +2199,7 @@
       this.head = pageHead('A note for the TV', ['Draw ', h('em', { text: 'something' })]);
       const canvas = h('canvas', { class: 'pad-canvas', role: 'img', 'aria-label': 'Drawing area. Draw with a finger, pen or mouse.' });
       const sentMark = h('div', { class: 'sent-mark' }, checkGlyph());
-      this.sent = h('div', { class: 'sent', role: 'status' }, sentMark, h('p', { class: 'sent-text' }, h('span', { class: 'sent-big', text: 'Sent ✓' }), h('span', { class: 'sent-small', text: ' — it is writing itself on the TV' })));
+      this.sent = h('div', { class: 'sent', role: 'status' }, sentMark, h('p', { class: 'sent-text' }, h('span', { class: 'sent-big', text: 'Sent ✓' }), h('span', { class: 'sent-small', text: 'It is writing itself on the TV' })));
       this.stage = h('div', { class: 'stage' }, h('div', { class: 'paper-wrap' }, canvas), this.sent);
       this.pad = makePad(canvas, function () { self.sync(); }, function (msg) { toast(msg, 'warn'); });
 
@@ -2146,7 +2398,7 @@
     if (have) return have.promise;
     const entry = { url: null, promise: null };
     entry.promise = api('/api/photo/' + id + '.thumb.jpg', { blob: true, prio: 1, timeout: 20000 }).then(function (r) {
-      if (r.status === 401) { toPairing(); throw new Error('unpaired'); }
+      if (r.status === 401) { toPairing(str(obj(r.data).error)); throw new Error('unpaired'); }
       if (!r.ok || !r.data) throw new Error('status ' + r.status);
       const url = URL.createObjectURL(r.data);
       if (thumbs.get(id) !== entry) { URL.revokeObjectURL(url); throw new Error('gone'); }
@@ -2468,6 +2720,7 @@
     if (uploads.running) return;
     uploads.running = true;
     let added = 0;
+    const finished = [];
     while (uploads.queue.length) {
       const item = uploads.queue.shift();
       const row = item.row;
@@ -2491,12 +2744,12 @@
           break;
         }
         if (r.status === 429) { row.set('The TV asked to slow down. Retrying…', 0.05, 'busy'); await sleep(2000); continue; }
-        if (r.status === 401) { row.set('Not paired', 0, 'failed'); toPairing(); uploads.running = false; return; }
+        if (r.status === 401) { row.set('Not paired', 0, 'failed'); toPairing(str(r.data.error)); uploads.running = false; return; }
         if (r.ok) {
           done = true;
           added++;
           row.set('On the TV · ' + fmtBytes(prep.blob.size), 1, 'done');
-          setTimeout(function () { row.el.classList.add('leaving'); setTimeout(function () { row.el.remove(); }, 500); }, 4500);
+          finished.push(row);
         } else {
           row.set(errorText(r.status, r.data), 0, 'failed');
           break;
@@ -2504,6 +2757,13 @@
       }
     }
     uploads.running = false;
+    // Finished rows stay until the whole batch is done, then fade together.
+    setTimeout(function () {
+      for (const row of finished) {
+        row.el.classList.add('leaving');
+        setTimeout(function () { row.el.remove(); }, 500);
+      }
+    }, 4500);
     if (added) { toast(added === 1 ? 'Photo added to the wall' : added + ' photos added to the wall'); pollSoon(); }
   }
 
@@ -2751,7 +3011,7 @@
     units: [['f', '°F'], ['c', '°C'], ['off', 'Hide']],
     clock: [['auto', 'Auto'], ['12', '12-hour'], ['24', '24-hour']],
     motion: [['full', 'Full'], ['reduced', 'Reduced']],
-    quality: [['motion', 'Drifting'], ['still', 'Still 4K']],
+    quality: [['motion', 'Slow drift'], ['still', 'Still and sharpest']],
     ambient: [['2', '2 min'], ['5', '5 min'], ['15', '15 min'], ['off', 'Never']],
     dim: [['5', '5 min'], ['10', '10 min'], ['30', '30 min'], ['off', 'Never']],
     findFor: [['15', '15 min'], ['30', '30 min'], ['60', '1 hour'], ['120', '2 hours']],
@@ -2779,13 +3039,13 @@
       const look = card(1, 'Look & feel', 'card-set');
       fill(look.body, [
         row('theme', 'Day and night look', 'Auto follows sunrise and sunset in Cambridge.'),
-        row('quality', 'Wallpaper', 'Drifting is gently moving 1080p. Still keeps the photo at full 4K detail.'),
+        row('quality', 'Wallpaper', 'Still shows the photo pixel for pixel, without the slow drift. Photos are stored at up to 4K.'),
         row('units', 'Temperature'),
         row('clock', 'Clock'),
         row('motion', 'Motion', 'Reduced keeps animations to a minimum on the TV.')
       ]);
 
-      const quiet = card(2, 'Quiet hours', 'card-set');
+      const quiet = card(3, 'Quiet hours', 'card-set');
       this.awakeAlways = toggle({ id: 'awake-always', label: 'Always awake', onChange: function (on) {
         if (on) return setSetting('awakeFrom', 'always').then(function () { return setSetting('awakeTo', 'always'); }).then(function () { self.syncAwake(); });
         return setSetting('awakeFrom', self.awakeFrom.value || '07:00').then(function () { return setSetting('awakeTo', self.awakeTo.value || '00:30'); }).then(function () { self.syncAwake(); });
@@ -2820,7 +3080,7 @@
           this.bedTime)
       ]);
 
-      const bikes = card(3, 'Bikes & buses', 'card-set');
+      const bikes = card(4, 'Bikes & buses', 'card-set');
       this.station = h('select', { class: 'input select', id: 'station' });
       this.station.addEventListener('change', function () {
         const val = self.station.value;
@@ -2850,16 +3110,16 @@
           mbtaForm, this.mbtaRemove)
       ]);
 
-      const notes = card(4, 'Notes & sky', 'card-set');
+      const notes = card(6, 'Notes & sky', 'card-set');
       fill(notes.body, [
         row('wakeForNotes', 'Wake the TV for a note', 'Daytime means between the awake hours.'),
         row('sky', 'Planes overhead')
       ]);
 
-      const photos = card(5, 'Photos', 'card-set');
+      const photos = card(7, 'Photos', 'card-set');
       fill(photos.body, [row('album', 'Which photos'), row('rotate', 'Change the photo')]);
 
-      const cals = card(6, 'Calendars', 'card-set');
+      const cals = card(8, 'Calendars', 'card-set');
       this.feedList = h('ul', { class: 'feeds' });
       const calName = h('input', { class: 'input', id: 'cal-name', type: 'text', maxLength: 30, placeholder: 'Family', autocomplete: 'off' });
       const calUrl = h('input', { class: 'input mono-input', id: 'cal-url', type: 'url', inputmode: 'url', placeholder: 'https://calendar.google.com/…/basic.ics', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
@@ -2894,7 +3154,7 @@
             h('p', { class: 'muted', text: 'The TV keeps the address to itself and only ever shows the start of it here.' })))
       ]);
 
-      const wifi = card(7, 'Guest Wi-Fi', 'card-set');
+      const wifi = card(9, 'Guest Wi-Fi', 'card-set');
       this.ssid = h('input', { class: 'input', id: 'wifi-ssid', type: 'text', maxLength: 32, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
       this.wpass = h('input', { class: 'input', id: 'wifi-pass', type: 'password', maxLength: 63, autocomplete: 'new-password', autocapitalize: 'off', spellcheck: 'false' });
       const eye = h('button', { class: 'btn btn-icon btn-icon-sm eye', type: 'button', 'aria-label': 'Show password', 'aria-pressed': 'false' }, icon('eye'));
@@ -2926,7 +3186,7 @@
       hideWifi.addEventListener('click', function () { act('wifi', { do: 'hide' }).catch(function (e) { toast(e.message, 'alert'); }); });
       fill(wifi.body, [h('p', { class: 'set-help', text: 'Guests scan a code on the TV to join. The password never comes back to this page.' }), wifiForm, h('div', { class: 'btn-row' }, showWifi, hideWifi)]);
 
-      const alexa = card(8, 'Alexa', 'card-set');
+      const alexa = card(10, 'Alexa', 'card-set');
       this.alexaOn = toggle({ id: 'alexa-on', label: 'Alexa routines', onChange: function (on) {
         return setSetting('alexa', on ? 'on' : 'off').then(function () { const a = obj(S.alexa); a.on = on; S.alexa = a; self.renderAlexa(true); });
       } });
@@ -2936,7 +3196,7 @@
         this.alexaBody
       ]);
 
-      const devices = card(9, 'Paired devices', 'card-set');
+      const devices = card(11, 'Paired devices', 'card-set');
       this.deviceList = h('ul', { class: 'devices' });
       const forget = h('button', { class: 'btn btn-danger btn-block', type: 'button' }, 'Forget this device');
       confirmTap(forget, 'Tap again to unpair this device', async function () {
@@ -2946,17 +3206,19 @@
       });
       fill(devices.body, [this.deviceList, forget]);
 
-      const health = card(10, 'Health', 'card-set');
+      const health = card(12, 'Health', 'card-set');
       this.healthList = h('ul', { class: 'health' });
       fill(health.body, [h('p', { class: 'set-help', text: 'Every live source the TV reads, and how it is pacing itself. Limited means the source asked Lucent to slow down.' }), this.healthList]);
 
-      const about = card(11, 'About', 'card-set');
+      const about = card(13, 'About', 'card-set');
       this.aboutBody = h('div', { class: 'about' });
       const refresh = h('button', { class: 'btn btn-block', type: 'button' }, icon('refresh'), 'Fetch fresh data now');
       refresh.addEventListener('click', function () { act('refresh', {}).then(function () { toast('The TV is fetching fresh data'); }).catch(function (e) { toast(e.message, 'alert'); }); });
       fill(about.body, [this.aboutBody, refresh]);
 
-      const left = h('div', { class: 'set-col' }, look.el, quiet.el, bikes.el, notes.el, photos.el);
+      const samsung = this.buildSamsung();
+      const push = this.buildPush();
+      const left = h('div', { class: 'set-col' }, look.el, samsung.el, quiet.el, bikes.el, push.el, notes.el, photos.el);
       const right = h('div', { class: 'set-col' }, cals.el, wifi.el, alexa.el, devices.el, health.el, about.el);
       const cols = h('div', { class: 'set-cols' }, left, right);
       stagger(cols);
@@ -2971,10 +3233,224 @@
       this.syncMbta();
       this.syncWifi();
       this.renderFeeds();
+      this.renderSamsung();
+      this.renderPush();
       this.renderAlexa();
       this.renderDevices();
       this.renderHealth();
       this.renderAbout();
+    },
+    buildSamsung: function () {
+      const self = this;
+      const c = card(2, 'Samsung picture', 'card-set card-samsung');
+      c.el.id = 'set-samsung';
+      c.el.hidden = true;
+      this.sam = { card: c, authorize: '' };
+      this.samError = h('p', { class: 'amber-note', role: 'status', hidden: true });
+      const code = function (t) { return h('code', { class: 'code', text: t }); };
+      const id = h('input', { class: 'input mono-input', id: 'sam-id', type: 'text', maxLength: 200, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+      const secret = h('input', { class: 'input mono-input', id: 'sam-secret', type: 'password', maxLength: 200, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+      const cont = h('button', { class: 'btn btn-primary', type: 'submit' }, 'Continue');
+      const signin = h('a', { class: 'btn btn-primary sam-signin', target: '_blank', rel: 'noopener noreferrer', hidden: true }, h('span', { text: 'Open Samsung sign-in' }), icon('external'));
+      const again = h('button', { class: 'btn btn-quiet btn-sm', type: 'button', hidden: true }, 'Change the ID or secret');
+      const begin = h('form', { class: 'sam-form' },
+        h('div', { class: 'field' }, h('label', { class: 'label', for: 'sam-id', text: 'Client ID' }), id),
+        h('div', { class: 'field' }, h('label', { class: 'label', for: 'sam-secret', text: 'Client Secret' }), secret),
+        h('div', { class: 'btn-row' }, cont, signin, again));
+      begin.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const clientId = id.value.trim(), clientSecret = secret.value.trim();
+        if (!clientId || !clientSecret) { toast('Paste both the Client ID and the Client Secret.', 'warn'); return; }
+        cont.disabled = true;
+        cont.classList.add('busy');
+        try {
+          const d = await act('samsung', { do: 'begin', clientId: clientId, clientSecret: clientSecret }, { timeout: 15000 });
+          const url = str(d.authorize);
+          if (!/^https:\/\/([a-z0-9-]+\.)*smartthings\.com\//i.test(url)) throw new Error('The TV sent back an address that isn’t Samsung’s.');
+          self.sam.authorize = url;
+          signin.href = url;
+          signin.hidden = false;
+          cont.hidden = true;
+          again.hidden = false;
+          secret.value = '';
+          self.setSamError('');
+          self.syncSamSteps();
+        } catch (err) {
+          self.setSamError(serverError(err));
+        }
+        cont.disabled = false;
+        cont.classList.remove('busy');
+      });
+      again.addEventListener('click', function () {
+        self.sam.authorize = '';
+        signin.hidden = true;
+        signin.removeAttribute('href');
+        cont.hidden = false;
+        again.hidden = true;
+        id.focus();
+      });
+      const pasted = h('textarea', { class: 'input mono-input sam-code', id: 'sam-code', rows: '2', maxLength: 8000, placeholder: 'The code, or the whole address', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+      const connect = h('button', { class: 'btn btn-primary', type: 'submit' }, 'Connect');
+      const finish = h('form', { class: 'sam-form' }, h('label', { class: 'sr-only', for: 'sam-code', text: 'Code from the Samsung page' }), pasted, h('div', { class: 'btn-row' }, connect));
+      finish.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const value = pasted.value.trim();
+        if (!value) { toast('Paste the code first.', 'warn'); return; }
+        connect.disabled = true;
+        connect.classList.add('busy');
+        try {
+          const d = await act('samsung', { do: 'finish', code: value }, { timeout: 20000 });
+          pasted.value = '';
+          self.sam.authorize = '';
+          signin.hidden = true;
+          cont.hidden = false;
+          again.hidden = true;
+          const sam = obj(S.samsung);
+          sam.connected = true;
+          sam.setup = 'none';
+          sam.error = '';
+          if (str(d.device)) sam.device = str(d.device);
+          S.samsung = sam;
+          self.setSamError('');
+          self.renderSamsung(true);
+          toast('Connected' + (str(d.device) ? ' to ' + str(d.device) : ''));
+        } catch (err) {
+          self.setSamError(serverError(err));
+        }
+        connect.disabled = false;
+        connect.classList.remove('busy');
+      });
+      const step = function (n, kids) {
+        return h('li', { class: 'step', data: { n: n } }, h('span', { class: 'step-n', 'aria-hidden': 'true', text: String(n) }), h('div', { class: 'step-body' }, kids));
+      };
+      this.samStep4 = step(4, [h('p', { text: 'After you allow it, a page of text opens. Copy the code (or the whole address) and paste it here' }), finish]);
+      this.samWizard = h('div', { class: 'sam-wizard' },
+        h('p', { class: 'set-help', text: 'Lucent can switch the TV’s picture mode for glare, day and night. It talks to Samsung’s SmartThings, which needs a one-time setup from a computer.' }),
+        h('ol', { class: 'steps' },
+          step(1, [h('p', { text: 'On a Mac:' }), codeField('brew install smartthingscommunity/smartthings/smartthings', 'sam-brew', 'Install command')]),
+          step(2, [h('p', null, 'Run ', code('smartthings apps:create'), ', choose OAuth-In App, name it Lucent, pick the scopes ', code('r:devices:*'), ' and ', code('x:devices:*'), ', and add the redirect ', code('https://httpbin.org/get'))]),
+          step(3, [h('p', { text: 'Paste the Client ID and Client Secret it prints, then sign in to Samsung.' }), begin]),
+          this.samStep4),
+        h('p', { class: 'set-help sam-note', text: 'The secret and the sign-in stay on the TV. Phones only ever see Connected.' }));
+      this.samConnected = h('div', { class: 'sam-connected', hidden: true });
+      fill(c.body, [this.samError, this.samWizard, this.samConnected]);
+      return c;
+    },
+    setSamError: function (text) {
+      this.samError.textContent = text || '';
+      this.samError.hidden = !text;
+    },
+    syncSamSteps: function () {
+      const begun = !!this.sam.authorize || str(obj(S.samsung).setup) === 'begun';
+      this.samStep4.classList.toggle('later', !begun);
+      $$('textarea, button', this.samStep4).forEach(function (el) { el.disabled = !begun; });
+    },
+    renderSamsung: function (force) {
+      const raw = S.samsung;
+      const has = !!raw && typeof raw === 'object';
+      this.sam.card.el.hidden = !has;
+      if (!has) return;
+      const sam = obj(raw);
+      if (!changed('s.samsung', sam) && !force) return;
+      // The TV's last Samsung error shows until it clears. A local error from this page stays until the next try.
+      const said = str(sam.error);
+      if (said) this.setSamError(said);
+      else if (sam.connected || (this.sam.said && this.samError.textContent === this.sam.said)) this.setSamError('');
+      this.sam.said = said;
+      const connected = sam.connected === true;
+      this.samWizard.hidden = connected;
+      this.samConnected.hidden = !connected;
+      setMeta(this.sam.card, connected ? 'Connected' : '', connected ? 'live' : '');
+      if (!connected) { this.syncSamSteps(); return; }
+      const modes = arr(sam.modes).map(str).filter(Boolean);
+      if (changed('s.samModes', [modes, sam.device]) || force || !this.samCtl) this.buildSamConnected(modes, sam);
+      this.samCtl.now.set(str(sam.mode));
+      this.samCtl.glare.set(str(sam.glareMode));
+      this.samCtl.day.set(str(sam.dayMode));
+      this.samCtl.night.set(str(sam.nightMode));
+      this.samCtl.follow.set(str(sam.follow) !== 'off');
+    },
+    buildSamConnected: function (modes, sam) {
+      const opts = modes.map(function (m) { return [m, m]; });
+      const pick = function (label, key) {
+        return choice({ label: label, options: opts, onChange: function (v) {
+          return setSetting(key, v).then(function () { obj(S.samsung)[key] = v; }).catch(function (e) { throw new Error(serverError(e)); });
+        } });
+      };
+      const now = choice({ label: 'Picture now', options: opts, onChange: function (v) {
+        return act('samsung', { do: 'mode', mode: v }).then(function () { obj(S.samsung).mode = v; toast('Picture set to ' + v); }).catch(function (e) { throw new Error(serverError(e)); });
+      } });
+      const glare = pick('Glare picture', 'glareMode');
+      const day = pick('Day picture', 'dayMode');
+      const night = pick('Night picture', 'nightMode');
+      const follow = toggle({ id: 'sam-follow', label: 'Picture follows day and night', onChange: function (on) {
+        return setSetting('pictureFollow', on ? 'on' : 'off').then(function () { obj(S.samsung).follow = on ? 'on' : 'off'; });
+      } });
+      const disconnect = h('button', { class: 'btn btn-quiet btn-danger btn-block', type: 'button' }, 'Disconnect');
+      const self = this;
+      confirmTap(disconnect, 'Tap again to disconnect', async function () {
+        try {
+          await act('samsung', { do: 'disconnect' });
+          const s = obj(S.samsung);
+          s.connected = false;
+          s.device = '';
+          self.renderSamsung(true);
+          toast('Disconnected from the Samsung');
+        } catch (e) { toast(serverError(e), 'alert'); }
+      });
+      this.samCtl = { now: now, glare: glare, day: day, night: night, follow: follow };
+      fill(this.samConnected, [
+        h('div', { class: 'sam-device' }, icon('tv', 'sam-ico'), h('div', null, h('p', { class: 'sam-name', text: str(sam.device) || 'Samsung TV' }), h('p', { class: 'set-help', text: 'Lucent switches its picture mode for you.' }))),
+        modes.length ? [
+          setRow('Picture now', null, now.el),
+          setRow('Glare picture', 'What the Glare switch on Home turns on.', glare.el),
+          setRow('Day picture', null, day.el),
+          setRow('Night picture', null, night.el)
+        ] : h('p', { class: 'set-help', text: 'The TV hasn’t listed its picture modes yet.' }),
+        h('div', { class: 'set-row' }, h('div', { class: 'switch-row' }, h('label', { class: 'switch-label', for: 'sam-follow' }, h('span', { class: 'strong', text: 'Picture follows day and night' }), h('span', { class: 'switch-help', text: 'Day picture at sunrise, night picture at sunset' })), follow.el)),
+        h('div', { class: 'set-row' }, disconnect)
+      ]);
+    },
+    buildPush: function () {
+      const self = this;
+      const c = card(5, 'Phone alerts', 'card-set card-push');
+      c.el.hidden = true;
+      this.pushCard = c;
+      this.pushOn = toggle({ id: 'push-on', label: 'Phone alerts', onChange: function (on) {
+        return setSetting('push', on ? 'on' : 'off').then(function () { const p = obj(S.push); p.on = on; S.push = p; self.renderPush(true); });
+      } });
+      this.pushBody = h('div', { class: 'push-body' });
+      fill(c.body, [
+        h('div', { class: 'switch-row' }, h('label', { class: 'switch-label', for: 'push-on' }, h('span', { class: 'strong', text: 'Buzz our phones' }), h('span', { class: 'switch-help', text: 'Free, through the ntfy app' })), this.pushOn.el),
+        h('p', { class: 'set-help push-why', text: 'When bike finder finds an e-bike, your phones buzz with a link to Bluebikes, where Reserve holds it for 10 minutes.' }),
+        this.pushBody
+      ]);
+      return c;
+    },
+    renderPush: function (force) {
+      const raw = S.push;
+      const has = !!raw && typeof raw === 'object';
+      this.pushCard.el.hidden = !has;
+      if (!has) return;
+      const p = obj(raw);
+      const on = p.on === true;
+      this.pushOn.set(on);
+      if (!changed('s.push', [on, p.topic]) && !force) return;
+      if (!on) { fill(this.pushBody, null); return; }
+      const topic = str(p.topic);
+      const test = h('button', { class: 'btn', type: 'button' }, icon('bell'), 'Send a test');
+      test.addEventListener('click', async function () {
+        try { await act('push', { do: 'test' }); toast('Test sent. Your phones should buzz in a moment'); } catch (e) { toast(serverError(e), 'alert'); }
+      });
+      const fresh = h('button', { class: 'btn btn-quiet btn-sm', type: 'button' }, icon('refresh'), 'New topic');
+      confirmTap(fresh, 'Tap again. Phones must subscribe again', async function () {
+        try { await setSetting('push', 'new'); toast('New topic made. Subscribe to it in ntfy.'); pollSoon(); } catch (e) { toast(serverError(e), 'alert'); }
+      });
+      fill(this.pushBody, [
+        h('p', { class: 'push-steps', text: 'Install ntfy from the App Store, tap +, and subscribe to this topic' }),
+        topic ? copyField('Topic', topic, 'push-topic') : h('p', { class: 'set-help', text: 'The TV is making a topic…' }),
+        h('div', { class: 'btn-row' }, test, fresh)
+      ]);
     },
     syncAwake: function () {
       const st = settings();
@@ -3037,7 +3513,7 @@
       const a = obj(S.alexa);
       const on = a.on === true || str(settings().alexa) === 'on';
       this.alexaOn.set(on);
-      if (!changed('s.alexa', [on, a.url, a.stopUrl]) && !force) return;
+      if (!changed('s.alexa', [on, a.url, a.stopUrl, a.commands]) && !force) return;
       if (!on) {
         fill(this.alexaBody, h('p', { class: 'set-help', text: 'Off. Turn it on for private links you can paste into Alexa.' }));
         return;
@@ -3047,9 +3523,12 @@
       confirmTap(fresh, 'Tap again. Old links stop working', async function () {
         try { await setSetting('alexa', 'new'); toast('New links made. Update them in Alexa.'); pollSoon(); } catch (e) { toast(e.message, 'alert'); }
       });
+      const commands = arr(a.commands).map(obj).filter(function (c) { return str(c.name) && str(c.on); });
       fill(this.alexaBody, [
-        h('p', { class: 'set-help', text: 'In the Alexa app, add a Virtual Smart Home URL switch for each link below, then use it in a routine such as “Alexa, find me a bike”.' }),
-        urls.length ? urls.map(function (u) { return copyField(u[0], u[1], u[2]); }) : h('p', { class: 'set-help', text: 'The TV is making the links…' }),
+        h('p', { class: 'set-help', text: 'At virtualsmarthome.xyz/url_switch, sign in with Amazon, add a switch per command with these addresses, then enable the URL Switch skill in the Alexa app. Alexa, turn on bike finder works at once. For your own phrase, make a routine in the Alexa app.' }),
+        commands.length ? h('ul', { class: 'cmds' }, commands.map(commandRow))
+          : urls.length ? urls.map(function (u) { return copyField(u[0], u[1], u[2]); })
+          : h('p', { class: 'set-help', text: 'The TV is making the links…' }),
         fresh
       ]);
     },
@@ -3090,15 +3569,19 @@
     },
     renderAbout: function () {
       const tv = obj(S.tv);
-      if (!changed('s.about', [tv.name, tv.version, tv.urls, tv.access, obj(S.me).name])) return;
+      const display = obj(S.display);
+      if (!changed('s.about', [tv.name, tv.version, tv.urls, tv.access, obj(S.me).name, display])) return;
+      const picture = pictureLine(display);
       const urls = arr(tv.urls).map(str).filter(Boolean);
       const access = str(tv.access) === 'lan' ? 'Home Wi-Fi and Tailscale' : str(tv.access) === 'tailnet' ? 'Tailscale only' : str(tv.access);
-      fill(this.aboutBody, h('dl', { class: 'kv' },
+      fill(this.aboutBody, [h('dl', { class: 'kv' },
         h('div', null, h('dt', { text: 'TV' }), h('dd', { text: (str(tv.name) || 'Lucent') + (str(tv.version) ? ' ' + str(tv.version) : '') })),
         str(obj(S.me).name) ? h('div', null, h('dt', { text: 'This device' }), h('dd', { text: str(obj(S.me).name) })) : null,
         urls.length ? h('div', null, h('dt', { text: 'Address' }), h('dd', { class: 'mono-text', text: urls.join('  ') })) : null,
         access ? h('div', null, h('dt', { text: 'Reachable from' }), h('dd', { text: access })) : null,
-        h('div', null, h('dt', { text: 'Privacy' }), h('dd', { text: 'This page only ever talks to the TV.' }))));
+        picture ? h('div', null, h('dt', { text: 'Picture' }), h('dd', { text: picture })) : null,
+        h('div', null, h('dt', { text: 'Privacy' }), h('dd', { text: 'This page only ever talks to the TV.' }))),
+        str(display.advice) ? h('p', { class: 'amber-note', text: str(display.advice) }) : null]);
     }
   };
 
@@ -3108,25 +3591,95 @@
       control);
   }
 
-  // A read-only field with a copy button. Plain http has no clipboard API, so it falls back to execCommand and then to a selection.
+  // Copies text. Plain http has no clipboard API, so this falls back to execCommand on a
+  // selection, either in the given field or in a hidden buffer. Resolves true when it worked.
+  async function copyText(value, input) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(value); return true; }
+    } catch (e) { /* fall through to the selection */ }
+    const field = input || h('textarea', { class: 'copy-buffer', readOnly: true, tabindex: '-1', 'aria-hidden': 'true' });
+    if (!input) { field.value = value; document.body.appendChild(field); }
+    field.focus({ preventScroll: true });
+    field.select();
+    try { field.setSelectionRange(0, value.length); } catch (e) { /* some inputs refuse */ }
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    if (!input) field.remove();
+    return ok;
+  }
+
+  // A read-only field with a copy button. When copying fails the text is left selected.
   function copyField(label, value, id) {
     const input = h('input', { class: 'input mono-input copy-input', id: id, type: 'text', readOnly: true, value: value, spellcheck: 'false' });
     const btn = h('button', { class: 'btn', type: 'button' }, icon('copy'), 'Copy');
     input.addEventListener('focus', function () { input.select(); });
     btn.addEventListener('click', async function () {
-      let ok = false;
-      try {
-        if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(value); ok = true; }
-      } catch (e) { ok = false; }
-      if (!ok) {
-        input.focus();
-        input.select();
-        input.setSelectionRange(0, value.length);
-        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-      }
+      const ok = await copyText(value, input);
       toast(ok ? 'Copied' : 'Selected. Use Copy from the menu.');
     });
     return h('div', { class: 'field copy-field' }, h('label', { class: 'label', for: id, text: label }), h('div', { class: 'inline-form' }, input, btn));
+  }
+
+  // A command line to type on a computer, shown whole so it wraps, with a copy button.
+  // When copying fails the line itself is selected.
+  function codeField(value, id, label) {
+    const code = h('code', { class: 'code-block', id: id, text: value, 'aria-label': label });
+    const btn = h('button', { class: 'btn btn-icon', type: 'button', 'aria-label': 'Copy ' + label.toLowerCase() }, icon('copy'));
+    btn.addEventListener('click', async function () {
+      const ok = await copyText(value);
+      if (!ok) {
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      toast(ok ? 'Copied' : 'Selected. Use Copy from the menu.');
+    });
+    return h('div', { class: 'code-row' }, code, btn);
+  }
+
+  // One Alexa command: what to say, and copy buttons for its on and off addresses.
+  function commandRow(c) {
+    const reveal = h('div', { class: 'cmd-reveal' });
+    const button = function (which, url) {
+      const b = h('button', { class: 'btn btn-sm', type: 'button', 'aria-label': 'Copy the ' + which + ' address for ' + str(c.name) }, icon('copy'), which === 'on' ? 'On address' : 'Off address');
+      b.addEventListener('click', async function () {
+        const ok = await copyText(url);
+        if (ok) { toast('Copied the ' + which + ' address'); return; }
+        const id = 'cmd-' + str(c.name).replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-' + which;
+        fill(reveal, copyField(str(c.name) + ', ' + which + ' address', url, id));
+        const input = $('input', reveal);
+        input.focus();
+        input.select();
+        toast('Selected. Use Copy from the menu.');
+      });
+      return b;
+    };
+    return h('li', { class: 'cmd' },
+      h('p', { class: 'cmd-name', text: str(c.name) }),
+      str(c.say) ? h('p', { class: 'cmd-say', text: '“' + str(c.say) + '”' }) : null,
+      h('div', { class: 'btn-row cmd-btns' }, button('on', str(c.on)), str(c.off) ? button('off', str(c.off)) : null),
+      reveal);
+  }
+
+  // "4K, 60 Hz, HDR10, HLG. Apps draw at 1080p, films play in 4K." from state.display.
+  function resLabel(w, hgt) {
+    if (!num(w) || !num(hgt)) return '';
+    if (hgt >= 2160 || w >= 3840) return '4K';
+    if (hgt >= 1440) return '1440p';
+    if (hgt >= 1080) return '1080p';
+    if (hgt >= 720) return '720p';
+    return w + '\u00A0×\u00A0' + hgt;
+  }
+  function pictureLine(d) {
+    const res = resLabel(d.width, d.height);
+    if (!res) return '';
+    const parts = [res];
+    if (num(d.hz)) parts.push(Math.round(d.hz) + ' Hz');
+    for (const x of arr(d.hdr).map(str).filter(Boolean)) parts.push(x);
+    const ui = resLabel(d.uiWidth, d.uiHeight);
+    return parts.join(', ') + '.' + (ui ? ' Apps draw at ' + ui + ', films play in ' + res + '.' : '');
   }
 
   /* ------------------------------------------------------------------ start */
