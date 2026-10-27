@@ -643,11 +643,24 @@ final class SamsungRemote {
         }
     }
 
+    /** The Samsung's built-in browser, which takes the address to open as its launch data. */
+    static final String BROWSER = "org.tizen.browser";
+
     /** Opens an app by its Tizen id (YouTube is 111299001912), as a deep link or a native launch. */
     synchronized void launch(String appId, boolean deepLink) throws Samsung.Failed {
+        launch(appId, deepLink, "");
+    }
+
+    /**
+     * The same, with launch data: for the browser, the address to open. Only Vestor's own page on
+     * the home network is ever sent this way.
+     */
+    synchronized void launch(String appId, boolean deepLink, String meta) throws Samsung.Failed {
         if (appId == null || !appId.matches("[A-Za-z0-9][A-Za-z0-9._-]{2,63}")) throw new Samsung.Failed(400, "app");
+        if (meta == null || meta.length() > 200 || !(meta.isEmpty() || meta.matches("http://[0-9.]{7,15}:[0-9]{2,5}/[a-z]{1,16}")))
+            throw new Samsung.Failed(400, "meta");
         send(new Jw().obj().put("method", "ms.channel.emit").key("params").obj().put("event", "ed.apps.launch").put("to", "host")
-                .key("data").obj().put("appId", appId).put("action_type", deepLink ? "DEEP_LINK" : "NATIVE_LAUNCH").put("metaTag", "")
+                .key("data").obj().put("appId", appId).put("action_type", deepLink ? "DEEP_LINK" : "NATIVE_LAUNCH").put("metaTag", meta)
                 .end().end().end().toString());
     }
 

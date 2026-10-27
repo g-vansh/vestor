@@ -1,0 +1,6 @@
+html, body { margin: 0; height: 100%; background: #0b0f26; color: #eef1ff; font-family: sans-serif; }
+main { box-sizing: border-box; max-width: 1200px; margin: 0 auto; padding: 12vh 6vw; }
+.eyebrow { font-size: 22px; letter-spacing: 0.2em; text-transform: uppercase; color: #9aa6d6; margin: 0 0 24px; }
+h1 { font-size: 64px; line-height: 1.15; margin: 0 0 28px; font-weight: 600; }
+.detail { font-size: 34px; line-height: 1.4; margin: 0 0 40px; color: #d5dbf5; }
+.next { font-size: 28px; line-height: 1.4; color: #9aa6d6; }

@@ -632,6 +632,15 @@ final class Icons {
         g.fillCircle(gx(cx, s, 3.6f), gy(cy, s, 18.4f), u * 1.4f, color);
     }
 
+    /** A video camera, for Video Calls. */
+    static void video(Gfx g, float cx, float cy, float s, int color) {
+        float w = stroke(s), u = s / 24f;
+        g.strokeRoundRect(gx(cx, s, 2.5f), gy(cy, s, 6.5f), gx(cx, s, 15.5f), gy(cy, s, 17.5f), u * 2.4f, w, color);
+        g.polyline(grid(cx, cy, s, VIDEO_LENS), w, color);
+    }
+
+    private static final float[] VIDEO_LENS = {15.5f, 10.5f, 21.5f, 7f, 21.5f, 17f, 15.5f, 13.5f};
+
     /** A phone, for the control center. */
     static void phone(Gfx g, float cx, float cy, float s, int color) {
         float w = stroke(s), u = s / 24f;

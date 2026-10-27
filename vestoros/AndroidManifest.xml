@@ -15,6 +15,15 @@
     <!-- Never granted by installing: only install.sh grants it, once, over ADB, and its undo takes
          it back. Used for nothing but re-enabling Vestor's own HOME service (see Boot.java). -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- Video Calls (WhatsApp Web): the camera and microphone, asked for only when a call starts
+         and granted to web.whatsapp.com alone. A Fire TV stick has neither unless a USB webcam is
+         attached, so neither is required to install. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
         android:label="@string/app_name"
@@ -50,6 +59,14 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".Calls"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustNothing"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode|fontScale|smallestScreenSize" />
 
         <service
             android:name=".Guard"

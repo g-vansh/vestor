@@ -44,6 +44,7 @@ public final class Preview {
         shot(out, "33-shuttles-grocery-friday", wallFile, new int[] {R, R, OK}, 15);
         shot(out, "34-bikes-panel-evening", "nature-04.jpg", new int[] {R, OK, OK}, 16);
         shot(out, "35-ask-button", wallFile, new int[] {U, L, L, L, L, L, L}, 0);
+        shot(out, "39-video-calls-button", wallFile, new int[] {U, L, L, L, L, L, L, R}, 0);
         shot(out, "36-answer", "nature-03.jpg", new int[0], 17);
         shot(out, "37-answer-playing", "nature-04.jpg", new int[0], 18);
         shot(out, "38-answer-thinking", "nature-04.jpg", new int[0], 19);

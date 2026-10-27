@@ -1,6 +1,7 @@
 package tv.vestor.home;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.AssetManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -48,7 +49,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
 
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
-            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23;
+            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24;
 
     private static Hub instance;
 
@@ -657,6 +658,13 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                     Guard.wake(app, true);
                 } else if ("firetv".equals(word)) {
                     Guard.amazon(app);
+                } else if ("calls".equals(word)) {
+                    Guard.wake(app, false);
+                    try {
+                        app.startActivity(new Intent(app, Calls.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                    } catch (RuntimeException ignored) {
+                        // Fire OS refused a start from the background: the button on the top row still works
+                    }
                 } else if ("wifi".equals(word)) {
                     if (prefs.get(Prefs.WIFI_SSID, "").isEmpty()) return;
                     Guard.wake(app, true);
@@ -845,6 +853,59 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     void decide(String id, boolean allow) {
         keys.decide(id, allow, System.currentTimeMillis());
         post(PAIR, null);
+    }
+
+    // ---- Camera check on the Samsung -----------------------------------------------------------------
+
+    /** Until when a report from the Samsung's browser is taken (0: no check running). */
+    private long camCheckUntil;
+    /** The last report, one sentence, and when it came. */
+    volatile String camReport = "";
+    volatile long camReportAt;
+
+    /**
+     * Starts the check of whether the Samsung itself can see a webcam on its USB port: opens the
+     * Samsung's own browser on a page this server serves, which lists the cameras and microphones
+     * the TV offers and reports back. Answers what the screen should say while it runs.
+     */
+    String startCamCheck(long now) {
+        List<String> urls = console.urls();
+        if (urls.isEmpty()) console.refresh();
+        urls = console.urls();
+        if (urls.isEmpty()) return "Vestor has no network address yet. Check the Fire TV's Wi-Fi.";
+        final String url = urls.get(0) + "/camcheck";
+        synchronized (this) {
+            camCheckUntil = now + 180000L;
+        }
+        if (!remote.paired()) {
+            return "On the Samsung remote, open Internet and go to " + url.substring("http://".length())
+                    + ". Then press Home on the Fire TV remote.";
+        }
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    remote.launch(SamsungRemote.BROWSER, false, url);
+                } catch (Samsung.Failed e) {
+                    // the screen already says where to go by hand
+                }
+            }
+        });
+        return "Opening the Samsung's browser. If it does not open, go to " + url.substring("http://".length())
+                + " in the Samsung's Internet app. Press Home on the Fire TV remote when it says it is done.";
+    }
+
+    @Override
+    public boolean camCheck(String peer, Map<String, Object> body, long now) {
+        synchronized (this) {
+            // One report per check, and only while one is running: a stranger cannot post at will.
+            if (now > camCheckUntil) return false;
+            camCheckUntil = 0;
+        }
+        camReport = Calling.camReport(body);
+        camReportAt = now;
+        post(CAMCHECK, camReport);
+        return true;
     }
 
     // ---- Console.Host -----------------------------------------------------------------------------

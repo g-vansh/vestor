@@ -102,6 +102,12 @@ public final class ConsoleDemo {
             public String name() {
                 return "Vestor";
             }
+
+            @Override
+            public boolean camCheck(String peer, Map<String, Object> body, long now) {
+                System.out.println("camcheck " + Calling.camReport(body));
+                return true;
+            }
         };
         Console console = new Console(host, keys);
         console.setPort(port);

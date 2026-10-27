@@ -1503,6 +1503,27 @@ add airline branding.
   Vestor allows one a question).
 - Next: nothing to set up on the Claude Console. Its Usage page shows cache reads.
 
+### 2026-10-27: Video Calls (WhatsApp Web on the Fire TV) and the webcam checks
+- Did: a modern browser on the 2020 Samsung is not possible. Its engine is Chromium 69
+  for life (Samsung's own tables, and OS upgrades only from 2023 models), every Tizen browser
+  and homebrew shell wraps that engine, and WhatsApp Web refuses it ("works with Safari 15+",
+  fetched with the TV's exact user agent). So WhatsApp Web runs on the Fire TV instead: Video
+  Calls on the top row (and "Ask Vestor: open WhatsApp") shows it full screen in the Fire TV's
+  current Chromium under a desktop Chrome name, with a D-pad pointer, the Fire TV keyboard for
+  text, camera and microphone for web.whatsapp.com only, and nothing else reachable. Its Menu
+  checks for a webcam on the Samsung (Vestor opens the Samsung's browser on its own check page,
+  which reports back once, only while a check runs) and on the Fire TV (Camera2, audio inputs,
+  USB classes).
+- Verified: WhatsApp Web shows its sign-in with Vestor's desktop name and a "use a computer"
+  page with the Fire TV's default name (headless Chromium, live). The check page end to end
+  against the real server with and without a camera, no page errors or CSP violations.
+  CallingTest 36 and SecurityTest 139 (the report endpoint: not without a running check, once,
+  1 KB, same-origin, paced). Signed build with the camera and microphone marked optional.
+- Changed from brief: a webcam on the Samsung's USB port is unlikely to work (Samsung added
+  webcam support to its TVs in 2021). If the Samsung check sees one, the next step is a small
+  Samsung camera app; if not, the webcam goes on the Fire TV stick with an OTG cable.
+- Next: on the TV, Video Calls, Menu, both checks with the webcam plugged in.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

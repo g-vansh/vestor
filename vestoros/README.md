@@ -33,6 +33,9 @@ Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
   (the phone keyboard's microphone turns speech into the question).
 - **The grocery shuttle.** On its days, MIT's Trader Joe's and Whole Foods run joins the
   shuttles, live at Tang/Westgate.
+- **Video Calls.** WhatsApp on the TV, run with the remote as a pointer: messages today, calls once
+  the Fire TV has a camera (see Video calls). Its Menu checks for a webcam on the Samsung and on
+  the Fire TV.
 - **Tech Shuttle NW.** MIT's weekday run past the gym and up to Pacific St, live at Grad
   Junction West from 7:13 AM to 3:43 PM. It comes after the main lines, so it never pushes the
   Tech Shuttle or the 85 off the info bar.
@@ -466,29 +469,47 @@ The Mirror button on the top row offers two ways:
   Miracast. Pixels only cast to Chromecast, so use the Samsung TV's own Screen Mirroring or
   AirScreen there). Any remote button ends a Miracast session.
 
-## FaceTime and video calls
+## Video calls: WhatsApp on the TV
 
-A WhatsApp video call cannot run from a webcam plugged into the Fire TV Stick or into this 2020
-Samsung:
+**Video Calls** (the camera button on the top row, or "Ask Vestor: open WhatsApp") shows WhatsApp
+Web full screen in the Fire TV's own web engine, which is current Chromium. WhatsApp Web has made
+voice and video calls in a browser since July 2026. Vestor presents it as a desktop Chrome at the
+engine's real version: WhatsApp sends the Fire TV's own browser name to a "use a computer" page,
+and the desktop name gets the normal sign-in (checked against web.whatsapp.com).
 
-- The Stick has no WhatsApp app, no microphone of its own and no camera support.
-- A webcam on the Samsung's USB port is only open to the Samsung's own apps. There is no WhatsApp
-  app for it, Samsung's calling app needs a 2023 or newer TV, and Google Meet left Samsung TVs in
-  March 2024.
-- WhatsApp Web now makes voice and video calls in a browser, but the Samsung's browser runs
-  Chromium 69, fixed on 2020 models, and WhatsApp turns it away ("WhatsApp works with Safari 15+").
+- **Sign in once:** scan the code on the TV with WhatsApp on your phone (Settings, Linked devices).
+  It stays signed in until you choose Menu, Sign out.
+- **With the remote:** the arrows move a pointer (faster while held), OK clicks, pushing past the
+  top or bottom edge scrolls, Rewind and Fast Forward scroll a page. Clicking a text field brings
+  up the Fire TV keyboard, and its send key sends. Back closes WhatsApp's panels, Back twice
+  leaves, Home always leaves.
+- **Messages work today.** Calls need a camera and microphone the Fire TV can use.
 
-What works:
+**Where the webcam can go.** This 2020 Samsung cannot help: its browser is Chromium 69, fixed for
+its life, every browser for it uses that same engine, and WhatsApp turns it away ("WhatsApp works
+with Safari 15+"). A webcam on the Samsung's USB port could only reach WhatsApp through a camera
+app on the Samsung itself, and Samsung added webcam support to its TVs in 2021. Menu has two
+checks that settle it on your hardware in a minute:
 
-- **Free, today:** start the call on the iPhone and AirPlay its screen to the Samsung. The phone,
-  propped up under the TV, is the camera and microphone. The call's sound may stay on the phone.
-- **Best picture and sound:** a computer on the TV running WhatsApp (the desktop app, or
-  web.whatsapp.com in Chrome), with the camera plugged into the computer. A MacBook can use the
-  iPhone as its camera. Both of the Samsung's HDMI ports are in use (the Fire TV, and the
-  soundbar on eARC), so the computer joins through a small HDMI switch in front of the Fire TV's
-  port. One that switches by itself picks the computer when it wakes. A small always-on PC
-  behind the TV, with a webcam and a wireless keyboard, makes it permanent.
-- **FaceTime:** an Apple TV 4K uses the iPhone as its camera and runs FaceTime on the big screen.
+- **Check for a webcam on the Samsung:** with the webcam in the TV's USB port, Vestor opens the
+  Samsung's browser on a page that lists the cameras and microphones the TV offers, and the answer
+  comes back to Vestor. If the TV sees the webcam, a small Samsung camera app can carry it to
+  WhatsApp (it needs the TV's Developer Mode and your Samsung account, once). If it does not, no
+  app on this TV can use a webcam.
+- **Check for a webcam on the Fire TV:** with the webcam on the stick through a micro-USB OTG cable
+  that also takes the stick's power (about $10), Vestor says whether Fire OS offers it as a camera.
+  If it does, calls work in Video Calls right away.
+
+Other ways that work: start the call on the iPhone and AirPlay its screen to the Samsung (the
+phone is the camera, the sound may stay on the phone), or a computer on the TV. For FaceTime, an
+Apple TV 4K uses the iPhone as its camera.
+
+**Privacy.** WhatsApp's own end-to-end encryption applies, and Vestor sees nothing of it. The
+screen loads web.whatsapp.com only (WhatsApp's own servers carry the page and calls), opens no
+other site, and gives the camera and microphone to WhatsApp Web alone, after Fire OS asks you
+once. The sign-in lives in Vestor's private storage on the TV, so anyone with the remote can read
+the chats while it is linked: Menu, Sign out ends that, and so does removing the TV's entry under
+Linked devices on your phone.
 
 ## Music, surround sound and headphones
 
@@ -678,7 +699,8 @@ apps, so it is the last resort.
 ## What it changes, exactly
 
 - Installs one app, `tv.vestor.home`. Its permissions: internet, keeping the screen awake (for a
-  note or Alexa), and starting at boot.
+  note or Alexa), starting at boot, and the camera and microphone, which Fire OS asks you about the
+  first time a WhatsApp call in Video Calls needs them.
 - Turns on one accessibility service, "Vestor home button". It looks only at which app and screen
   a new window belongs to, to spot Amazon's home, and it draws the bike alarm, notes and hearts
   over other apps. It is declared unable to read screen content, press keys, read the remote,
@@ -740,6 +762,10 @@ device you approved on the TV with the remote, and nothing anyone sends it can t
 
 **Everything else**
 
+- **Video Calls is WhatsApp's page, not Vestor's.** That one screen is a browser locked to
+  web.whatsapp.com: it talks to WhatsApp's servers like WhatsApp on a computer, keeps its sign-in
+  in Vestor's private storage, and gets the camera and microphone only for that page. Nothing in
+  it reaches Vestor's own data.
 - **Outgoing only to the hosts above, over HTTPS.** Plain HTTP is refused, and so are certificates
   a user or another app installed. Redirects stay on the same host. Every answer has a size cap
   and a time limit. No identifiers or cookies leave the TV, and the user agent is just "Vestor"

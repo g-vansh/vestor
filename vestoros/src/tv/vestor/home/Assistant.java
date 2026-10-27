@@ -379,6 +379,9 @@ final class Assistant implements Claude.Hands {
             case "fire_tv_home":
                 hub.command("firetv");
                 return "Went to Fire TV's home";
+            case "video_calls":
+                hub.command("calls");
+                return "Opened Video Calls";
             default:
                 throw new Claude.Failed("Not something Vestor can do.");
         }

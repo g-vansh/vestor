@@ -366,6 +366,9 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             case Hub.FORECAST:
                 scene.setForecast((Forecast.Result) detail, now);
                 break;
+            case Hub.CAMCHECK:
+                if (detail instanceof String) scene.toast("Camera check", (String) detail, Scene.TOAST_INFO, now);
+                break;
             case Hub.ANSWER:
                 if (detail instanceof Claude.Answer) {
                     Claude.Answer a = (Claude.Answer) detail;
@@ -1196,6 +1199,9 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 break;
             case "ask":
                 ask();
+                break;
+            case "calls":
+                startActivity(new Intent(this, Calls.class));
                 break;
             case "forget":
                 hub.keys.revokeAll(now);

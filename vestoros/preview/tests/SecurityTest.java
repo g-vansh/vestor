@@ -47,6 +47,7 @@ public final class SecurityTest {
         storage();
         pairingOverHttp();
         cookiesOverHttp();
+        camCheckOverHttp();
         slowClients();
         System.out.println(checks + " checks, " + failures + " failures");
         System.exit(failures > 0 ? 1 : 0);
@@ -513,6 +514,9 @@ public final class SecurityTest {
         final int port;
         final List<Keys.Pending> asked = Collections.synchronizedList(new ArrayList<Keys.Pending>());
         volatile boolean approve = true;
+        /** A camera check is running (Hub.startCamCheck), and the report it got. */
+        volatile boolean camArmed;
+        volatile String camReport = "";
 
         Server(String storeJson, final byte[] font) throws IOException {
             store = new Mem(storeJson);
@@ -568,6 +572,14 @@ public final class SecurityTest {
                 public String name() {
                     return "Vestor";
                 }
+
+                @Override
+                public boolean camCheck(String peer, Map<String, Object> body, long now) {
+                    if (!camArmed) return false;
+                    camArmed = false;
+                    camReport = Calling.camReport(body);
+                    return true;
+                }
             };
             console = new Console(host, keys);
             port = freePort();
@@ -605,6 +617,43 @@ public final class SecurityTest {
         if (c == null || !c.startsWith("vestor=")) return null;
         int semi = c.indexOf(';');
         return c.substring("vestor=".length(), semi < 0 ? c.length() : semi);
+    }
+
+    /** The Samsung's camera report: taken without a key, but only while a check runs, once, small and same-origin. */
+    private static void camCheckOverHttp() throws Exception {
+        Server s = new Server(null, null);
+        try {
+            String body = "{\"engine\":69,\"devices\":true,\"cameras\":1,\"mics\":1}";
+            eq("the check page is served without a key", 200, s.get("127.0.0.20", "/camcheck", null).status);
+            eq("no report while no check runs", 409, s.post("127.0.0.21", "/api/camcheck", body, null).status);
+            s.camArmed = true;
+            // Another site's page posting to the TV: its own Origin, and no X-Vestor header.
+            byte[] b = body.getBytes(StandardCharsets.UTF_8);
+            for (String extra : new String[] {"X-Vestor: 1\r\nOrigin: http://evil.example\r\n", "Origin: http://127.0.0.1:" + s.port + "\r\n"}) {
+                Socket sock = connect(s.port, "127.0.0.22");
+                try {
+                    sock.setSoTimeout(5000);
+                    String h = "POST /api/camcheck HTTP/1.1\r\nHost: 127.0.0.1:" + s.port + "\r\n" + extra
+                            + "Content-Type: application/json\r\nContent-Length: " + b.length + "\r\n\r\n" + body;
+                    sock.getOutputStream().write(h.getBytes(StandardCharsets.UTF_8));
+                    Resp r = read(sock, System.nanoTime());
+                    ok("no report from another site (" + (extra.startsWith("X") ? "foreign origin" : "no X-Vestor") + ")",
+                            r.status == 403 && s.camArmed);
+                } finally {
+                    sock.close();
+                }
+            }
+            Resp big = s.post("127.0.0.23", "/api/camcheck", "{\"pad\":\"" + new String(new char[2000]).replace('\0', 'a') + "\"}", null);
+            ok("no report over 1 KB", big.status == 413 && s.camArmed);
+            eq("the report while the check runs", 200, s.post("127.0.0.24", "/api/camcheck", body, null).status);
+            ok("its words are Vestor's own", s.camReport.startsWith("The Samsung's browser (Chromium 69) sees 1 camera"));
+            eq("only one report per check", 409, s.post("127.0.0.25", "/api/camcheck", body, null).status);
+            int limited = 0;
+            for (int i = 0; i < 5; i++) if (s.post("127.0.0.26", "/api/camcheck", body, null).status == 429) limited++;
+            ok("one address cannot keep trying", limited >= 2);
+        } finally {
+            s.stop();
+        }
     }
 
     private static void pairingOverHttp() throws Exception {

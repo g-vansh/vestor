@@ -82,6 +82,12 @@ final class Console {
 
         /** The TV's name for the page header. */
         String name();
+
+        /**
+         * The Samsung's browser reports what cameras it sees (see {@code /camcheck}). False when
+         * no check is running, so the report is refused.
+         */
+        boolean camCheck(String peer, Map<String, Object> body, long now);
     }
 
     static final int PORT = 8686;
@@ -506,6 +512,10 @@ final class Console {
         FILES.put("/app.css", new String[] {"web/app.css", "text/css; charset=utf-8"});
         FILES.put("/icon.svg", new String[] {"web/icon.svg", "image/svg+xml"});
         FILES.put("/manifest.webmanifest", new String[] {"web/manifest.webmanifest", "application/manifest+json"});
+        // The camera check the Samsung's own browser opens (Hub.startCamCheck).
+        FILES.put("/camcheck", new String[] {"web/camcheck.html", "text/html; charset=utf-8"});
+        FILES.put("/camcheck.js", new String[] {"web/camcheck.js", "text/javascript; charset=utf-8"});
+        FILES.put("/camcheck.css", new String[] {"web/camcheck.css", "text/css; charset=utf-8"});
         FILES.put("/fonts/inter-medium.ttf", new String[] {"fonts/Inter-Medium.ttf", "font/ttf"});
         FILES.put("/fonts/inter-semibold.ttf", new String[] {"fonts/Inter-SemiBold.ttf", "font/ttf"});
         FILES.put("/fonts/newsreader-display.ttf", new String[] {"fonts/NewsreaderDisplay-Regular.ttf", "font/ttf"});
@@ -592,6 +602,15 @@ final class Console {
             if (!allow(r.peer, 5, now)) throw new Http.Refused(429, "slow down");
             Map<String, Object> body = jsonBody(c, r, in, 4096);
             pair(c, r, body, out, now);
+            return;
+        }
+        // The Samsung's browser cannot pair: its camera report is taken without a key, but only
+        // while a check Vestor started is running, once, small, and same-origin like the rest.
+        if ("POST".equals(r.method) && "/api/camcheck".equals(r.path)) {
+            if (!allow(r.peer, 10, now)) throw new Http.Refused(429, "slow down");
+            Map<String, Object> body = jsonBody(c, r, in, 1024);
+            if (!host.camCheck(r.peer, body, now)) throw new Http.Refused(409, "no check running");
+            json(out, r, 200, "{}");
             return;
         }
         Keys.Check k = keys.verify(Http.cookie(r, COOKIE), r.peer, now);

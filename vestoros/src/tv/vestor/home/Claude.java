@@ -113,7 +113,7 @@ final class Claude {
     static final Set<String> SAFE_AFTER_SEARCH = new HashSet<>(java.util.Arrays.asList("play", "open_app", "media", "list_automations"));
     static final String[] DAYS = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"};
     static final String[] VESTOR_ACTIONS = {"find_ebike", "stop_ebike", "glare_on", "glare_off", "night_look", "day_look",
-        "auto_look", "show_guest_wifi", "hide_guest_wifi", "send_hearts", "vestor_home", "fire_tv_home"};
+        "auto_look", "show_guest_wifi", "hide_guest_wifi", "send_hearts", "vestor_home", "fire_tv_home", "video_calls"};
     static final String[] MEDIA_ACTIONS = {"play", "pause", "next", "previous"};
     static final String[] TV_ACTIONS = {"volume_up", "volume_down", "mute", "power_off", "picture_mode", "sound_mode", "input"};
     static final String[] RULE_ACTIONS = {"find_ebike", "glare_on", "glare_off", "night_look", "day_look", "auto_look",
@@ -600,6 +600,7 @@ final class Claude {
                 if (action.endsWith("_look")) return any(q, "night", "day", "dark", "light", "look", "theme", "mode", "auto");
                 if (action.endsWith("guest_wifi")) return any(q, "wifi", "wi-fi", "wi fi", "guest", "password", "network", "internet");
                 if ("send_hearts".equals(action)) return any(q, "heart", "love");
+                if ("video_calls".equals(action)) return any(q, "whatsapp", "video", "call");
                 return any(q, "home", "vestor", "lucent", "fire", "amazon", "back", "exit", "leave", "close"); // lucent: the old name
             default:
                 return false;
@@ -1077,7 +1078,7 @@ final class Claude {
         tool(w, "vestor", "Do something on Vestor itself: start or stop the e-bike finder (it rings when an e-bike docks "
                 + "at Westgate or Erie St), switch the Samsung to its bright picture for glare or back, change the screen's look "
                 + "(night, day or automatic), show or hide the guest Wi-Fi code, send floating hearts, bring Vestor to the "
-                + "front, or go to Fire TV's own home.",
+                + "front, go to Fire TV's own home, or open Video Calls (WhatsApp on the TV).",
                 new String[][] {{"action", "enum", ""}}, VESTOR_ACTIONS);
         tool(w, "media", "Play, pause or skip whatever is playing on the TV.", new String[][] {{"action", "enum", ""}}, MEDIA_ACTIONS);
         tool(w, "tv", "Control the Samsung TV and the soundbar's volume. picture_mode, sound_mode and input take a value "

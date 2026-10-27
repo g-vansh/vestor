@@ -90,8 +90,9 @@ final class Scene {
             NOTE = 9, MIRROR = 10, WIFI = 11, ALARM = 12, ANSWER = 13;
     private static final int DOCK = 0, TOP = 1, GLANCE = 2;
     /** Top controls, left to right. */
-    private static final int T_ASK = 0, T_EXIT = 1, T_MIRROR = 2, T_PHONE = 3, T_AUDIO = 4, T_GEAR = 5, T_COUNT = 6;
-    private static final String[] TOP_NAMES = {"Ask Vestor", "Fire TV Home", "Mirror a Screen", "Phone Control", "Sound", "Settings"};
+    private static final int T_ASK = 0, T_CALL = 1, T_EXIT = 2, T_MIRROR = 3, T_PHONE = 4, T_AUDIO = 5, T_GEAR = 6, T_COUNT = 7;
+    private static final String[] TOP_NAMES = {"Ask Vestor", "Video Calls", "Fire TV Home", "Mirror a Screen", "Phone Control", "Sound",
+        "Settings"};
     private static final String[] MENU_ROWS = {"Move", "Hide from Home", "App Info"};
 
     /** Light text drawn straight on the photograph, whatever the look (the scrim keeps it legible). */
@@ -946,6 +947,9 @@ final class Scene {
                         break;
                     case T_ASK:
                         host.action("ask");
+                        break;
+                    case T_CALL:
+                        host.action("calls");
                         break;
                     case T_MIRROR:
                         mode = MIRROR;
@@ -2220,6 +2224,9 @@ final class Scene {
                     break;
                 case T_ASK:
                     Icons.sparkle(g, cx, mid, dp(24), ink);
+                    break;
+                case T_CALL:
+                    Icons.video(g, cx, mid, dp(22), ink);
                     break;
                 default: {
                     float iconC = r[0] + capH / 2;
