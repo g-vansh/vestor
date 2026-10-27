@@ -137,6 +137,10 @@ public final class Feeds {
         eq("grocery by id", 4, Transit.kind("64288", ""));
         eq("grocery by name", 4, Transit.kind("1", "Trader Joe-Whole Foods"));
         eq("costco is not ours", 0, Transit.kind("64291", "Costco - Aldi's"));
+        eq("NW by id", 2, Transit.kind("73992", "Tech Shuttle NW"));
+        eq("NW by name, not the Tech Shuttle", 2, Transit.kind("1", "Tech Shuttle NW"));
+        eq("Tech Shuttle by name", 1, Transit.kind("2", "Tech Shuttle"));
+        eq("NW ranks after the other lines", true, Transit.tech2().minor && !Transit.tech().minor);
         Gtfs.Update u = new Gtfs.Update(), elsewhere = new Gtfs.Update();
         u.routeId = "64288";
         u.stopId = Transit.STOP_TANG_WESTGATE;

@@ -13,8 +13,8 @@ import java.util.TimeZone;
 /**
  * Shuttles near Westgate, with the same stops and routes as Vestor's clients:
  *
- * - MIT Tech Shuttle (route 63220) and Tech Shuttle 2 (56642, 71674) at Grad Junction West
- *   (stop 180113), and SafeRide (any route named "Saferide...") at W98 @ Vassar St (stop 3813),
+ * - MIT Tech Shuttle (route 63220) and Tech Shuttle NW (73992, weekdays 7:13 AM to 3:43 PM, the
+ *   run past the gym on Vassar St and up to Pacific St) at Grad Junction West (stop 180113), and SafeRide (any route named "Saferide...") at W98 @ Vassar St (stop 3813),
  *   all from Passio's GTFS-realtime feed for agency "mit".
  * - MBTA route 85 (Assembly Row - Ruggles) at the Westgate dock, from the MBTA's V3 API, shown as
  *   two lines: 85A towards Assembly Row, boarding at Vassar St @ Audrey St (stop 21772, beside the
@@ -44,7 +44,8 @@ final class Transit {
      */
     static final int[] GROCERY_FROM_KENDALL = {660, 720, 783, 846, 909};
     static final Set<String> TECH = set("63220");
-    static final Set<String> TECH2 = set("56642", "71674");
+    /** Tech Shuttle NW, and the ids its route had before (still in the test fixtures). */
+    static final Set<String> TECH2 = set("73992", "56642", "71674");
 
     static final String MBTA_ROUTE = "85";
     static final String STOP_TO_ASSEMBLY = "21772", STOP_TO_RUGGLES = "22173";
@@ -77,7 +78,9 @@ final class Transit {
     }
 
     static Model.Line tech2() {
-        return new Model.Line("tech2", "Tech Shuttle +NW", "NW", "Grad Junction West", AZURE);
+        Model.Line l = new Model.Line("tech2", "Tech Shuttle NW", "NW", "Grad Junction West", AZURE);
+        l.minor = true;
+        return l;
     }
 
     static Model.Line saferide() {
@@ -134,7 +137,8 @@ final class Transit {
         String n = routeName == null ? "" : routeName.toLowerCase(Locale.US).replace(" ", "");
         if (n.startsWith("saferide")) return 3;
         if (n.startsWith("traderjoe")) return 4;
-        if (n.startsWith("techshuttle2")) return 2;
+        // "Tech Shuttle NW" before plain "Tech Shuttle", which its name also starts with.
+        if (n.startsWith("techshuttlenw") || n.startsWith("techshuttle2")) return 2;
         if (n.startsWith("techshuttle")) return 1;
         return 0;
     }
@@ -283,7 +287,7 @@ final class Transit {
 
     /**
      * What an MIT line with no tracked bus says, from MIT's published hours (2026): Tech Shuttle
-     * weekdays 6:15 AM to 11 PM, +NW weekdays 7 AM to 4 PM, SafeRide fixed routes 6 to 11 PM and
+     * weekdays 6:15 AM to 11 PM, NW weekdays 7 AM to 4 PM, SafeRide fixed routes 6 to 11 PM and
      * on demand after. Hours change in summer and on holidays, so these are hints beside live
      * data, never instead of it. MBTA lines say when the timetable's next bus is due instead.
      */

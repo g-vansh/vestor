@@ -344,7 +344,7 @@ final class Cards {
         return x - x0;
     }
 
-    /** Lines with a bus coming, soonest first. */
+    /** Lines with a bus coming, soonest first, a minor line after the others. */
     List<Model.Line> running() {
         List<Model.Line> out = new ArrayList<>();
         // Minutes are worked out at fetch time: once they are old they are wrong, so none show.
@@ -353,6 +353,7 @@ final class Cards {
         Collections.sort(out, new Comparator<Model.Line>() {
             @Override
             public int compare(Model.Line p, Model.Line q) {
+                if (p.minor != q.minor) return p.minor ? 1 : -1;
                 return Integer.compare(p.minutes.get(0), q.minutes.get(0));
             }
         });

@@ -184,6 +184,8 @@ final class Model {
         String idle = "";
         /** Where it is heading, to tell apart two directions of one route ("Assembly"). */
         String toward = "";
+        /** A line that matters less (Tech Shuttle NW, mostly for the gym): after the others with a bus coming. */
+        boolean minor;
 
         Line(String id, String label, String chip, String stop, int color) {
             this.id = id;

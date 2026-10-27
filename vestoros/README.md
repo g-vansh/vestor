@@ -33,6 +33,9 @@ Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
   (the phone keyboard's microphone turns speech into the question).
 - **The grocery shuttle.** On its days, MIT's Trader Joe's and Whole Foods run joins the
   shuttles, live at Tang/Westgate.
+- **Tech Shuttle NW.** MIT's weekday run past the gym and up to Pacific St, live at Grad
+  Junction West from 7:13 AM to 3:43 PM. It comes after the main lines, so it never pushes the
+  Tech Shuttle or the 85 off the info bar.
 - **A Glare button.** One press switches the Samsung to its brightest picture for a sunny
   afternoon, from the remote, a phone or Alexa. The evening picture comes back at sunset.
 - **Rain in the next two hours** for Westgate, from NOAA's 15-minute HRRR forecast: "Rain from
@@ -465,12 +468,27 @@ The Mirror button on the top row offers two ways:
 
 ## FaceTime and video calls
 
-The Fire TV Stick has no FaceTime, WhatsApp or Zoom app and does not take a webcam, so the TV
-cannot place a call itself. What works today: start the FaceTime or WhatsApp video call on the
-iPhone and AirPlay its screen to the Samsung TV. The call fills the TV and the sound comes through
-the soundbar, while the phone, propped up, is the camera and microphone. For FaceTime on the TV
-properly, an Apple TV 4K uses your iPhone as its camera (Continuity Camera) and runs FaceTime
-on the big screen.
+A WhatsApp video call cannot run from a webcam plugged into the Fire TV Stick or into this 2020
+Samsung:
+
+- The Stick has no WhatsApp app, no microphone of its own and no camera support.
+- A webcam on the Samsung's USB port is only open to the Samsung's own apps. There is no WhatsApp
+  app for it, Samsung's calling app needs a 2023 or newer TV, and Google Meet left Samsung TVs in
+  March 2024.
+- WhatsApp Web now makes voice and video calls in a browser, but the Samsung's browser runs
+  Chromium 69, fixed on 2020 models, and WhatsApp turns it away ("WhatsApp works with Safari 15+").
+
+What works:
+
+- **Free, today:** start the call on the iPhone and AirPlay its screen to the Samsung. The phone,
+  propped up under the TV, is the camera and microphone. The call's sound may stay on the phone.
+- **Best picture and sound:** a computer on the TV running WhatsApp (the desktop app, or
+  web.whatsapp.com in Chrome), with the camera plugged into the computer. A MacBook can use the
+  iPhone as its camera. Both of the Samsung's HDMI ports are in use (the Fire TV, and the
+  soundbar on eARC), so the computer joins through a small HDMI switch in front of the Fire TV's
+  port. One that switches by itself picks the computer when it wakes. A small always-on PC
+  behind the TV, with a webcam and a wireless keyboard, makes it permanent.
+- **FaceTime:** an Apple TV 4K uses the iPhone as its camera and runs FaceTime on the big screen.
 
 ## Music, surround sound and headphones
 

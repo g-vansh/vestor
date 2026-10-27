@@ -505,10 +505,10 @@ final class Live {
         long mbtaAge = now - Math.max(mbtaPolled, mbta.changed());
         if (mbtaStreaming || mbtaAge < 120000L) mbta.fill(now, assembly, ruggles);
         t.lines.add(tech);
-        t.lines.add(tech2);
         t.lines.add(safe);
         t.lines.add(assembly);
         t.lines.add(ruggles);
+        t.lines.add(tech2);
         // The grocery shuttle only on its days (or whenever one is tracked), so it never clutters a weekday.
         if (Transit.groceryShown(grocery, now)) t.lines.add(grocery);
         Transit.idleNotes(t, now);
