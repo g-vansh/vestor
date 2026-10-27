@@ -13,3 +13,14 @@ notices are retained.
   540 Memorial Drive, Cambridge MA (Logan/BOS corridor).
 - Modular `scenes/` + `data/` architecture for future MBTA, Bluebikes, weather,
   and animation scenes.
+
+## Live flight data sources
+Aircraft positions come from community ADS-B networks, used for personal,
+non-commercial display only and within each service's published rate limits
+(see `utilities/ratelimit.py`).
+- **adsb.fi** open data API, https://adsb.fi (primary position source)
+- **adsb.lol**, https://adsb.lol (fallback position source)
+- **airplanes.live**, https://airplanes.live (last resort, needs registration)
+- **adsbdb.com**, https://www.adsbdb.com (callsign to route lookups)
+- **Flightradar24** via the unofficial FlightRadarAPI package (current routes,
+  low volume, personal use)

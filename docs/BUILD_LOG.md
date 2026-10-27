@@ -1363,6 +1363,49 @@ add airline branding.
 - **Verified:** idle + flight previews; live on the Pi (weather 28C/83F, ARR/DEP
   tags, 7700 alert, service healthy, ~64% CPU, 52 °C).
 
+### 2026-10-27: Flight data that never gets rate limited (governor + provider failover)
+- **Why:** the tracker runs 24/7 and must never be rate limited. It polled
+  airplanes.live every 10 s with no handling of 429 or Retry-After, no failover
+  and no backoff. A live probe on 2026-10-27 showed airplanes.live now answers
+  HTTP 403 and asks unregistered clients to email contact@airplanes.live.
+  adsb.lol advertises 4 requests per second, 60 per minute and only 500 per day.
+- **Did:** added `utilities/ratelimit.py`, a thread-safe per-host governor. It
+  enforces a minimum spacing, a per-minute token bucket and an exact 24 h cap
+  per host, all set well below each documented limit. It honours 429 and 503
+  with Retry-After (seconds or HTTP date) and X-RateLimit-Reset, and pauses a
+  host when X-RateLimit-Remaining reaches 0. Errors and timeouts back off
+  exponentially with full jitter up to 5 minutes and reset on success. A request
+  that would break a budget is refused locally and never sent. Daily quotas and
+  long pauses are saved to `/tmp/vestor-ratelimit.json` so a restart cannot reset them.
+- `utilities/overhead.py` now asks providers in order: adsb.fi (primary, 1
+  request per second documented), adsb.lol (fallback, paced to one call per 15 s
+  and 400 per day) and airplanes.live (last resort, parked for an hour after a
+  403). A failure moves the same poll to the next provider. The primary is
+  probed again when its backoff ends. If every provider fails, the last flights
+  stay on screen and `Overhead.stale` turns True after 2 minutes. The board is
+  not blanked.
+- FR24 route lookups keep the 20 s floor. After a failure, or two empty answers
+  in a row, they wait 1 min, then 5 min, then 15 min, with one probe per step.
+  adsbdb lookups go through the governor at 30 per minute (its limit is 512) and
+  cache hits for 4 h and misses for 1 h.
+- `POLL_SECONDS` dropped from 10 to 5. That is 12 requests per minute to adsb.fi,
+  a fifth of its limit, and matches the display's 5 s check for new data. New
+  knobs in `config.py`: `FLIGHT_PROVIDERS`, `RATE_BUDGETS`, `FR24_BACKOFF_STEPS`,
+  `FR24_EMPTY_TOLERANCE`, `STALE_AFTER_SECONDS`, `STALE_CLEAR_SECONDS`,
+  `RATE_STATE_FILE`, `RATE_STATS_LOG_SECONDS`.
+- The flight dict schema and the `grab_data` / `new_data` / `processing` /
+  `data` / `data_is_empty` interface are unchanged, so no scene changed.
+  DEMO_MODE still skips the network. The journal gets `[overhead]` lines only on
+  transitions, plus a `rate stats` summary every 15 minutes.
+- **Verified:** `python3 -m unittest discover -s tests -v` passes 54 offline
+  tests. They cover 429 with Retry-After, timeouts, a dead primary, all providers
+  down, FR24 escalation, budget refusal and the adsb.lol daily cap over a
+  simulated 26 h outage. One live poll from a dev machine returned flights via
+  adsb.fi. A live 403 from airplanes.live failed over to adsb.fi in the same poll.
+- **Next:** to use airplanes.live again, email contact@airplanes.live with a
+  short project description and the repo link. Feeding adsb.fi or adsb.lol with
+  a receiver later raises their limits and is how adsb.lol plans to hand out API keys.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

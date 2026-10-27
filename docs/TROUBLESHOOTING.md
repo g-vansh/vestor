@@ -11,5 +11,8 @@
 | Flicker | Sound on / HW pulse off | blacklist snd_bcm2835 + audio=off + disable_hardware_pulsing=False |
 | Won't boot after cmdline edit | Malformed cmdline.txt | Restore cmdline.txt.bak on Mac |
 | No flights | FlightRadarAPI change | `pip install FlightRadarAPI -U` or merge upstream |
+| Same flights frozen on the board, journal says `holding last data` | Every position provider failed or is paused by the rate governor. The last flights stay up on purpose and `Overhead.stale` turns True after 2 min. | It clears by itself once a provider answers. Run `journalctl -u vestor -g overhead` to see which provider is paused and why (see the `rate stats` line). Check the Pi has internet. If the journal says `could not persist state`, delete `/tmp/vestor-ratelimit.json` because another user created it. |
+| Journal says `airplanes.live failed (HTTP 403 (forbidden))` | airplanes.live now answers 403 to clients that have not registered with them. | Harmless. adsb.fi is the primary and airplanes.live is a last resort that is retried once an hour. To use it, email contact@airplanes.live with a short project description and the repo link. |
+| Routes show `?` for a while, journal says `FR24 route lookup failed` | FR24 is throttling or blocking the unofficial feed (Cloudflare). | Expected and self-healing. FR24 waits 1 min, then 5 min, then 15 min and probes once per step. adsbdb plus the BOS check fill in routes meanwhile. If it never recovers, run `pip install -U FlightRadarAPI`. |
 | Service dead | Path/env/caps | Check EnvironmentFile, venv path, setcap, journalctl |
 | No SSH | WiFi/SSH not baked | Re-flash custom.toml; SSID + country=US |
