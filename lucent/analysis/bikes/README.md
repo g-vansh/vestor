@@ -157,8 +157,8 @@ e-bike): Brier score 0.141 against 0.167 for always saying the base rate, log lo
 **Through the morning.** The evening outlook shows the chance at 7:30, 8:30 and 9:30. Checked
 from 10 PM on 29 mornings at every half hour from 7:30 to 10:00, it beat the base rate at each
 time (Brier 0.135 to 0.227 against 0.153 to 0.268), and its average chance stayed within about
-nine points of how often an e-bike was really there (68% forecast against 59% seen at 8:30, the
-widest gap). The chance hovers near one half by mid-morning, so a single "gone by" time would
+ten points of how often an e-bike was really there (the widest gap: 58% forecast against 48%
+seen at 10:00, so it leans a little hopeful late in the morning). The chance hovers near one half by mid-morning, so a single "gone by" time would
 jump around from night to night, and the card gives the three chances instead
 (`validate_morning.py`, `results/validate_morning.json`).
 
