@@ -4507,7 +4507,7 @@
       });
       this.clModeRow = h('div', { class: 'set-row', hidden: true },
         h('div', { class: 'set-text' }, h('p', { class: 'set-label', id: 'cl-mode-label', text: 'Which model answers' }),
-          h('p', { class: 'set-help', text: 'Most questions cost well under a tenth of a cent. Questions that need a web search cost about one cent. Hard questions that need Opus’s advice cost about five to eight cents.' })),
+          h('p', { class: 'set-help', text: 'Most questions cost well under a tenth of a cent. Questions that need a web search cost about one cent. Hard questions that need Opus’s advice cost about four to eight cents.' })),
         modeGroup);
       this.clForget = h('button', { class: 'btn btn-quiet btn-danger btn-sm cl-forget', type: 'button', 'data-fk': 'cl-forget' }, 'Forget Key');
       confirmTap(this.clForget, 'Tap again to forget the key', async function () {
