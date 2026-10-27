@@ -166,6 +166,9 @@ final class Actions {
                         case "cap":
                             c.setCap((int) Json.num(body, "dollars", -1));
                             break;
+                        case "mode":
+                            c.setMode(Json.str(body, "mode", ""));
+                            break;
                         case "clear":
                             c.clearHistory();
                             break;

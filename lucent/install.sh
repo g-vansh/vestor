@@ -64,18 +64,24 @@ case ${1:-} in
 esac
 
 # The Claude API key, read from a file you keep private, goes over ADB straight into Lucent's
-# private storage. It is never on a command line here or in your shell's history; on the TV only
-# ADB's shell may hand it to Lucent (KeyDrop). Phones never see it again.
+# private storage: "content write" streams it from standard input, so it is on no command line,
+# in no shell history and in no broadcast record. On the TV only ADB's shell may hand it over
+# (KeyDrop checks the caller), and only to a Lucent signed with Lucent's key. Phones never see it.
 claude_key() {
   local f=$1 k out
   [[ -f $f ]] || { echo "error: no key file at $f" >&2; return 1; }
   k=$(LC_ALL=C tr -d ' \r\n\t' < "$f")
   [[ $k =~ ^sk-ant-[A-Za-z0-9_-]{20,300}$ ]] || { echo "error: $f does not hold a Claude API key (it starts with sk-ant-)" >&2; return 1; }
-  out=$(printf '%s\n' "$k" | adb_ shell 'read -r k; am broadcast -n tv.lucent.home/.KeyDrop -a tv.lucent.home.CLAUDE_KEY --es key "$k"' 2>&1 | tr -d '\r')
-  if [[ $out == *'data="ok"'* ]]; then
-    echo "Claude key saved on the TV (it ends in ${k: -4}). Ask Lucent is ready: the sparkle at the top of the home screen."
+  local sig
+  sig=$(installed_sig)
+  [[ $sig == "$SIG" ]] || { echo "error: the Lucent on this TV is not signed with Lucent's key, so it does not get the Claude key." >&2; return 1; }
+  printf '%s' "$k" | adb_ shell content write --uri content://$PKG.key/claude >/dev/null 2>&1 || true
+  sleep 1
+  out=$(sh_ content call --uri content://$PKG.key --method status 2>&1 || true)
+  if [[ $out == *"result=set"* ]]; then
+    echo "Claude key saved on the TV (it ends in ${k: -4}). Ask is ready: the sparkle at the top of the home screen."
   else
-    echo "error: the TV did not take the key. Is Lucent installed? $(plain "$out")" >&2
+    echo "error: the TV did not take the key. Is Lucent installed and open once? $(plain "$out")" >&2
     return 1
   fi
 }
@@ -92,8 +98,8 @@ if [[ $mode == claudekey ]]; then
   exit $?
 fi
 if [[ $mode == claudeforget ]]; then
-  out=$(sh_ am broadcast -n $PKG/.KeyDrop -a tv.lucent.home.CLAUDE_KEY_FORGET 2>&1 || true)
-  if [[ $out == *'data="ok"'* ]]; then echo "The Claude key is gone from the TV."; else echo "error: the TV did not answer: $(plain "$out")" >&2; exit 1; fi
+  out=$(sh_ content call --uri content://$PKG.key --method forget 2>&1 || true)
+  if [[ $out == *"result=forgotten"* ]]; then echo "The Claude key is gone from the TV."; else echo "error: the TV did not answer: $(plain "$out")" >&2; exit 1; fi
   exit 0
 fi
 

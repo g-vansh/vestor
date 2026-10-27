@@ -82,7 +82,17 @@ final class Assistant implements Claude.Hands {
                 @Override
                 public void run() {
                     Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
-                    Claude.Answer a = claude.ask(question, from, System.currentTimeMillis());
+                    Claude.Answer a;
+                    try {
+                        a = claude.ask(question, from, System.currentTimeMillis());
+                    } catch (Throwable t) {
+                        // Whatever went wrong stays on this thread: the home screen keeps running.
+                        a = new Claude.Answer();
+                        a.question = pending.question;
+                        a.from = from;
+                        a.at = pending.at;
+                        a.error = "Something went wrong answering that. Try again.";
+                    }
                     latest = a;
                     hub.post(Hub.ANSWER, a);
                 }

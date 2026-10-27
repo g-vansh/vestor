@@ -20,7 +20,7 @@ final class State {
      */
     private static void assistant(Jw w, Hub h, long now) {
         Claude c = h.assistant.claude;
-        w.key("assistant").obj().put("on", c.hasKey()).put("hint", c.keyHint()).put("model", Claude.MODEL).put("cap", c.cap())
+        w.key("assistant").obj().put("on", c.hasKey()).put("hint", c.keyHint()).put("mode", c.mode()).put("cap", c.cap())
                 .put("spent", c.spent(now)).put("perDay", Claude.PER_DAY);
         Claude.Answer latest = h.assistant.latest;
         if (latest != null && latest.busy) {

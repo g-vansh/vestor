@@ -11,7 +11,7 @@ import java.util.Map;
  */
 final class Json {
     private final String s;
-    private int i, depth, values;
+    private int i, depth, values, maxString = MAX_STRING;
     /** Deeper input than any real feed is refused rather than allowed to overflow the stack. */
     private static final int MAX_DEPTH = 64;
     /**
@@ -29,8 +29,17 @@ final class Json {
 
     /** Parses a whole document. Throws IllegalArgumentException on malformed input. */
     static Object parse(String text) {
+        return parse(text, MAX_STRING);
+    }
+
+    /**
+     * The same with a larger cap on each string, for Claude's answers: their signatures and
+     * encrypted search results are long opaque strings. The answer as a whole is capped by Net.
+     */
+    static Object parse(String text, int maxString) {
         if (text == null) throw new IllegalArgumentException("no input");
         Json p = new Json(text, 0);
+        p.maxString = maxString;
         p.space();
         Object v = p.value();
         p.space();
@@ -274,7 +283,7 @@ final class Json {
         while (i < s.length()) {
             char c = s.charAt(i);
             if (c == '"') {
-                if (i - start > MAX_STRING) throw error("string too long");
+                if (i - start > maxString) throw error("string too long");
                 String out = s.substring(start, i);
                 i++;
                 return out;
@@ -284,7 +293,7 @@ final class Json {
         }
         StringBuilder b = new StringBuilder(s.substring(start, i));
         while (i < s.length()) {
-            if (b.length() > MAX_STRING) throw error("string too long");
+            if (b.length() > maxString) throw error("string too long");
             char c = s.charAt(i++);
             if (c == '"') return b.toString();
             if (c != '\\') {
