@@ -1,0 +1,404 @@
+institution,event,start_date,end_date,source_url,notes
+US_federal,holiday_new_years_day_observed,2021-12-31,2021-12-31,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,"2022 New Year's Day (Sat Jan 1 2022), observed Friday because the holiday falls on Saturday"
+US_federal,holiday_new_years_day,2022-01-01,2022-01-01,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,actual date
+US_federal,holiday_mlk_day,2022-01-17,2022-01-17,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+US_federal,holiday_presidents_day,2022-02-21,2022-02-21,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,legal name Washington's Birthday
+MA_Suffolk,evacuation_day,2022-03-17,2022-03-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+BAA,boston_marathon,2022-04-18,2022-04-18,https://www.baa.org/news/qualifier-registration-for-131st-boston-marathon-presented-by-bank-of-america-begins-today/,126th Boston Marathon (Patriots Day)
+MA,holiday_patriots_day,2022-04-18,2022-04-18,https://catalog.mit.edu/archive/2021-2022/academic-calendar/ https://www.baa.org/news/qualifier-registration-for-131st-boston-marathon-presented-by-bank-of-america-begins-today/,"Massachusetts state holiday, third Monday in April. Date confirmed by MIT HR, MIT Registrar, BU Registrar and the B.A.A. (statute page malegislature.gov and mass.gov were unreachable from this environment)"
+BU,summer_term,2022-05-24,2022-08-12,https://www.bu.edu/reg/calendars/,"Summer Session I May 24 to Jul 1, Session II Jul 5 to Aug 12, twelve-week session May 24 to Aug 12. Not used for bu_classes"
+US_federal,holiday_memorial_day,2022-05-30,2022-05-30,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,summer_session,2022-06-06,2022-08-16,https://catalog.mit.edu/archive/2021-2022/academic-calendar/ https://catalog.mit.edu/archive/2022-2023/academic-calendar/,"regular summer session incl. exam period (first day Jun 6, last class Aug 12, exams Aug 15-16)"
+MA_Suffolk,bunker_hill_day,2022-06-17,2022-06-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+US_federal,holiday_juneteenth,2022-06-19,2022-06-19,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,actual date
+US_federal,holiday_juneteenth_observed,2022-06-20,2022-06-20,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,observed Monday because the holiday falls on Sunday
+MIT,holiday_independence_day,2022-07-04,2022-07-04,https://policies.mit.edu/employment-policy-manual/40-leave-policies/41-holidays,"Institute holiday. 2022 HR holiday table no longer online, date from MIT Policy 4.1 fixed-date rule (July 4, a Monday) and OPM"
+US_federal,holiday_independence_day,2022-07-04,2022-07-04,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,summer_last_day_of_classes,2022-08-12,2022-08-12,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,
+MIT,summer_final_exam_period,2022-08-15,2022-08-16,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,
+MIT,first_year_orientation_begins,2022-08-28,2022-08-28,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,registrar lists only the start date
+MIT,graduate_orientation_begins,2022-08-28,2022-08-28,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,Graduate student orientation activities begin
+BU,holiday_labor_day,2022-09-05,2022-09-05,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_labor_day,2022-09-05,2022-09-05,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+US_federal,holiday_labor_day,2022-09-05,2022-09-05,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,fall_first_day_of_classes,2022-09-06,2022-09-06,https://www.bu.edu/reg/calendars/,
+MIT,registration_day_fall,2022-09-06,2022-09-06,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+MIT,fall_first_day_of_classes,2022-09-07,2022-09-07,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,Bulletin: fall class days Sep 7 to Dec 14 = 65 (13 Mon 13 Tue 15 Wed 13 Thu 11 Fri)
+MIT,student_holiday_no_classes,2022-09-23,2022-09-23,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,"Student holiday, no classes (offices open)"
+MIT,fall_add_date,2022-10-07,2022-10-07,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+BU,holiday_indigenous_peoples_day,2022-10-10,2022-10-10,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_indigenous_peoples_day,2022-10-10,2022-10-10,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+US_federal,holiday_columbus_day,2022-10-10,2022-10-10,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,substitute_monday_schedule,2022-10-11,2022-10-11,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,student_holiday_no_classes,2022-10-11,2022-10-11,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,"Student holiday, no classes (offices open)"
+BU,veterans_day_classes_held,2022-11-11,2022-11-11,https://www.bu.edu/reg/calendars/,BU: classes will be held on Veterans Day
+MIT,holiday_veterans_day,2022-11-11,2022-11-11,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+US_federal,holiday_veterans_day,2022-11-11,2022-11-11,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,thanksgiving_recess,2022-11-23,2022-11-27,https://www.bu.edu/reg/calendars/,
+MIT,fall_drop_date,2022-11-23,2022-11-23,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,"key-dates handout labels Nov 23 as Thursday (typo), Bulletin gives Wed Nov 23"
+MIT,holiday_thanksgiving,2022-11-24,2022-11-24,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+US_federal,holiday_thanksgiving,2022-11-24,2022-11-24,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_day_after_thanksgiving,2022-11-25,2022-11-25,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,listed as Institute holiday
+BU,fall_last_day_of_classes,2022-12-12,2022-12-12,https://www.bu.edu/reg/calendars/,
+BU,fall_study_period,2022-12-13,2022-12-14,https://www.bu.edu/reg/calendars/,
+MIT,fall_last_day_of_classes,2022-12-14,2022-12-14,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+BU,fall_final_exam_period,2022-12-15,2022-12-21,https://www.bu.edu/reg/calendars/,"BU publishes only begin and end dates, every day in the range is flagged"
+MIT,fall_reading_days,2022-12-15,2022-12-15,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+MIT,fall_final_exam_period,2022-12-16,2022-12-22,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,exam days Dec 16 and Dec 19-22 (weekdays only)
+MIT,winter_closure,2022-12-24,2023-01-02,https://iso.mit.edu/?p=4949 https://libraries.mit.edu/news/libraries-winter-break/33655,"MIT ISO: most MIT offices closed Dec 24 2022 through Jan 2 2023, reopen Jan 3. Libraries: extended winter break for staff Dec 25 to Jan 2. HR holiday table for 2022 no longer online"
+US_federal,holiday_christmas_day,2022-12-25,2022-12-25,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,actual date
+US_federal,holiday_christmas_day_observed,2022-12-26,2022-12-26,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,observed Monday because the holiday falls on Sunday
+US_federal,holiday_new_years_day,2023-01-01,2023-01-01,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,actual date
+US_federal,holiday_new_years_day_observed,2023-01-02,2023-01-02,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,observed Monday because the holiday falls on Sunday
+MIT,iap,2023-01-09,2023-02-03,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,January Independent Activities Period
+BU,holiday_mlk_day,2023-01-16,2023-01-16,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_mlk_day,2023-01-16,2023-01-16,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,
+US_federal,holiday_mlk_day,2023-01-16,2023-01-16,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,spring_first_day_of_classes,2023-01-19,2023-01-19,https://www.bu.edu/reg/calendars/,
+MIT,spring_registration_week,2023-01-30,2023-02-03,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+MIT,spring_first_day_of_classes,2023-02-06,2023-02-06,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,Bulletin: spring class days Feb 6 to May 16 = 65 (13 of each weekday)
+BU,holiday_presidents_day,2023-02-20,2023-02-20,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_presidents_day,2023-02-20,2023-02-20,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+US_federal,holiday_presidents_day,2023-02-20,2023-02-20,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,legal name Washington's Birthday
+BU,substitute_monday_schedule,2023-02-21,2023-02-21,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,monday_schedule_of_classes,2023-02-21,2023-02-21,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,Tuesday runs a Monday schedule of classes (counted as a class day)
+BU,spring_recess,2023-03-04,2023-03-12,https://www.bu.edu/reg/calendars/,
+MIT,spring_add_date,2023-03-10,2023-03-10,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+MA_Suffolk,evacuation_day,2023-03-17,2023-03-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,spring_break,2023-03-27,2023-03-31,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,
+MIT,campus_preview_weekend,2023-04-13,2023-04-16,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,admitted-student visit weekend
+BAA,boston_marathon,2023-04-17,2023-04-17,https://www.baa.org/news/127th-boston-marathon-raises-402-million-non-profit-organizations/,127th Boston Marathon (Patriots Day)
+BU,holiday_patriots_day,2023-04-17,2023-04-17,https://www.bu.edu/reg/calendars/,classes suspended
+MA,holiday_patriots_day,2023-04-17,2023-04-17,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://www.bu.edu/reg/calendars/ https://www.baa.org/news/127th-boston-marathon-raises-402-million-non-profit-organizations/,"Massachusetts state holiday, third Monday in April. Date confirmed by MIT HR, MIT Registrar, BU Registrar and the B.A.A. (statute page malegislature.gov and mass.gov were unreachable from this environment)"
+MIT,holiday_patriots_day,2023-04-17,2023-04-17,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+BU,substitute_monday_schedule,2023-04-19,2023-04-19,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,spring_drop_date,2023-04-25,2023-04-25,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+BU,spring_last_day_of_classes,2023-05-03,2023-05-03,https://www.bu.edu/reg/calendars/,
+BU,spring_study_period,2023-05-04,2023-05-07,https://www.bu.edu/reg/calendars/,
+BU,spring_final_exam_period,2023-05-08,2023-05-12,https://www.bu.edu/reg/calendars/,
+MIT,spring_last_day_of_classes,2023-05-16,2023-05-16,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+MIT,spring_reading_days,2023-05-17,2023-05-18,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,commencement_weekend,2023-05-18,2023-05-21,https://www.bu.edu/reg/calendars/,
+MIT,spring_final_exam_period,2023-05-19,2023-05-24,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,exam days May 19 and May 22-24 (weekdays only)
+BU,all_university_commencement,2023-05-21,2023-05-21,https://www.bu.edu/reg/calendars/,
+BU,summer_term,2023-05-23,2023-08-15,https://www.bu.edu/reg/calendars/,"Summer Session I May 23 to Jun 30, Session II Jul 5 to Aug 15. Not used for bu_classes"
+MIT,holiday_memorial_day,2023-05-29,2023-05-29,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,"key-dates handout lists Monday 30 (copy error), Bulletin and OPM give May 29"
+US_federal,holiday_memorial_day,2023-05-29,2023-05-29,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,advanced_degree_ceremonies,2023-05-31,2023-05-31,https://news.mit.edu/2023/mark-rober-commencement-0601,MIT News: separate degree ceremonies held Wednesday May 31 to Friday June 2 (registrar lists Commencement activities only Jun 1-2)
+MIT,commencement_activities,2023-06-01,2023-06-02,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://registrar.mit.edu/sites/default/files/2022-09/Key_catalog_and_schedule_dates_2022-2023.pdf,
+MIT,onemit_commencement_ceremony,2023-06-01,2023-06-01,https://news.mit.edu/2023/mark-rober-commencement-0601,"speaker Mark Rober, Killian Court"
+MIT,undergraduate_degree_ceremony,2023-06-02,2023-06-02,https://news.mit.edu/2023/commencement-undergraduate-ceremony-2023-0602,
+MIT,summer_session,2023-06-12,2023-08-22,https://catalog.mit.edu/archive/2022-2023/academic-calendar/ https://catalog.mit.edu/archive/2023-2024/academic-calendar/,"first day Jun 12, last class Aug 18, exams Aug 21-22"
+MA_Suffolk,bunker_hill_day,2023-06-17,2023-06-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,holiday_juneteenth,2023-06-19,2023-06-19,https://catalog.mit.edu/archive/2022-2023/academic-calendar/,
+US_federal,holiday_juneteenth,2023-06-19,2023-06-19,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_independence_day,2023-07-04,2023-07-04,https://policies.mit.edu/employment-policy-manual/40-leave-policies/41-holidays,"Institute holiday. 2023 HR holiday table no longer online, date from MIT Policy 4.1 fixed-date rule (July 4, a Tuesday) and OPM"
+US_federal,holiday_independence_day,2023-07-04,2023-07-04,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,summer_last_day_of_classes,2023-08-18,2023-08-18,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,
+MIT,summer_final_exam_period,2023-08-21,2023-08-22,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,
+MIT,first_year_orientation_begins,2023-08-27,2023-08-27,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,registrar lists only the start date
+MIT,graduate_orientation_begins,2023-08-27,2023-08-27,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,Graduate student orientation activities begin
+BU,holiday_labor_day,2023-09-04,2023-09-04,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_labor_day,2023-09-04,2023-09-04,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+US_federal,holiday_labor_day,2023-09-04,2023-09-04,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,fall_first_day_of_classes,2023-09-05,2023-09-05,https://www.bu.edu/reg/calendars/,
+MIT,registration_day_fall,2023-09-05,2023-09-05,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+MIT,fall_first_day_of_classes,2023-09-06,2023-09-06,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,Bulletin: fall class days Sep 6 to Dec 13 = 65 (13 Mon 13 Tue 15 Wed 13 Thu 11 Fri)
+MIT,student_holiday_no_classes,2023-09-22,2023-09-22,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,"Student holiday, no classes (offices open)"
+MIT,fall_add_date,2023-10-06,2023-10-06,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+BU,holiday_indigenous_peoples_day,2023-10-09,2023-10-09,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_indigenous_peoples_day,2023-10-09,2023-10-09,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+US_federal,holiday_columbus_day,2023-10-09,2023-10-09,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,substitute_monday_schedule,2023-10-10,2023-10-10,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,student_holiday_no_classes,2023-10-10,2023-10-10,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,"Student holiday, no classes (offices open)"
+BU,veterans_day_classes_held,2023-11-10,2023-11-10,https://www.bu.edu/reg/calendars/,BU: classes will be held on Veterans Day (observed)
+MIT,holiday_veterans_day_observed,2023-11-10,2023-11-10,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,observed (Nov 11 is a Saturday)
+US_federal,holiday_veterans_day_observed,2023-11-10,2023-11-10,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,observed Friday because the holiday falls on Saturday
+US_federal,holiday_veterans_day,2023-11-11,2023-11-11,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,actual date
+BU,thanksgiving_recess,2023-11-22,2023-11-26,https://www.bu.edu/reg/calendars/,
+MIT,fall_drop_date,2023-11-22,2023-11-22,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+MIT,holiday_thanksgiving,2023-11-23,2023-11-23,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+US_federal,holiday_thanksgiving,2023-11-23,2023-11-23,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_day_after_thanksgiving,2023-11-24,2023-11-24,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,listed as Institute holiday
+BU,fall_last_day_of_classes,2023-12-12,2023-12-12,https://www.bu.edu/reg/calendars/,
+BU,fall_study_period,2023-12-13,2023-12-14,https://www.bu.edu/reg/calendars/,
+MIT,fall_last_day_of_classes,2023-12-13,2023-12-13,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+MIT,fall_reading_days,2023-12-14,2023-12-15,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,fall_final_exam_period,2023-12-15,2023-12-21,https://www.bu.edu/reg/calendars/,"BU publishes only begin and end dates, every day in the range is flagged"
+MIT,fall_final_exam_period,2023-12-18,2023-12-22,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,exam days Dec 18-22
+MIT,winter_closure,2023-12-25,2024-01-01,https://iso.mit.edu/news/iso-most-mit-offices-closed-december-25-2023-through-january-1-2024/ https://ischo.mit.edu/news/extended-winter-break-saturday-dec-23-2023-monday-january-1-2024,"MIT ISO: most MIT offices closed Dec 25 2023 through Jan 1 2024, reopen Jan 2. ISCHO describes the break as Sat Dec 23 to Jan 1 (adds only the weekend)"
+US_federal,holiday_christmas_day,2023-12-25,2023-12-25,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+US_federal,holiday_new_years_day,2024-01-01,2024-01-01,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,iap,2024-01-08,2024-02-02,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,January Independent Activities Period
+BU,holiday_mlk_day,2024-01-15,2024-01-15,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_mlk_day,2024-01-15,2024-01-15,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,
+US_federal,holiday_mlk_day,2024-01-15,2024-01-15,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,spring_first_day_of_classes,2024-01-18,2024-01-18,https://www.bu.edu/reg/calendars/,
+MIT,spring_registration_week,2024-01-29,2024-02-02,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+MIT,spring_first_day_of_classes,2024-02-05,2024-02-05,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,Bulletin: spring class days Feb 5 to May 14 = 65 (13 of each weekday)
+BU,holiday_presidents_day,2024-02-19,2024-02-19,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_presidents_day,2024-02-19,2024-02-19,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+US_federal,holiday_presidents_day,2024-02-19,2024-02-19,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,legal name Washington's Birthday
+MIT,monday_schedule_of_classes,2024-02-20,2024-02-20,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,Tuesday runs a Monday schedule of classes (counted as a class day)
+BU,substitute_monday_schedule,2024-02-21,2024-02-21,https://www.bu.edu/reg/calendars/,Monday schedule of classes (a Wednesday this year)
+MIT,spring_add_date,2024-03-08,2024-03-08,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+BU,spring_recess,2024-03-09,2024-03-17,https://www.bu.edu/reg/calendars/,
+MA_Suffolk,evacuation_day,2024-03-17,2024-03-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,spring_break,2024-03-25,2024-03-29,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,
+MIT,campus_preview_weekend,2024-04-11,2024-04-14,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,admitted-student visit weekend
+BAA,boston_marathon,2024-04-15,2024-04-15,https://www.baa.org/news/registration-128th-boston-marathonr-presented-bank-america-open-september-11-15-2023/,128th Boston Marathon (Patriots Day)
+BU,holiday_patriots_day,2024-04-15,2024-04-15,https://www.bu.edu/reg/calendars/,classes suspended (no substitute Monday listed this term)
+MA,holiday_patriots_day,2024-04-15,2024-04-15,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://www.bu.edu/reg/calendars/ https://www.baa.org/news/registration-128th-boston-marathonr-presented-bank-america-open-september-11-15-2023/,"Massachusetts state holiday, third Monday in April. Date confirmed by MIT HR, MIT Registrar, BU Registrar and the B.A.A. (statute page malegislature.gov and mass.gov were unreachable from this environment)"
+MIT,holiday_patriots_day,2024-04-15,2024-04-15,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+MIT,spring_drop_date,2024-04-23,2024-04-23,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+BU,spring_last_day_of_classes,2024-05-01,2024-05-01,https://www.bu.edu/reg/calendars/,
+BU,spring_study_period,2024-05-02,2024-05-03,https://www.bu.edu/reg/calendars/,
+BU,spring_final_exam_period,2024-05-06,2024-05-10,https://www.bu.edu/reg/calendars/,
+MIT,spring_last_day_of_classes,2024-05-14,2024-05-14,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+MIT,spring_reading_days,2024-05-15,2024-05-16,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,commencement_weekend,2024-05-16,2024-05-19,https://www.bu.edu/reg/calendars/,
+MIT,spring_final_exam_period,2024-05-17,2024-05-22,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,exam days May 17 and May 20-22 (weekdays only)
+BU,all_university_commencement,2024-05-19,2024-05-19,https://www.bu.edu/reg/calendars/,
+BU,summer_term,2024-05-21,2024-08-09,https://www.bu.edu/reg/calendars/,"Summer Session I May 21 to Jun 28, Session II Jul 1 to Aug 9. Not used for bu_classes"
+MIT,holiday_memorial_day,2024-05-27,2024-05-27,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf,
+US_federal,holiday_memorial_day,2024-05-27,2024-05-27,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,commencement_activities,2024-05-29,2024-05-31,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://registrar.mit.edu/sites/default/files/2023-10/Key_catalog_and_schedule_dates_2023-2024.pdf https://news.mit.edu/2024/noubar-afeyan-gives-new-mit-graduates-special-assignment-0530,
+MIT,onemit_commencement_ceremony,2024-05-30,2024-05-30,https://news.mit.edu/2024/noubar-afeyan-gives-new-mit-graduates-special-assignment-0530,"speaker Noubar Afeyan, Killian Court"
+MIT,undergraduate_degree_ceremony,2024-05-31,2024-05-31,https://news.mit.edu/2024/chancellor-melissa-nobles-commencement-0531,Chancellor Nobles address to the undergraduate Class of 2024 delivered at the ceremony on May 31
+MIT,summer_session,2024-06-10,2024-08-20,https://catalog.mit.edu/archive/2023-2024/academic-calendar/ https://catalog.mit.edu/archive/2024-2025/academic-calendar/,"first day Jun 10, last class Aug 16, exams Aug 19-20"
+MA_Suffolk,bunker_hill_day,2024-06-17,2024-06-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,holiday_juneteenth,2024-06-19,2024-06-19,https://catalog.mit.edu/archive/2023-2024/academic-calendar/,
+US_federal,holiday_juneteenth,2024-06-19,2024-06-19,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_independence_day,2024-07-04,2024-07-04,https://policies.mit.edu/employment-policy-manual/40-leave-policies/41-holidays,"Institute holiday. 2024 HR holiday table no longer online, date from MIT Policy 4.1 fixed-date rule (July 4, a Thursday) and OPM"
+US_federal,holiday_independence_day,2024-07-04,2024-07-04,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,summer_last_day_of_classes,2024-08-16,2024-08-16,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,
+MIT,summer_final_exam_period,2024-08-19,2024-08-20,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,
+MIT,first_year_orientation_begins,2024-08-25,2024-08-25,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,registrar lists only the start date
+MIT,graduate_orientation_begins,2024-08-25,2024-08-25,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,Graduate student orientation activities begin
+BU,holiday_labor_day,2024-09-02,2024-09-02,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_labor_day,2024-09-02,2024-09-02,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+US_federal,holiday_labor_day,2024-09-02,2024-09-02,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,fall_first_day_of_classes,2024-09-03,2024-09-03,https://www.bu.edu/reg/calendars/,
+MIT,registration_day_fall,2024-09-03,2024-09-03,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+MIT,fall_first_day_of_classes,2024-09-04,2024-09-04,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,Bulletin: fall class days Sep 4 to Dec 11 = 65 (12 Mon 13 Tue 15 Wed 13 Thu 12 Fri)
+MIT,student_holiday_no_classes,2024-09-20,2024-09-20,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,"Student holiday, no classes (offices open)"
+BU,inauguration_classes_cancelled_from_1pm,2024-09-27,2024-09-27,https://www.bu.edu/reg/calendars/,"Installation of Dr. Melissa Gilliam, classes cancelled beginning at 1pm (morning classes held, bu_classes stays 1)"
+MIT,fall_add_date,2024-10-04,2024-10-04,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+BU,holiday_indigenous_peoples_day,2024-10-14,2024-10-14,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_indigenous_peoples_day,2024-10-14,2024-10-14,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+US_federal,holiday_columbus_day,2024-10-14,2024-10-14,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,substitute_monday_schedule,2024-10-15,2024-10-15,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,student_holiday_no_classes,2024-10-15,2024-10-15,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,"Student holiday, no classes (offices open)"
+MIT,holiday_veterans_day,2024-11-11,2024-11-11,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+US_federal,holiday_veterans_day,2024-11-11,2024-11-11,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,fall_drop_date,2024-11-20,2024-11-20,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+BU,thanksgiving_recess,2024-11-27,2024-12-01,https://www.bu.edu/reg/calendars/,
+MIT,holiday_thanksgiving,2024-11-28,2024-11-28,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+US_federal,holiday_thanksgiving,2024-11-28,2024-11-28,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_day_after_thanksgiving,2024-11-29,2024-11-29,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,listed as Institute holiday
+BU,fall_last_day_of_classes,2024-12-10,2024-12-10,https://www.bu.edu/reg/calendars/,
+BU,fall_study_period,2024-12-11,2024-12-13,https://www.bu.edu/reg/calendars/,
+MIT,fall_last_day_of_classes,2024-12-11,2024-12-11,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+MIT,fall_reading_days,2024-12-12,2024-12-13,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,fall_final_exam_period,2024-12-16,2024-12-20,https://www.bu.edu/reg/calendars/,
+MIT,fall_final_exam_period,2024-12-16,2024-12-20,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,exam days Dec 16-20
+MIT,winter_closure,2024-12-25,2025-01-01,https://vpf.mit.edu/2024-calendar-year-end-deadlines-and-winter-break-coverage-0 https://ischo.mit.edu/news/extended-winter-break-wednesday-dec-25-2024-wednesday-jan-1-2025,"MIT VPF: Institute's Winter Break Wed Dec 25 2024 through Wed Jan 1 2025, offices reopen Jan 2"
+US_federal,holiday_christmas_day,2024-12-25,2024-12-25,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+US_federal,holiday_new_years_day,2025-01-01,2025-01-01,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,iap,2025-01-06,2025-01-31,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,January Independent Activities Period
+BU,holiday_mlk_day,2025-01-20,2025-01-20,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_mlk_day,2025-01-20,2025-01-20,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://hr.mit.edu/holidays-prior,
+US_federal,holiday_mlk_day,2025-01-20,2025-01-20,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,"also Inauguration Day, a federal holiday only for the Washington DC area"
+BU,spring_first_day_of_classes,2025-01-21,2025-01-21,https://www.bu.edu/reg/calendars/,
+MIT,spring_registration_week,2025-01-27,2025-01-31,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+MIT,spring_first_day_of_classes,2025-02-03,2025-02-03,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,Bulletin: spring class days Feb 3 to May 13 = 65 (13 of each weekday)
+BU,holiday_presidents_day,2025-02-17,2025-02-17,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_presidents_day,2025-02-17,2025-02-17,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf https://hr.mit.edu/holidays-prior,
+US_federal,holiday_presidents_day,2025-02-17,2025-02-17,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,legal name Washington's Birthday
+BU,substitute_monday_schedule,2025-02-18,2025-02-18,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,monday_schedule_of_classes,2025-02-18,2025-02-18,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,Tuesday runs a Monday schedule of classes (counted as a class day)
+MIT,spring_add_date,2025-03-07,2025-03-07,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+BU,spring_recess,2025-03-08,2025-03-16,https://www.bu.edu/reg/calendars/,
+MA_Suffolk,evacuation_day,2025-03-17,2025-03-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,spring_break,2025-03-24,2025-03-28,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,
+MIT,campus_preview_weekend,2025-04-17,2025-04-20,https://catalog.mit.edu/archive/2024-2025/academic-calendar/,admitted-student visit weekend
+BAA,boston_marathon,2025-04-21,2025-04-21,https://www.baa.org/news/media-notes-statistics-and-helpful-information-mondays-129th-boston-marathon-presented-bank-america/,129th Boston Marathon (Patriots Day)
+BU,holiday_patriots_day,2025-04-21,2025-04-21,https://www.bu.edu/reg/calendars/,classes suspended
+MA,holiday_patriots_day,2025-04-21,2025-04-21,https://hr.mit.edu/holidays-prior https://www.bu.edu/reg/calendars/ https://www.baa.org/news/media-notes-statistics-and-helpful-information-mondays-129th-boston-marathon-presented-bank-america/,"Massachusetts state holiday, third Monday in April. Date confirmed by MIT HR, MIT Registrar, BU Registrar and the B.A.A. (statute page malegislature.gov and mass.gov were unreachable from this environment)"
+MIT,holiday_patriots_day,2025-04-21,2025-04-21,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf https://hr.mit.edu/holidays-prior,
+MIT,spring_drop_date,2025-04-22,2025-04-22,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+BU,substitute_monday_schedule,2025-04-23,2025-04-23,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+BU,spring_last_day_of_classes,2025-05-01,2025-05-01,https://www.bu.edu/reg/calendars/,
+BU,spring_study_period,2025-05-02,2025-05-04,https://www.bu.edu/reg/calendars/,
+BU,spring_final_exam_period,2025-05-05,2025-05-09,https://www.bu.edu/reg/calendars/,
+MIT,spring_last_day_of_classes,2025-05-13,2025-05-13,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,
+MIT,spring_reading_days,2025-05-14,2025-05-15,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,commencement_weekend,2025-05-15,2025-05-18,https://www.bu.edu/reg/calendars/,Commencement Celebrations
+MIT,spring_final_exam_period,2025-05-16,2025-05-21,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf,exam days May 16 and May 19-21 (weekdays only)
+BU,all_university_commencement,2025-05-18,2025-05-18,https://www.bu.edu/reg/calendars/,
+BU,summer_term,2025-05-20,2025-08-08,https://www.bu.edu/reg/calendars/,"first six-week session May 20 to Jun 27, second Jun 30 to Aug 8. Not used for bu_classes"
+MIT,holiday_memorial_day,2025-05-26,2025-05-26,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf https://hr.mit.edu/holidays-prior,
+US_federal,holiday_memorial_day,2025-05-26,2025-05-26,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,commencement_activities,2025-05-28,2025-05-30,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/sites/default/files/2024-08/Key_catalog_and_schedule_dates_2024-2025.pdf https://news.mit.edu/2025/hank-green-urges-new-graduates-work-on-everyday-solvable-problems-0529,
+MIT,onemit_commencement_ceremony,2025-05-29,2025-05-29,https://news.mit.edu/2025/hank-green-urges-new-graduates-work-on-everyday-solvable-problems-0529,"speaker Hank Green, Killian Court"
+MIT,undergraduate_degree_ceremony,2025-05-30,2025-05-30,https://news.mit.edu/2025/chancellor-melissa-nobles-commencement-0530,Undergraduate Degree Ceremony held Friday (article dated May 30)
+MIT,summer_session,2025-06-09,2025-08-19,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://registrar.mit.edu/calendar,"first day Jun 9, last class Aug 15, exams Aug 18-19"
+MA_Suffolk,bunker_hill_day,2025-06-17,2025-06-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,holiday_juneteenth,2025-06-19,2025-06-19,https://catalog.mit.edu/archive/2024-2025/academic-calendar/ https://hr.mit.edu/holidays-prior,
+US_federal,holiday_juneteenth,2025-06-19,2025-06-19,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_independence_day,2025-07-04,2025-07-04,https://registrar.mit.edu/calendar https://hr.mit.edu/holidays-prior,
+US_federal,holiday_independence_day,2025-07-04,2025-07-04,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,summer_last_day_of_classes,2025-08-15,2025-08-15,https://registrar.mit.edu/calendar,
+MIT,summer_final_exam_period,2025-08-18,2025-08-19,https://registrar.mit.edu/calendar,
+MIT,first_year_orientation_begins,2025-08-24,2025-08-24,https://registrar.mit.edu/calendar,registrar lists only the start date
+MIT,graduate_orientation,2025-08-27,2025-08-28,https://registrar.mit.edu/calendar,Central graduate student orientation activities (also Sep 2)
+BU,holiday_labor_day,2025-09-01,2025-09-01,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_labor_day,2025-09-01,2025-09-01,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf https://hr.mit.edu/holidays-prior,
+US_federal,holiday_labor_day,2025-09-01,2025-09-01,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,fall_first_day_of_classes,2025-09-02,2025-09-02,https://www.bu.edu/reg/calendars/,
+MIT,graduate_orientation,2025-09-02,2025-09-02,https://registrar.mit.edu/calendar,Central graduate student orientation activities (Registration Day)
+MIT,registration_day_fall,2025-09-02,2025-09-02,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,
+MIT,fall_first_day_of_classes,2025-09-03,2025-09-03,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,fall class days Sep 3 to Dec 10 = 65 (12 Mon 13 Tue 15 Wed 13 Thu 12 Fri) per registrar class-days page as indexed by web search (the live page now shows 2026-2027)
+MIT,student_holiday_no_classes,2025-09-19,2025-09-19,https://registrar.mit.edu/calendar,"Student holiday, no classes (offices open)"
+MIT,fall_add_date,2025-10-03,2025-10-03,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,
+BU,holiday_indigenous_peoples_day,2025-10-13,2025-10-13,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_indigenous_peoples_day,2025-10-13,2025-10-13,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf https://hr.mit.edu/holidays-prior,
+US_federal,holiday_columbus_day,2025-10-13,2025-10-13,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,substitute_monday_schedule,2025-10-14,2025-10-14,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,student_holiday_no_classes,2025-11-10,2025-11-10,https://registrar.mit.edu/calendar,"Student holiday, no classes (offices open)"
+MIT,holiday_veterans_day,2025-11-11,2025-11-11,https://registrar.mit.edu/calendar https://hr.mit.edu/holidays-prior,"key-dates handout labels it Monday 11 (typo), registrar and HR give Tue Nov 11"
+US_federal,holiday_veterans_day,2025-11-11,2025-11-11,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,fall_drop_date,2025-11-19,2025-11-19,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,
+BU,thanksgiving_recess,2025-11-26,2025-11-30,https://www.bu.edu/reg/calendars/,
+MIT,holiday_thanksgiving,2025-11-27,2025-11-27,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf https://hr.mit.edu/holidays-prior,
+US_federal,holiday_thanksgiving,2025-11-27,2025-11-27,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_day_after_thanksgiving,2025-11-28,2025-11-28,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf https://hr.mit.edu/holidays-prior,listed as Institute holiday
+BU,fall_last_day_of_classes,2025-12-10,2025-12-10,https://www.bu.edu/reg/calendars/,
+MIT,fall_last_day_of_classes,2025-12-10,2025-12-10,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,
+BU,fall_study_period,2025-12-11,2025-12-14,https://www.bu.edu/reg/calendars/,
+MIT,fall_reading_days,2025-12-11,2025-12-12,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,fall_final_exam_period,2025-12-15,2025-12-19,https://www.bu.edu/reg/calendars/,
+MIT,fall_final_exam_period,2025-12-15,2025-12-19,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,exam days Dec 15-19
+MIT,winter_closure,2025-12-23,2026-01-02,https://hr.mit.edu/holidays-prior https://hr.mit.edu/holidays https://orgchart.mit.edu/node/1533 https://iso.mit.edu/news/iso-most-mit-offices-closed-december-23-2025-january-4-2026-iso-hours-contact-information-over-winter-break,"HR: special holiday closings Dec 23-24, Christmas Dec 25, Winter Break Dec 27-31, New Year Jan 1, Winter Break Jan 2. HR prior-holidays table omits Fri Dec 26 2025 but MIT ISO states most MIT offices closed Tue Dec 23 2025 through Fri Jan 2 2026"
+US_federal,holiday_christmas_day,2025-12-25,2025-12-25,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+US_federal,holiday_new_years_day,2026-01-01,2026-01-01,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,iap,2026-01-05,2026-01-30,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,January Independent Activities Period
+BU,holiday_mlk_day,2026-01-19,2026-01-19,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_mlk_day,2026-01-19,2026-01-19,https://registrar.mit.edu/calendar https://hr.mit.edu/holidays,
+US_federal,holiday_mlk_day,2026-01-19,2026-01-19,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,spring_first_day_of_classes,2026-01-20,2026-01-20,https://www.bu.edu/reg/calendars/,
+MIT,spring_registration_week,2026-01-26,2026-01-30,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,
+MIT,spring_first_day_of_classes,2026-02-02,2026-02-02,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,"no published class-day count retrieved for spring 2026, build_days.py computes 65"
+BU,holiday_presidents_day,2026-02-16,2026-02-16,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_presidents_day,2026-02-16,2026-02-16,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf https://hr.mit.edu/holidays,
+US_federal,holiday_presidents_day,2026-02-16,2026-02-16,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,legal name Washington's Birthday
+BU,substitute_monday_schedule,2026-02-17,2026-02-17,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,monday_schedule_of_classes,2026-02-17,2026-02-17,https://registrar.mit.edu/calendar,Tuesday runs a Monday schedule of classes (counted as a class day)
+MIT,spring_add_date,2026-03-06,2026-03-06,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,
+BU,spring_recess,2026-03-07,2026-03-15,https://www.bu.edu/reg/calendars/,
+MA_Suffolk,evacuation_day,2026-03-17,2026-03-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,spring_break,2026-03-23,2026-03-27,https://registrar.mit.edu/calendar,"Spring break begins Mar 23, ends Mar 27"
+MIT,campus_preview_weekend,2026-04-16,2026-04-19,https://registrar.mit.edu/calendar,admitted-student visit weekend
+BAA,boston_marathon,2026-04-20,2026-04-20,https://www.baa.org/news/130thqualifiers/,130th Boston Marathon (Patriots Day)
+BU,holiday_patriots_day,2026-04-20,2026-04-20,https://www.bu.edu/reg/calendars/,classes suspended
+MA,holiday_patriots_day,2026-04-20,2026-04-20,https://hr.mit.edu/holidays https://www.bu.edu/reg/calendars/ https://www.baa.org/news/130thqualifiers/,"Massachusetts state holiday, third Monday in April. Date confirmed by MIT HR, MIT Registrar, BU Registrar and the B.A.A. (statute page malegislature.gov and mass.gov were unreachable from this environment)"
+MIT,holiday_patriots_day,2026-04-20,2026-04-20,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf https://hr.mit.edu/holidays,
+MIT,spring_drop_date,2026-04-21,2026-04-21,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,
+BU,substitute_monday_schedule,2026-04-22,2026-04-22,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+BU,spring_last_day_of_classes,2026-04-30,2026-04-30,https://www.bu.edu/reg/calendars/,
+BU,spring_study_period,2026-05-01,2026-05-03,https://www.bu.edu/reg/calendars/,
+BU,spring_final_exam_period,2026-05-04,2026-05-08,https://www.bu.edu/reg/calendars/,
+MIT,spring_last_day_of_classes,2026-05-12,2026-05-12,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,
+MIT,spring_reading_days,2026-05-13,2026-05-14,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,commencement_weekend,2026-05-14,2026-05-17,https://www.bu.edu/reg/calendars/,Commencement Celebrations
+MIT,spring_final_exam_period,2026-05-15,2026-05-20,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf,exam days May 15 and May 18-20 (weekdays only)
+BU,all_university_commencement,2026-05-17,2026-05-17,https://www.bu.edu/reg/calendars/,
+BU,summer_term,2026-05-19,2026-08-07,https://www.bu.edu/reg/calendars/,"first six-week session May 19 to Jun 26, second Jun 29 to Aug 7. Not used for bu_classes"
+MIT,senior_week,2026-05-20,2026-05-27,https://engage.mit.edu/2026swc/home,Class of 2026 Senior Week Committee (student group) event window. No comparable page found for 2023-2025 or 2027
+MIT,holiday_memorial_day,2026-05-25,2026-05-25,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf https://hr.mit.edu/holidays,
+US_federal,holiday_memorial_day,2026-05-25,2026-05-25,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,commencement_activities,2026-05-27,2026-05-29,https://registrar.mit.edu/calendar https://registrar.mit.edu/sites/default/files/2025-07/Key_catalog_and_schedule_dates_2025-2026.pdf https://news.mit.edu/2026/commencement-photo-essay-0529,
+MIT,onemit_commencement_ceremony,2026-05-28,2026-05-28,https://news.mit.edu/2026/spirited-mit-commencement-ceremony-run-toward-hardest-problems-0528,"speaker Lisa Su, Killian Court"
+MIT,undergraduate_degree_ceremony,2026-05-29,2026-05-29,https://news.mit.edu/2026/commencement-photo-essay-0529,undergraduates crossed the stage at their own ceremony on Friday
+MIT,summer_session,2026-06-08,2026-08-18,https://registrar.mit.edu/calendar,"first day Jun 8, last class Aug 14, exams Aug 17-18"
+MA_Suffolk,bunker_hill_day,2026-06-17,2026-06-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,holiday_juneteenth,2026-06-19,2026-06-19,https://registrar.mit.edu/calendar https://hr.mit.edu/holidays,
+US_federal,holiday_juneteenth,2026-06-19,2026-06-19,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_independence_day_observed,2026-07-03,2026-07-03,https://registrar.mit.edu/calendar https://hr.mit.edu/holidays,observed (July 4 2026 is a Saturday)
+US_federal,holiday_independence_day_observed,2026-07-03,2026-07-03,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,observed Friday because the holiday falls on Saturday
+US_federal,holiday_independence_day,2026-07-04,2026-07-04,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,actual date (Esplanade fireworks night in Boston)
+MIT,summer_last_day_of_classes,2026-08-14,2026-08-14,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,
+MIT,summer_final_exam_period,2026-08-17,2026-08-18,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,
+MIT,first_year_orientation_begins,2026-08-30,2026-08-30,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,registrar lists only the start date
+BU,fall_first_day_of_classes,2026-09-02,2026-09-02,https://www.bu.edu/reg/calendars/,
+MIT,graduate_orientation,2026-09-02,2026-09-03,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,Central graduate student orientation activities (also Sep 8)
+BU,holiday_labor_day,2026-09-07,2026-09-07,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_labor_day,2026-09-07,2026-09-07,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,
+US_federal,holiday_labor_day,2026-09-07,2026-09-07,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,graduate_orientation,2026-09-08,2026-09-08,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,Central graduate student orientation activities (Registration Day)
+MIT,registration_day_fall,2026-09-08,2026-09-08,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,
+MIT,fall_first_day_of_classes,2026-09-09,2026-09-09,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://registrar.mit.edu/calendar/class-days,class-days page: Sep 9 to Dec 10 = 63 (13 Mon 12 Tue 13 Wed 13 Thu 12 Fri)
+MIT,fall_add_date,2026-10-09,2026-10-09,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,
+BU,holiday_indigenous_peoples_day,2026-10-12,2026-10-12,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_indigenous_peoples_day,2026-10-12,2026-10-12,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,
+US_federal,holiday_columbus_day,2026-10-12,2026-10-12,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,substitute_monday_schedule,2026-10-13,2026-10-13,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,monday_schedule_of_classes,2026-10-13,2026-10-13,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,Tuesday runs a Monday schedule of classes (counted as a class day)
+MIT,holiday_veterans_day,2026-11-11,2026-11-11,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,
+US_federal,holiday_veterans_day,2026-11-11,2026-11-11,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,fall_drop_date,2026-11-18,2026-11-18,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,
+BU,thanksgiving_recess,2026-11-25,2026-11-29,https://www.bu.edu/reg/calendars/,
+MIT,holiday_thanksgiving,2026-11-26,2026-11-26,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,
+US_federal,holiday_thanksgiving,2026-11-26,2026-11-26,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,holiday_day_after_thanksgiving,2026-11-27,2026-11-27,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,listed as Institute holiday
+BU,fall_last_day_of_classes,2026-12-10,2026-12-10,https://www.bu.edu/reg/calendars/,
+MIT,fall_last_day_of_classes,2026-12-10,2026-12-10,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://registrar.mit.edu/calendar/class-days,
+BU,fall_study_period,2026-12-11,2026-12-13,https://www.bu.edu/reg/calendars/,
+MIT,fall_reading_days,2026-12-11,2026-12-11,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,fall_final_exam_period,2026-12-14,2026-12-18,https://www.bu.edu/reg/calendars/,
+MIT,fall_final_exam_period,2026-12-14,2026-12-18,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,exam days Dec 14-18
+MIT,winter_closure,2026-12-25,2027-01-01,https://hr.mit.edu/holidays,"HR table: Christmas Dec 25, Winter Break special holiday closings Dec 26-31, New Year Jan 1. Thu Dec 24 2026 not listed as of 2026-10-27, extra special closings can be announced late (in 2025 they were announced Dec 19)"
+US_federal,holiday_christmas_day,2026-12-25,2026-12-25,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+US_federal,holiday_new_years_day,2027-01-01,2027-01-01,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,iap,2027-01-04,2027-01-29,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,January Independent Activities Period
+BU,holiday_mlk_day,2027-01-18,2027-01-18,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_mlk_day,2027-01-18,2027-01-18,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,
+US_federal,holiday_mlk_day,2027-01-18,2027-01-18,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+BU,spring_first_day_of_classes,2027-01-19,2027-01-19,https://www.bu.edu/reg/calendars/,
+MIT,spring_registration_week,2027-01-25,2027-01-29,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,
+MIT,spring_first_day_of_classes,2027-02-01,2027-02-01,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://registrar.mit.edu/calendar/class-days,class-days page: Feb 1 to May 11 = 65 (13 of each weekday)
+BU,holiday_presidents_day,2027-02-15,2027-02-15,https://www.bu.edu/reg/calendars/,classes suspended
+MIT,holiday_presidents_day,2027-02-15,2027-02-15,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,
+US_federal,holiday_presidents_day,2027-02-15,2027-02-15,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,legal name Washington's Birthday
+BU,substitute_monday_schedule,2027-02-16,2027-02-16,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+MIT,monday_schedule_of_classes,2027-02-16,2027-02-16,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,Tuesday runs a Monday schedule of classes (counted as a class day)
+MIT,spring_add_date,2027-03-05,2027-03-05,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,
+BU,spring_recess,2027-03-06,2027-03-14,https://www.bu.edu/reg/calendars/,
+MA_Suffolk,evacuation_day,2027-03-17,2027-03-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,spring_break,2027-03-22,2027-03-26,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,
+MIT,campus_preview_weekend,2027-04-15,2027-04-18,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,admitted-student visit weekend
+BAA,boston_marathon,2027-04-19,2027-04-19,https://www.baa.org/races/boston-marathon/history/,"131st Boston Marathon (Patriots Day), scheduled"
+BU,holiday_patriots_day,2027-04-19,2027-04-19,https://www.bu.edu/reg/calendars/,classes suspended
+MA,holiday_patriots_day,2027-04-19,2027-04-19,https://hr.mit.edu/holidays https://www.bu.edu/reg/calendars/ https://www.baa.org/races/boston-marathon/history/,"Massachusetts state holiday, third Monday in April. Date confirmed by MIT HR, MIT Registrar, BU Registrar and the B.A.A. (statute page malegislature.gov and mass.gov were unreachable from this environment)"
+MIT,holiday_patriots_day,2027-04-19,2027-04-19,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,
+MIT,spring_drop_date,2027-04-20,2027-04-20,https://registrar.mit.edu/calendar https://catalog.mit.edu/academic-calendar/,
+BU,substitute_monday_schedule,2027-04-21,2027-04-21,https://www.bu.edu/reg/calendars/,Monday schedule of classes
+BU,spring_last_day_of_classes,2027-04-29,2027-04-29,https://www.bu.edu/reg/calendars/,
+BU,spring_study_period,2027-04-30,2027-05-02,https://www.bu.edu/reg/calendars/,
+BU,spring_final_exam_period,2027-05-03,2027-05-07,https://www.bu.edu/reg/calendars/,
+MIT,spring_last_day_of_classes,2027-05-11,2027-05-11,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://registrar.mit.edu/calendar/class-days,
+MIT,spring_reading_days,2027-05-12,2027-05-13,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,"derived: weekdays between the last day of classes and the first final exam day. MIT does not publish named reading or study days, so the reading-day label is unverified (the dates follow from the verified last-class and final-exam rows)"
+BU,commencement_weekend,2027-05-13,2027-05-16,https://www.bu.edu/reg/calendars/,Commencement Celebrations
+MIT,spring_final_exam_period,2027-05-14,2027-05-19,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/,exam days May 14 and May 17-19 (weekdays only)
+BU,all_university_commencement,2027-05-16,2027-05-16,https://www.bu.edu/reg/calendars/,
+BU,summer_term,2027-05-18,2027-08-06,https://www.bu.edu/reg/calendars/,"first six-week session May 18 to Jun 25, second Jun 28 to Aug 6 (listed under 2027-2028). Not used for bu_classes"
+MIT,commencement_activities,2027-05-26,2027-05-28,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://commencement.mit.edu/schedule,
+MIT,onemit_commencement_ceremony,2027-05-27,2027-05-27,https://commencement.mit.edu/schedule,scheduled 3-4:30 pm Killian Court
+MIT,undergraduate_degree_ceremony,2027-05-28,2027-05-28,https://commencement.mit.edu/schedule,scheduled 10 am to 12 pm Killian Court
+MIT,holiday_memorial_day,2027-05-31,2027-05-31,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://catalog.mit.edu/academic-calendar/ https://hr.mit.edu/holidays,
+US_federal,holiday_memorial_day,2027-05-31,2027-05-31,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,
+MIT,summer_session,2027-06-07,2027-08-17,https://registrar.mit.edu/calendar https://registrar.mit.edu/calendar/current-key-dates https://registrar.mit.edu/calendar/class-days https://catalog.mit.edu/academic-calendar/,"summer session incl. exam period, Jun 7 to Aug 17 (window ends Jun 30)"
+MA_Suffolk,bunker_hill_day,2027-06-17,2027-06-17,,"unverified: Suffolk County (Boston) legal holiday on a fixed date under Massachusetts law, from general knowledge. The statute and mass.gov pages returned 403 or timed out here. Applies to Boston (BU side), not Cambridge. Not counted in us_holiday"
+MIT,holiday_juneteenth_observed,2027-06-18,2027-06-18,https://registrar.mit.edu/calendar https://hr.mit.edu/holidays https://catalog.mit.edu/academic-calendar/,observed (June 19 2027 is a Saturday)
+US_federal,holiday_juneteenth_observed,2027-06-18,2027-06-18,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,observed Friday because the holiday falls on Saturday
+US_federal,holiday_juneteenth,2027-06-19,2027-06-19,https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/,actual date

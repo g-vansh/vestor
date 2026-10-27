@@ -1,0 +1,262 @@
+{
+ "docks": {
+  "mit": 7,
+  "other": 82
+ },
+ "weekdays": 674,
+ "term/ebike:mit_class": {
+  "ratio": 1.329,
+  "ci95": [
+   1.219,
+   1.449
+  ],
+  "p": 1.171327479454476e-10
+ },
+ "term/ebike:mit_finals": {
+  "ratio": 1.266,
+  "ci95": [
+   1.193,
+   1.344
+  ],
+  "p": 7.549516567451064e-15
+ },
+ "term/classic:mit_class": {
+  "ratio": 1.24,
+  "ci95": [
+   1.17,
+   1.313
+  ],
+  "p": 3.1241675912951905e-13
+ },
+ "term/classic:mit_finals": {
+  "ratio": 1.164,
+  "ci95": [
+   1.107,
+   1.224
+  ],
+  "p": 2.7014082082388313e-09
+ },
+ "mitclosed/ebike:mit_closed": {
+  "ratio": 0.84,
+  "ci95": [
+   0.576,
+   1.225
+  ],
+  "p": 0.36494305844783925
+ },
+ "registration_event_study": {
+  "-2": {
+   "ratio": 1.007,
+   "ci95": [
+    0.944,
+    1.073
+   ]
+  },
+  "-1": {
+   "ratio": 1.154,
+   "ci95": [
+    1.025,
+    1.3
+   ]
+  },
+  "0": {
+   "ratio": 1.195,
+   "ci95": [
+    1.052,
+    1.356
+   ]
+  },
+  "1": {
+   "ratio": 1.263,
+   "ci95": [
+    1.113,
+    1.433
+   ]
+  },
+  "2": {
+   "ratio": 1.29,
+   "ci95": [
+    1.146,
+    1.453
+   ]
+  }
+ },
+ "rain/mit/ebike:wet": {
+  "ratio": 0.829,
+  "ci95": [
+   0.796,
+   0.863
+  ],
+  "p": 0.0
+ },
+ "rain/mit/ebike:heavy": {
+  "ratio": 0.669,
+  "ci95": [
+   0.642,
+   0.698
+  ],
+  "p": 0.0
+ },
+ "rain/mit/classic:wet": {
+  "ratio": 0.739,
+  "ci95": [
+   0.726,
+   0.751
+  ],
+  "p": 0.0
+ },
+ "rain/mit/classic:heavy": {
+  "ratio": 0.603,
+  "ci95": [
+   0.566,
+   0.644
+  ],
+  "p": 0.0
+ },
+ "rain/cambridge/ebike:wet": {
+  "ratio": 0.776,
+  "ci95": [
+   0.763,
+   0.789
+  ],
+  "p": 0.0
+ },
+ "rain/cambridge/ebike:heavy": {
+  "ratio": 0.658,
+  "ci95": [
+   0.636,
+   0.681
+  ],
+  "p": 0.0
+ },
+ "rain/cambridge/classic:wet": {
+  "ratio": 0.708,
+  "ci95": [
+   0.698,
+   0.718
+  ],
+  "p": 0.0
+ },
+ "rain/cambridge/classic:heavy": {
+  "ratio": 0.592,
+  "ci95": [
+   0.577,
+   0.607
+  ],
+  "p": 0.0
+ },
+ "temperature_vs_15to20C": {
+  "below0": {
+   "ratio": 0.728,
+   "ci95": [
+    0.673,
+    0.787
+   ],
+   "days": 14
+  },
+  "0to5": {
+   "ratio": 0.844,
+   "ci95": [
+    0.812,
+    0.877
+   ],
+   "days": 40
+  },
+  "5to10": {
+   "ratio": 0.943,
+   "ci95": [
+    0.897,
+    0.991
+   ],
+   "days": 68
+  },
+  "10to15": {
+   "ratio": 0.99,
+   "ci95": [
+    0.953,
+    1.028
+   ],
+   "days": 60
+  },
+  "20to25": {
+   "ratio": 1.04,
+   "ci95": [
+    0.994,
+    1.089
+   ],
+   "days": 42
+  },
+  "25to30": {
+   "ratio": 1.045,
+   "ci95": [
+    1.011,
+    1.081
+   ],
+   "days": 21
+  }
+ },
+ "term_by_time/ebike:night": {
+  "ratio": 1.278,
+  "ci95": [
+   1.034,
+   1.581
+  ],
+  "p": 0.023345736437537346
+ },
+ "term_by_time/ebike:morning": {
+  "ratio": 1.04,
+  "ci95": [
+   0.974,
+   1.11
+  ],
+  "p": 0.24096450426293226
+ },
+ "term_by_time/ebike:midday": {
+  "ratio": 1.469,
+  "ci95": [
+   1.269,
+   1.7
+  ],
+  "p": 2.543000381383109e-07
+ },
+ "term_by_time/ebike:afternoon": {
+  "ratio": 1.406,
+  "ci95": [
+   1.265,
+   1.563
+  ],
+  "p": 2.929307907351131e-10
+ },
+ "term_by_time/ebike:evening": {
+  "ratio": 1.296,
+  "ci95": [
+   1.223,
+   1.374
+  ],
+  "p": 0.0
+ },
+ "first_week/ebike:mit_first": {
+  "ratio": 0.943,
+  "ci95": [
+   0.898,
+   0.99
+  ],
+  "p": 0.018532379598715343
+ },
+ "thanksgiving_week/ebike:mit_tg": {
+  "ratio": 0.988,
+  "ci95": [
+   0.836,
+   1.167
+  ],
+  "p": 0.8860243499848144
+ },
+ "bu_session_placebo/ebike:mit_bu": {
+  "ratio": 1.184,
+  "ci95": [
+   1.12,
+   1.251
+  ],
+  "p": 2.079986849423676e-09
+ }
+}

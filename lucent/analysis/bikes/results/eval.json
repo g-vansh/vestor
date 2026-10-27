@@ -1,0 +1,128 @@
+{
+ "cut": {
+  "next/weekday": {
+   "cases": 79,
+   "events": 78,
+   "logscore": -2.756,
+   "pit": 0.65,
+   "cover80": 0.744,
+   "median_abs_err_min": 19
+  },
+  "next/weekend": {
+   "cases": 14,
+   "events": 14,
+   "logscore": -3.22,
+   "pit": 0.677,
+   "cover80": 0.643,
+   "median_abs_err_min": 70
+  },
+  "runout/weekday": {
+   "cases": 151,
+   "events": 150,
+   "logscore": -3.073,
+   "pit": 0.485,
+   "cover80": 0.873,
+   "median_abs_err_min": 31
+  },
+  "runout/weekend": {
+   "cases": 86,
+   "events": 70,
+   "logscore": -3.179,
+   "pit": 0.398,
+   "cover80": 0.714,
+   "median_abs_err_min": 65
+  },
+  "next/all": {
+   "cases": 93,
+   "logscore": -2.826
+  },
+  "runout/all": {
+   "cases": 237,
+   "logscore": -3.112
+  }
+ },
+ "cutcal": {
+  "next/weekday": {
+   "cases": 79,
+   "events": 78,
+   "logscore": -2.63,
+   "pit": 0.51,
+   "cover80": 0.885,
+   "median_abs_err_min": 20
+  },
+  "next/weekend": {
+   "cases": 14,
+   "events": 14,
+   "logscore": -3.106,
+   "pit": 0.536,
+   "cover80": 0.929,
+   "median_abs_err_min": 61
+  },
+  "runout/weekday": {
+   "cases": 151,
+   "events": 150,
+   "logscore": -3.073,
+   "pit": 0.485,
+   "cover80": 0.873,
+   "median_abs_err_min": 31
+  },
+  "runout/weekend": {
+   "cases": 86,
+   "events": 70,
+   "logscore": -3.179,
+   "pit": 0.398,
+   "cover80": 0.714,
+   "median_abs_err_min": 65
+  },
+  "next/all": {
+   "cases": 93,
+   "logscore": -2.702
+  },
+  "runout/all": {
+   "cases": 237,
+   "logscore": -3.112
+  }
+ },
+ "recentcal": {
+  "next/weekday": {
+   "cases": 79,
+   "events": 78,
+   "logscore": -2.629,
+   "pit": 0.527,
+   "cover80": 0.885,
+   "median_abs_err_min": 20
+  },
+  "next/weekend": {
+   "cases": 14,
+   "events": 14,
+   "logscore": -3.102,
+   "pit": 0.556,
+   "cover80": 0.929,
+   "median_abs_err_min": 62
+  },
+  "runout/weekday": {
+   "cases": 151,
+   "events": 150,
+   "logscore": -3.099,
+   "pit": 0.465,
+   "cover80": 0.867,
+   "median_abs_err_min": 30
+  },
+  "runout/weekend": {
+   "cases": 86,
+   "events": 70,
+   "logscore": -3.208,
+   "pit": 0.377,
+   "cover80": 0.729,
+   "median_abs_err_min": 62
+  },
+  "next/all": {
+   "cases": 93,
+   "logscore": -2.7
+  },
+  "runout/all": {
+   "cases": 237,
+   "logscore": -3.138
+  }
+ }
+}

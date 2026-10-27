@@ -1,0 +1,36 @@
+{
+ "vassar_empty/weekday": {
+  "cases": 106,
+  "events": 105,
+  "logscore": -2.906,
+  "pit": 0.533,
+  "cover80": 0.81,
+  "median_abs_err_min": 23
+ },
+ "vassar_empty/weekend": {
+  "cases": 77,
+  "events": 77,
+  "logscore": -2.965,
+  "pit": 0.477,
+  "cover80": 0.87,
+  "median_abs_err_min": 37
+ },
+ "morning_from_18h": {
+  "mornings": 32,
+  "had_ebike": 26,
+  "brier": 0.1431,
+  "brier_base_rate": 0.1623,
+  "logloss": 0.4442,
+  "logloss_base_rate": 0.5169,
+  "mean_p": 0.762
+ },
+ "morning_from_22h": {
+  "mornings": 31,
+  "had_ebike": 25,
+  "brier": 0.1412,
+  "brier_base_rate": 0.1667,
+  "logloss": 0.4226,
+  "logloss_base_rate": 0.5267,
+  "mean_p": 0.747
+ }
+}

@@ -10,7 +10,7 @@ if [[ -d ${SHOTS:-} ]]; then cp "$SHOTS"/*.png "$SHOTS"/*.jpg dist/lucent/screen
 # The source, from a fixed list of what belongs in it, so a key or a copy of one lying in this
 # folder can never ride along.
 src=(AndroidManifest.xml NOTICE README.md build.sh install.sh package.sh .gitignore)
-while IFS= read -r f; do src+=("$f"); done < <(find src res assets preview scripts web -type f 2>/dev/null | sort)
+while IFS= read -r f; do src+=("$f"); done < <(find src res assets preview scripts web analysis -type f 2>/dev/null | sort)
 zip -q -X dist/lucent/lucent-source.zip "${src[@]}"
 if unzip -Z1 dist/lucent/lucent-source.zip | grep -iE 'keystore|\.jks$|\.p12$|\.pass$|signing-key' >&2; then
   echo "error: key material found in the source zip, stopping" >&2
