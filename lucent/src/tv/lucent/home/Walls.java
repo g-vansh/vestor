@@ -4,8 +4,8 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.RectF;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,10 +19,10 @@ import java.util.TimeZone;
  * Wallpapers: twelve bundled CC0 photographs (Wikimedia Commons, credits in NOTICE) and your own
  * album ({@link Album}), as chosen in Settings: nature, ours, or both, taking turns.
  *
- * Album photos are JPEGs Lucent's sandbox wrote, at most 3840 pixels on the long side, so this
- * class only ever decodes pictures that came out of the sandbox or out of the APK. A photo whose
- * shape is far from the screen's (a portrait from a phone, a square) is shown whole, over a soft,
- * enlarged copy of itself, the way a good photo frame does, rather than cropped to a strip.
+ * Album photos are laid out for the screen by Lucent's sandbox ({@link Decode}) and come back as
+ * plain pixels, so the only pictures this process decodes are the twelve in the APK. A photo
+ * whose shape is far from the screen's (a portrait from a phone, a square) is shown whole, over a
+ * soft, enlarged copy of itself, the way a good photo frame does, rather than cropped to a strip.
  */
 final class Walls {
     static final class Item {
@@ -30,14 +30,18 @@ final class Walls {
         final String id, title, place, asset;
         final File file;
         final long taken;
+        /** An album photo's size as the album recorded it, or 0. */
+        final int w, h;
 
-        Item(String id, String title, String place, String asset, File file, long taken) {
+        Item(String id, String title, String place, String asset, File file, long taken, int w, int h) {
             this.id = id;
             this.title = title;
             this.place = place;
             this.asset = asset;
             this.file = file;
             this.taken = taken;
+            this.w = w;
+            this.h = h;
         }
 
         boolean ours() {
@@ -60,7 +64,7 @@ final class Walls {
         {"nature-02.jpg", "Spruce Forest", "Holma, Sweden"},
     };
 
-    /** Album photos are Lucent's own files, but a bound still keeps a damaged one harmless. */
+    /** The bundled pictures are Lucent's own, but a bound still keeps a damaged one harmless. */
     private static final int MAX_SIDE = 8192;
     private static final long MAX_PIXELS = 40_000_000L;
 
@@ -72,14 +76,14 @@ final class Walls {
      */
     static List<Item> list(String album, Album photos) {
         List<Item> nature = new ArrayList<>();
-        for (String[] b : BUNDLED) nature.add(new Item("n:" + b[0], b[1], b[2], "wallpapers/" + b[0], null, 0));
+        for (String[] b : BUNDLED) nature.add(new Item("n:" + b[0], b[1], b[2], "wallpapers/" + b[0], null, 0, 0, 0));
         List<Item> ours = new ArrayList<>();
         if (photos != null && !"nature".equals(album)) {
             for (Album.Photo p : photos.list()) {
                 String when = Album.when(p);
                 boolean named = !p.caption.isEmpty();
                 ours.add(new Item("p:" + p.id, named ? p.caption : when.isEmpty() ? "Our photos" : when, named ? when : "", null,
-                        photos.file(p), p.taken));
+                        photos.file(p), p.taken, p.w, p.h));
             }
         }
         if ("nature".equals(album) || ours.isEmpty()) return nature;
@@ -122,50 +126,14 @@ final class Walls {
         return "On this day in " + c.get(Calendar.YEAR);
     }
 
-    /** Decodes, fits to the screen and prepares the blurred copy. Slow: call off the UI thread. */
+    /**
+     * Fits the picture to the screen and prepares the blurred copy. Album photos come from the
+     * sandbox as pixels already laid out, whole or cropped. Slow: call off the UI thread.
+     */
     static Model.Wall load(Context c, Item item, int w, int h) {
-        Bitmap src = decode(c, item, w, h);
-        if (src == null) return null;
-        Bitmap full;
-        try {
-            full = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        } catch (OutOfMemoryError e) {
-            src.recycle();
-            return null;
-        }
-        Canvas canvas = new Canvas(full);
-        Paint smooth = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG | Paint.ANTI_ALIAS_FLAG);
-        float sw = src.getWidth(), sh = src.getHeight();
-        if (whole(item, sw, sh, w, h)) {
-            // A portrait or a panorama: the whole photo, over a soft, enlarged copy of itself.
-            Bitmap tiny = Bitmap.createScaledBitmap(src, Math.max(1, Math.round(sw / sh * 24)), 24, true);
-            Matrix back = new Matrix();
-            float bs = Math.max(w / (float) tiny.getWidth(), h / (float) tiny.getHeight()) * 1.15f;
-            back.setScale(bs, bs);
-            back.postTranslate((w - tiny.getWidth() * bs) / 2f, (h - tiny.getHeight() * bs) / 2f);
-            canvas.drawBitmap(tiny, back, smooth);
-            tiny.recycle();
-            canvas.drawColor(0x66000000);
-            float fs = Math.min(w * 0.92f / sw, h * 0.9f / sh);
-            float fw = sw * fs, fh = sh * fs, fl = (w - fw) / 2f, ft = (h - fh) / 2f;
-            Paint shade = new Paint(Paint.ANTI_ALIAS_FLAG);
-            for (int i = 6; i >= 1; i--) {
-                shade.setColor(Pixels.alpha(0xFF000000, 0.05f));
-                float grow = i * 4f;
-                canvas.drawRoundRect(fl - grow, ft - grow + i * 2f, fl + fw + grow, ft + fh + grow + i * 2f, grow + 6, grow + 6, shade);
-            }
-            Matrix m = new Matrix();
-            m.setScale(fs, fs);
-            m.postTranslate(fl, ft);
-            canvas.drawBitmap(src, m, smooth);
-        } else {
-            float scale = Math.max(w / sw, h / sh);
-            Matrix m = new Matrix();
-            m.setScale(scale, scale);
-            m.postTranslate((w - sw * scale) / 2f, (h - sh * scale) / 2f);
-            canvas.drawBitmap(src, m, smooth);
-        }
-        src.recycle();
+        Bitmap full = item.file != null ? Decode.pixels(c, item.file, whole(item, w, h) ? Layout.WHOLE : Layout.COVER, w, h)
+                : bundled(c, item, w, h);
+        if (full == null) return null;
 
         int[] px = new int[w * h];
         full.getPixels(px, 0, w, 0, 0, w, h);
@@ -196,42 +164,52 @@ final class Walls {
     }
 
     /** Whether a photo is shown whole rather than cropped: one of ours, far from the screen's shape. */
-    private static boolean whole(Item item, float sw, float sh, int w, int h) {
-        float shape = (sw / sh) / (w / (float) h);
-        // 4:3 and 3:2 photos fill the screen; portraits, squares and panoramas are shown whole.
-        return item.ours() && (shape < 0.7f || shape > 1.6f);
+    private static boolean whole(Item item, int w, int h) {
+        return item.ours() && Layout.whole(item.w, item.h, w, h);
+    }
+
+    /** A bundled wallpaper, from the APK, decoded here and drawn to fill the screen. */
+    private static Bitmap bundled(Context c, Item item, int w, int h) {
+        Bitmap src = decode(c, item.asset, w, h);
+        if (src == null) return null;
+        try {
+            Bitmap full = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            float[] at = Layout.box(Layout.COVER, src.getWidth(), src.getHeight(), w, h);
+            Paint smooth = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG | Paint.ANTI_ALIAS_FLAG);
+            new Canvas(full).drawBitmap(src, null, new RectF(at[0], at[1], at[0] + at[2], at[1] + at[3]), smooth);
+            return full;
+        } catch (RuntimeException | OutOfMemoryError e) {
+            return null;
+        } finally {
+            src.recycle();
+        }
     }
 
     /**
      * Decodes at the smallest power-of-two step that still covers the screen, then the final
      * scale is a filtered draw: sharp on a 1080p panel without holding a 4K bitmap.
      */
-    private static Bitmap decode(Context c, Item item, int w, int h) {
+    private static Bitmap decode(Context c, String asset, int w, int h) {
         try {
             BitmapFactory.Options o = new BitmapFactory.Options();
             o.inJustDecodeBounds = true;
-            read(c, item, o);
+            read(c, asset, o);
             if (o.outWidth <= 0 || o.outHeight <= 0 || o.outWidth > MAX_SIDE || o.outHeight > MAX_SIDE
                     || (long) o.outWidth * o.outHeight > MAX_PIXELS) {
                 return null;
             }
             o.inSampleSize = 1;
-            if (whole(item, o.outWidth, o.outHeight, w, h)) {
-                float fit = Math.min(w * 0.92f / o.outWidth, h * 0.9f / o.outHeight);
-                while (o.inSampleSize * 2 * fit <= 1f) o.inSampleSize *= 2;
-            } else {
-                while (o.outWidth / (o.inSampleSize * 2) >= w && o.outHeight / (o.inSampleSize * 2) >= h) o.inSampleSize *= 2;
-            }
+            while (o.outWidth / (o.inSampleSize * 2) >= w && o.outHeight / (o.inSampleSize * 2) >= h) o.inSampleSize *= 2;
             o.inJustDecodeBounds = false;
             o.inPreferredConfig = Bitmap.Config.ARGB_8888;
-            return read(c, item, o);
+            return read(c, asset, o);
         } catch (IOException | RuntimeException | OutOfMemoryError e) {
             return null;
         }
     }
 
-    private static Bitmap read(Context c, Item item, BitmapFactory.Options o) throws IOException {
-        InputStream in = item.file != null ? new java.io.FileInputStream(item.file) : c.getAssets().open(item.asset);
+    private static Bitmap read(Context c, String asset, BitmapFactory.Options o) throws IOException {
+        InputStream in = c.getAssets().open(asset);
         try {
             return BitmapFactory.decodeStream(in, null, o);
         } finally {

@@ -1,8 +1,6 @@
 package tv.lucent.home;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.StatFs;
 
 import java.io.File;
@@ -22,8 +20,9 @@ import java.util.Map;
  * Your own photos for the wallpaper: uploaded from the control center or pushed into the media
  * folder's wallpapers/ by adb. Each is decoded in the sandbox ({@link Decoder}), scaled so its long
  * side is at most 3840 (4K), re-encoded as JPEG and kept in Lucent's private storage, where no
- * other app can read it. EXIF is gone, GPS included. A 480 pixel thumbnail is kept beside it for
- * the control center's gallery.
+ * other app can read it. EXIF is gone, GPS included. A 480 pixel thumbnail, also the sandbox's, is
+ * kept beside it for the control center's gallery. This process never decodes either: it stores
+ * them and serves them to phones, and the wallpaper gets its pixels from the sandbox ({@link Walls}).
  *
  * The stick has little storage (about 1 GB free on this one), so the album stops at 300 photos or
  * 900 MB, and refuses new ones whenever less than 400 MB would be left free on the device.
@@ -35,7 +34,9 @@ final class Album {
         int w, h, bytes;
     }
 
-    static final int MAX_PHOTOS = 300, LONG_SIDE = 3840, THUMB = 480, QUALITY = 88;
+    static final int MAX_PHOTOS = 300, LONG_SIDE = 3840, THUMB = 480, QUALITY = 88, THUMB_QUALITY = 80;
+    /** The most the sandbox may hand back for a photo and for a thumbnail. */
+    static final int MAX_JPEG = 16 * 1024 * 1024, MAX_THUMB = 1024 * 1024;
     static final long MAX_BYTES = 900L * 1024 * 1024, KEEP_FREE = 400L * 1024 * 1024;
 
     /** Why a photo was not added. */
@@ -117,7 +118,7 @@ final class Album {
     }
 
     private Photo addFile(File src, String caption, long taken, String from, String source) throws Refused {
-        Decode.Result r = Decode.run(context, src, Decoder.FIT, LONG_SIDE, LONG_SIDE, QUALITY);
+        Decode.Result r = Decode.jpeg(context, src, Layout.FIT, LONG_SIDE, LONG_SIDE, QUALITY, MAX_JPEG);
         if (r.status == Decoder.NOT_IMAGE) throw new Refused("not a photo");
         if (r.status == Decoder.TOO_LARGE) throw new Refused("too large");
         if (r.jpeg == null) throw new Refused("could not read");
@@ -136,8 +137,10 @@ final class Album {
         p.w = r.width;
         p.h = r.height;
         p.bytes = r.jpeg.length;
-        Live.write(new File(dir, p.id + ".jpg"), r.jpeg);
-        byte[] thumb = thumbnail(r.jpeg);
+        File kept = new File(dir, p.id + ".jpg");
+        Live.write(kept, r.jpeg);
+        // The thumbnail is made from the copy just kept, never from the original.
+        byte[] thumb = Decode.jpeg(context, kept, Layout.FIT, THUMB, THUMB, THUMB_QUALITY, MAX_THUMB).jpeg;
         if (thumb != null) Live.write(new File(dir, p.id + ".t.jpg"), thumb);
         synchronized (this) {
             photos.add(0, p);
@@ -153,33 +156,6 @@ final class Album {
             if (bytes() + size > MAX_BYTES) throw new Refused("album full");
         }
         if (free() - size < KEEP_FREE) throw new Refused("tv storage low");
-    }
-
-    /**
-     * The thumbnail is made from Lucent's own re-encoded JPEG, never from the original, so the
-     * main process only ever decodes pictures its sandbox wrote.
-     */
-    private static byte[] thumbnail(byte[] jpeg) {
-        try {
-            BitmapFactory.Options o = new BitmapFactory.Options();
-            o.inJustDecodeBounds = true;
-            BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length, o);
-            o.inSampleSize = 1;
-            while (Math.max(o.outWidth, o.outHeight) / (o.inSampleSize * 2) >= THUMB) o.inSampleSize *= 2;
-            o.inJustDecodeBounds = false;
-            Bitmap b = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length, o);
-            if (b == null) return null;
-            float s = THUMB / (float) Math.max(b.getWidth(), b.getHeight());
-            Bitmap t = s < 1 ? Bitmap.createScaledBitmap(b, Math.max(1, Math.round(b.getWidth() * s)),
-                    Math.max(1, Math.round(b.getHeight() * s)), true) : b;
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-            t.compress(Bitmap.CompressFormat.JPEG, 80, out);
-            if (t != b) t.recycle();
-            b.recycle();
-            return out.toByteArray();
-        } catch (RuntimeException | OutOfMemoryError e) {
-            return null;
-        }
     }
 
     /**

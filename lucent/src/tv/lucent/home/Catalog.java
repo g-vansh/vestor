@@ -8,8 +8,6 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.RectF;
 import android.graphics.drawable.AdaptiveIconDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -71,13 +69,16 @@ final class Catalog {
         final Intent intent;
         final ActivityInfo info;
         final boolean leanback;
+        /** Lucent's application context, through which art() reaches the sandbox. */
+        final Context context;
 
-        Entry(String pkg, CharSequence label, Intent intent, ActivityInfo info, boolean leanback) {
+        Entry(String pkg, CharSequence label, Intent intent, ActivityInfo info, boolean leanback, Context context) {
             this.pkg = pkg;
             this.label = label;
             this.intent = intent;
             this.info = info;
             this.leanback = leanback;
+            this.context = context;
         }
     }
 
@@ -93,10 +94,11 @@ final class Catalog {
 
     /** Every launchable app, TV apps first. Call off the UI thread. */
     static List<Entry> all(Context c) {
+        Context app = c.getApplicationContext();
         PackageManager pm = c.getPackageManager();
         Map<String, Entry> found = new LinkedHashMap<>();
-        collect(pm, found, Intent.CATEGORY_LEANBACK_LAUNCHER, true, c.getPackageName());
-        collect(pm, found, Intent.CATEGORY_LAUNCHER, false, c.getPackageName());
+        collect(pm, found, Intent.CATEGORY_LEANBACK_LAUNCHER, true, app);
+        collect(pm, found, Intent.CATEGORY_LAUNCHER, false, app);
         for (String pkg : BY_PACKAGE) {
             if (found.containsKey(pkg)) continue;
             try {
@@ -105,7 +107,7 @@ final class Catalog {
                 if (launch == null) continue;
                 ResolveInfo ri = pm.resolveActivity(launch, 0);
                 if (ri == null || ri.activityInfo == null) continue;
-                found.put(pkg, new Entry(pkg, label(ri.loadLabel(pm), pkg), launch, ri.activityInfo, true));
+                found.put(pkg, new Entry(pkg, label(ri.loadLabel(pm), pkg), launch, ri.activityInfo, true, app));
             } catch (RuntimeException | OutOfMemoryError | StackOverflowError ignored) {
                 // not installed, or a label that cannot be loaded
             }
@@ -114,14 +116,16 @@ final class Catalog {
     }
 
     private static void collect(PackageManager pm, Map<String, Entry> found, String category, boolean leanback,
-            String self) {
+            Context app) {
+        String self = app.getPackageName();
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(category);
         for (ResolveInfo ri : pm.queryIntentActivities(query, 0)) {
             ActivityInfo ai = ri.activityInfo;
             if (ai == null || ai.packageName.equals(self) || found.containsKey(ai.packageName)) continue;
             Intent launch = new Intent(Intent.ACTION_MAIN).addCategory(category).setClassName(ai.packageName, ai.name);
             try {
-                found.put(ai.packageName, new Entry(ai.packageName, label(ri.loadLabel(pm), ai.packageName), launch, ai, leanback));
+                found.put(ai.packageName, new Entry(ai.packageName, label(ri.loadLabel(pm), ai.packageName), launch, ai, leanback,
+                        app));
             } catch (RuntimeException | OutOfMemoryError | StackOverflowError e) {
                 // An app whose name cannot be loaded (a huge or looping label resource) is left
                 // off the dock rather than taking the whole list down with it.
@@ -184,7 +188,7 @@ final class Catalog {
      * thread.
      */
     static void art(PackageManager pm, Entry e, Model.App app, File bannerDir) {
-        Bitmap own = userBanner(bannerDir, e.pkg);
+        Bitmap own = userBanner(e.context, bannerDir, e.pkg);
         if (own != null) {
             set(app, own);
             return;
@@ -259,31 +263,22 @@ final class Catalog {
         }
     }
 
+    /** The largest picture taken from banners/. */
+    private static final int MAX_BANNER = 8 * 1024 * 1024;
+
     /**
      * Your own picture for an app, from banners/ in the media folder. That folder is shared
-     * storage, so the file must really be a JPEG or a PNG of sane size ({@link Images}).
+     * storage other apps can write, so the picture is decoded and cropped to the tile in the
+     * sandbox ({@link Decode}), and only its pixels come back.
      */
-    private static Bitmap userBanner(File dir, String pkg) {
+    private static Bitmap userBanner(Context c, File dir, String pkg) {
         // Package names never hold path separators, but a crafted one is refused anyway.
-        if (dir == null || !pkg.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+") || pkg.length() > 200) return null;
+        if (c == null || dir == null || !pkg.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+") || pkg.length() > 200) return null;
         for (String ext : new String[] {".png", ".jpg", ".jpeg"}) {
             File f = new File(dir, pkg + ext);
-            if (!f.isFile()) continue;
-            Bitmap src = Images.decode(f, 8 * 1024 * 1024, 8192, 64000000L, Tiles.W, Tiles.H);
-            if (src == null) continue;
-            try {
-                // Centre-crop to 16:9.
-                Bitmap out = Bitmap.createBitmap(Tiles.W, Tiles.H, Bitmap.Config.ARGB_8888);
-                float scale = Math.max(Tiles.W / (float) src.getWidth(), Tiles.H / (float) src.getHeight());
-                float w = src.getWidth() * scale, h = src.getHeight() * scale;
-                Paint p = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
-                new Canvas(out).drawBitmap(src, null, new RectF((Tiles.W - w) / 2, (Tiles.H - h) / 2, (Tiles.W + w) / 2,
-                        (Tiles.H + h) / 2), p);
-                src.recycle();
-                return out;
-            } catch (RuntimeException | OutOfMemoryError ex) {
-                return null;
-            }
+            if (!f.isFile() || f.length() > MAX_BANNER) continue;
+            Bitmap b = Decode.pixels(c, f, Layout.COVER, Tiles.W, Tiles.H);
+            if (b != null) return b;
         }
         return null;
     }
