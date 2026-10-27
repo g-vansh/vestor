@@ -28,6 +28,11 @@ Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
   calendar and the weather.
 - **The Samsung's remote on your phone.** A Remote tab with the TV's own keys, menus and
   settings, over your Wi-Fi, so the Samsung remote can stay in the drawer.
+- **Ask Lucent.** Claude on the TV: ask a question, say "play Better Call Saul", or "every
+  weekday at 7:15 start the bike finder", from the sparkle on the TV or the phone's Ask box
+  (the phone keyboard's microphone turns speech into the question).
+- **The grocery shuttle.** On its days, MIT's Trader Joe's and Whole Foods run joins the
+  shuttles, live at Tang/Westgate.
 - **A Glare button.** One press switches the Samsung to its brightest picture for a sunny
   afternoon, from the remote, a phone or Alexa. The evening picture comes back at sunset.
 - **Rain in the next two hours** for Westgate, from NOAA's 15-minute HRRR forecast: "Rain from
@@ -315,6 +320,54 @@ one that ships:
 - **What works:** the alert, one tap into Bluebikes, and Reserve. The reserved bike's screen says
   "reserved" and nobody else can undock it. A reserved minute costs the same as a minute ridden
   ($0.07 on the $5 Boston Bikes Pass), per the City of Boston's Bluebikes FAQ.
+
+## Ask Lucent: Claude on the TV
+
+Press Up to the top row and choose the sparkle (far left), or use the Ask box at the top of the
+phone page. Type, or speak: on the iPhone, tap the microphone on the keyboard. On the TV, the
+Fire TV keyboard's microphone works on some models. The remote's own microphone button always
+belongs to Alexa, so it cannot reach Lucent. The answer shows on a glass card on the TV (when
+Lucent is in front, never over a film) and on the phone.
+
+**What it can do**
+
+- **Answer questions**, searching the web when it needs to ("What's the famous brass town in
+  India?", "Who's ahead in the World Series?"), with the sites it used at the bottom.
+- **Answer about the room**: it sees what the home screen shows, so "When will the e-bikes run
+  out?", "Is it going to rain before 6?", "When's the next Tech Shuttle?" and "What's on our
+  calendar tonight?" work.
+- **Play things**: "Play Better Call Saul" finds the title and opens it in Netflix. YouTube videos
+  and Spotify playlists, albums and songs by name work the same way, and Prime Video, Disney+,
+  Max, Hulu, Peacock, Paramount+ and Apple TV open at the title's page where those apps allow it.
+- **Run the house**: start or stop the bike finder, glare on or off, the day or night look, the
+  guest Wi-Fi code, hearts, play and pause, volume, the Samsung's picture or sound mode and input,
+  and a note on the home screen.
+- **Automations**: "Every weekday at 7:15 start the bike finder", "At sunset switch the TV to
+  Movie", "Weekends at 9 put up a note: farmers market". They run on the TV each day on their
+  own, with no AI involved, and the phone lists them with a switch and a delete for each.
+
+**What it won't do.** Buy, rent, sign in, message anyone or change an account. After it reads a
+web page in a question it only plays titles and opens apps: a change to the TV or a new automation
+needs you to ask for it on its own, so nothing a web page says can steer the TV.
+
+**Cost.** It uses Claude Opus 5.5. A plain question costs about 1 to 4 cents, one with a web
+search 5 to 10 cents, and a search answer takes 10 to 20 seconds. Lucent prices every answer as it
+arrives and stops for the month at your cap (40 dollars unless you change it on the phone, up to
+100), with at most 150 questions a day. The phone shows the month's total.
+
+**Setup, once.** Either run the installer with the key in a file: `./install.sh --claude-key
+claude-key.txt` (or `LUCENT_CLAUDE_KEY=claude-key.txt ./install.sh` while updating), or paste it
+on the phone page under Settings › Claude. The key then lives only in Lucent's private storage on
+the TV and goes only to Anthropic. Phones see its last four characters, never the key.
+
+**Privacy.** Each question goes to Anthropic with a few lines of what the TV shows: the time, the
+bikes and their forecast, the weather, the shuttles, your next few calendar entries by title and
+time, what's playing, the apps and the Samsung's modes. Nothing else from the TV, and nothing
+from your phones.
+
+**Spoken questions without a phone in hand.** If your stick has Alexa+ (free on supported Fire TVs
+in the US since August), the remote's microphone already answers general questions. Ask Lucent is
+for what Alexa can't see: your bikes, shuttles, plans and this TV's own controls.
 
 ## Alexa and the Echos
 
@@ -643,6 +696,11 @@ device you approved on the TV with the remote, and nothing anyone sends it can t
   screen for Fire TV"). Weather and planes get positions rounded to a few kilometres.
 - **The Samsung sign-in stays on the TV.** The SmartThings secret and tokens go only to Samsung,
   phones never see them, and Disconnect forgets them.
+- **The Claude key stays on the TV.** It goes only to api.anthropic.com, phones see its last four
+  characters, and install.sh hands it over ADB to a receiver that only ADB's shell may call.
+  Pasting it on the phone page sends it once over your Wi-Fi like any setting, so prefer the
+  installer if the TV shares a network you do not run. Claude acts only through fixed, checked
+  tools, and a monthly cap bounds what it can spend.
 - **Broken or hostile data cannot take it down.** The parsers are tested against hundreds of
   thousands of broken, truncated and malicious inputs (`preview/tests`): deep nesting, impossible
   numbers, overflowing lengths, zip bombs, calendars with endless repeats. A bad answer skips one
@@ -679,6 +737,12 @@ device you approved on the TV with the remote, and nothing anyone sends it can t
   says. Lyft can change its restock rounds at any time, and the next-e-bike forecast learns that
   only when the model is refitted (`analysis/bikes`).
 - The soundbar's modes and EQ stay in VIZIO's app (see Getting the best sound from the VIZIO).
+- Ask Lucent starts playback reliably on Netflix and YouTube. Other apps open at the title's page,
+  or at their home if they take no links. Spotify plays what it can find on the web (public
+  playlists, albums, songs). Your own private playlists would need Spotify's account link, which
+  is not built.
+- The grocery shuttle's live minutes depend on MIT's feed labelling its trips. Without them the
+  line shows the next departure from Kendall from MIT's schedule.
 
 ## Rebuilding
 
