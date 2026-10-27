@@ -24,5 +24,5 @@ logged in `docs/BUILD_LOG.md`.
 - `scenes/`, `data/` — modular scenes and data clients
 - `scripts/` — `flash_sd.sh`, `setup_pi.sh`, `install_app.sh`, `install_service.sh`
 - `services/vestor.service` — systemd unit
-- `lucent/`: Lucent, the Fire TV home screen that shows the same bikes, buses,
-  shuttles and planes in the living room (Android, its own guide in `lucent/README.md`)
+- `vestoros/`: VestorOS, the Fire TV home screen that shows the same bikes, buses,
+  shuttles and planes in the living room (Android, its own guide in `vestoros/README.md`)

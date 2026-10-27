@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="tv.vestor.home">
+
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <!-- Public feeds (weather, Bluebikes, MIT shuttles, the MBTA, aircraft, your calendar links)
+         and the control center on your home network. See README. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Waking the screen for Alexa's "find an e-bike" and, if chosen, for a new note. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Starting the control center at boot, and putting the HOME service back after an update. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Never granted by installing: only install.sh grants it, once, over ADB, and its undo takes
+         it back. Used for nothing but re-enabling Vestor's own HOME service (see Boot.java). -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@drawable/icon"
+        android:banner="@drawable/banner"
+        android:theme="@style/Home"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security"
+        android:hardwareAccelerated="true"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".Home"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:clearTaskOnLaunch="true"
+            android:resumeWhilePausing="true"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:windowSoftInputMode="adjustNothing"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode|fontScale|smallestScreenSize">
+            <!-- No android:priority: Android 11 caps third-party HOME priority, so Amazon's
+                 launcher always wins the HOME intent. The Guard takes the HOME key instead. -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".Guard"
+            android:label="@string/guard_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/guard" />
+        </service>
+
+        <!-- Photos are decoded here: a separate, isolated process with no permissions, no network
+             and no files of its own, so a booby-trapped picture cannot reach Vestor's data. -->
+        <service
+            android:name=".Decoder"
+            android:process=":decode"
+            android:isolatedProcess="true"
+            android:exported="false" />
+
+        <!-- Only for seeing which app is playing (Now Playing). Reads no notifications. -->
+        <service
+            android:name=".Listener"
+            android:label="@string/listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- install.sh's way to hand over the Claude key: KeyDrop answers only ADB's shell (it checks the caller). -->
+        <provider
+            android:name=".KeyDrop"
+            android:authorities="tv.vestor.home.key"
+            android:exported="true" />
+        <receiver
+            android:name=".Boot"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

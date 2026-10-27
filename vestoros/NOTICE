@@ -1,0 +1,73 @@
+Vestor, a home screen for Fire TV.
+
+HOME guard
+  src/tv/vestor/home/Guard.java and the HOME takeover in install.sh are adapted from dumbtv,
+  https://github.com/humblemuzzu/dumbtv, MIT License, Copyright (c) 2026 dumbtv contributors.
+  src/tv/vestor/home/Tint.java is adapted from dumbtv's FocusColor, same licence.
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+  and associated documentation files (the "Software"), to deal in the Software without
+  restriction, including without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
+  Software is furnished to do so, subject to the following conditions: The above copyright
+  notice and this permission notice shall be included in all copies or substantial portions of
+  the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+Typefaces, all under the SIL Open Font License 1.1 (text in assets/fonts/OFL.txt)
+  Inter and Inter Display, Copyright (c) 2016 The Inter Project Authors. Subsetted to Latin.
+  Newsreader Display (Light, Regular and Italic, static 72 pt instances), Copyright 2020 The
+    Newsreader Project Authors, https://github.com/productiontype/Newsreader
+  Geist Mono Medium, Copyright 2024 The Geist Project Authors, https://github.com/vercel/geist-font
+  The control center's page serves the same files to your phone.
+
+Photographs (assets/wallpapers), all CC0 1.0, from Wikimedia Commons, as collected and checked
+by Glass Home (https://github.com/victaphu/glass-home-samsung-tv, MIT):
+  nature-01  Moraine Lake at sunrise, Banff, Canada            Garrett Parker
+  nature-02  Spruce forest at Holma, Lysekil, Sweden            W.carter
+  nature-03  The Twelve Apostles, Great Ocean Road, Victoria    Bernard Spragg
+  nature-04  Aurora over Flakstad, Lofoten, Norway              Johannes Groll
+  nature-05  The Palouse from Steptoe Butte, Washington         Caleb Riston
+  nature-06  Cradle Mountain above Dove Lake, Tasmania          Dhx1
+  nature-07  Western Alps in morning haze, near Grenoble        Dktue
+  nature-08  Autumn at Jigoku-numa, Hakkoda Mountains, Japan    lumoplank
+  nature-09  Sankenbach Waterfalls, Black Forest, Germany       Leonhard Lenz
+  nature-10  Valle de la Luna, Atacama Desert, Chile            Hailey Kean
+  nature-11  The Matterhorn at sunset, Switzerland              Sam Ferrara
+  nature-12  Blue Mountains, New South Wales                    Matthew Kane
+
+Live data (public feeds)
+  Weather and air quality by Open-Meteo, https://open-meteo.com, CC BY 4.0 (credited in the
+    weather panel).
+  Weather alerts from the US National Weather Service, https://www.weather.gov (public domain).
+  Bike data from Bluebikes' GBFS feed (https://bluebikes.com/system-data), provided under the
+    Bluebikes Data License Agreement.
+  MIT shuttle data from MIT's Passio GO GTFS-realtime feed. Bus predictions and timetables from
+    the MBTA V3 API (https://www.mbta.com/developers), under the MBTA's developer terms. Vestor
+    is not endorsed by the MBTA.
+  Aircraft positions from adsb.fi, https://adsb.fi (open data for non-commercial use, credited
+    in the planes panel), with adsb.lol (ODbL) as the fallback. Flight routes from adsbdb,
+    https://www.adsbdb.com, and hexdb.io.
+  Calendars are read from the private iCal links you give it (Google Calendar, iCloud, Outlook).
+  The Alexa link and the phone alerts use ntfy, https://ntfy.sh (the public server), as a relay.
+  The forecast models behind Open-Meteo's answer for Boston are NOAA's HRRR, National Blend of
+    Models and GFS (US government works).
+  The Glare button uses Samsung's SmartThings API (https://developer.smartthings.com) with an
+    OAuth-In app the owner creates. Its sign-in passes once through httpbin.org, a public echo
+    service, to show the one-time code.
+  Stops, routes, station choices and counting rules follow Vestor (github.com/g-vansh/vestor).
+
+Code written for Vestor 2.0
+  The control center's server, pairing, QR encoder (ISO/IEC 18004 byte mode), iCalendar reader
+  (RFC 5545 recurrence rules), rate governor, photo sandbox and SmartThings client are original
+  to this project and use no libraries.
+
+Glyphs and marks
+  Every glyph (weather, bikes, docks, shuttle, aircraft, radar) and the Vestor mark are original
+  drawings made for this project.
+
+Trademarks
+  Fire TV, Fire OS, Alexa and Prime Video are Amazon's. Apple, AirPlay, AirPods, FaceTime,
+  iCloud and Liquid Glass are Apple's. Google Calendar and YouTube are Google's. Samsung,
+  SmartThings, VIZIO, Spotify, WhatsApp, Tailscale, Bluebikes, Lyft, MIT, the MBTA and BU belong to their
+  owners. Vestor is not affiliated with any of them and draws no third-party logos: dock tiles
+  show the banner each app provides, or a tile composed from that app's own icon.

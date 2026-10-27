@@ -1,0 +1,14 @@
+{
+  "name": "Vestor",
+  "short_name": "Vestor",
+  "description": "The control center for Vestor, the home screen on the living room TV.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0E0D0C",
+  "theme_color": "#0E0D0C",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
