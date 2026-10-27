@@ -155,6 +155,15 @@ final class Updater {
         notes = "";
         set(Update.DOWNLOADING);
         File part = new File(dir(), "download.apk");
+        // The governor spaces requests to GitHub: the APK waits its turn after update.json.
+        long wait = Pace.wait("raw.githubusercontent.com", System.currentTimeMillis());
+        if (wait > 0 && wait <= 60000L) {
+            try {
+                Thread.sleep(wait);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         if (!Net.download(offer.url(), part, offer.size, offer.sha256, 30000, 15 * 60000L)) {
             problem = "Download Failed";
             set(Update.FAILED);

@@ -8,5 +8,5 @@ final class BuildInfo {
     private BuildInfo() {}
 
     static final String VERSION = "2.1";
-    static final int CODE = 4;
+    static final int CODE = 5;
 }

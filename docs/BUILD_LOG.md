@@ -1541,11 +1541,16 @@ add airline branding.
   downloads into private storage, checks size, SHA-256, package, version and that the signer
   is the running app's own, then offers it. Install goes through Fire OS's confirmation screen,
   and Vestor comes back to the front after. install.sh allows "Install unknown apps" for Vestor
-  and --undo takes it back. Version now comes from BuildInfo.java only: 2.1, code 4.
+  and --undo takes it back. Version now comes from BuildInfo.java only: 2.1, code 5.
 - Verified: CallingTest 67 (routes, lines, the check), UpdateTest 60 (forged and malformed
   update.json, file names, sizes, numbers as text, hosts), all 14 suites green, -Werror build
-  against Android 11. publish.sh refuses a one-byte-tampered APK. The TV's parser offers code 4
-  to a 2.0 TV and nothing to a 2.1 TV, from the update.json publish.sh wrote.
+  against Android 11. publish.sh refuses a one-byte-tampered APK. Live against GitHub with the
+  TV's own Net, Pace and Update code: update.json offers the new code to a 2.0 TV and nothing to
+  a 2.1 TV, the APK downloads with its size and SHA-256 checked, is byte for byte the build and
+  signed by Vestor's key, and a wrong SHA-256 is refused with nothing left on disk. That run
+  caught a real bug: the governor's five-second gap refused the APK right after update.json, so
+  the updater now waits its turn. The first publish (code 4) carried the bug and no TV had taken
+  it, so 2.1 went out again as code 5.
 - Changed from brief: whether Fire OS offers the AirPods' microphone could not be settled
   without the hardware (Amazon lists Bluetooth 5.2 with no profiles). The code handles both
   answers and the Menu check reports it. One confirmation press per update stays: Android 11
