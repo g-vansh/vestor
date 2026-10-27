@@ -588,7 +588,7 @@ final class Claude {
                 if (action.endsWith("_look")) return any(q, "night", "day", "dark", "light", "look", "theme", "mode", "auto");
                 if (action.endsWith("guest_wifi")) return any(q, "wifi", "wi-fi", "wi fi", "guest", "password", "network", "internet");
                 if ("send_hearts".equals(action)) return any(q, "heart", "love");
-                return any(q, "home", "vestor", "vestor", "fire", "amazon", "back", "exit", "leave", "close");
+                return any(q, "home", "vestor", "lucent", "fire", "amazon", "back", "exit", "leave", "close"); // lucent: the old name
             default:
                 return false;
         }

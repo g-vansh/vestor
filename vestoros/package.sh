@@ -17,7 +17,7 @@ if unzip -Z1 dist/vestoros/vestoros-source.zip | grep -iE 'keystore|\.jks$|\.p12
   rm -rf dist
   exit 1
 fi
-(cd dist && zip -q -r -X vestoros.zip vestor)
+(cd dist && zip -q -r -X vestoros.zip vestoros)
 printf 'dist/vestoros.zip  %s bytes\n' "$(wc -c < dist/vestoros.zip | tr -d ' ')"
 # The key travels on its own, never in dist/ beside the zip meant for sharing, and only when asked
 # for: VESTOR_KEY_ZIP=/somewhere/private/signing-key-keep-private.zip ./package.sh
