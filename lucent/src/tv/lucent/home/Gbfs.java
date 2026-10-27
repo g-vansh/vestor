@@ -48,6 +48,8 @@ final class Gbfs {
             s.lat = Json.num(m, "lat", 0);
             s.lon = Json.num(m, "lon", 0);
             s.capacity = Json.integer(m, "capacity", 0);
+            Map<String, Object> uris = Json.obj(m, "rental_uris");
+            if (uris != null) s.rent = Json.str(uris, "ios", Json.str(uris, "android", ""));
             s.metres = (float) metres(lat, lon, s.lat, s.lon);
             out.add(s);
         }
@@ -185,6 +187,7 @@ final class Gbfs {
         s.id = a.id;
         s.name = a.name;
         s.shortName = a.shortName;
+        s.rent = a.rent;
         s.lat = a.lat;
         s.lon = a.lon;
         s.capacity = a.capacity;
@@ -199,6 +202,24 @@ final class Gbfs {
         s.live = a.live;
         s.reported = a.reported;
         return s;
+    }
+
+    /** The Bluebikes app's own link, which every Boston dock lists today. */
+    static final String RENT = "https://bos.lft.to/lastmile_qr_scan";
+
+    /**
+     * The link a phone alert opens: the dock's rental link when it is an https address on
+     * Lyft's or Bluebikes' own hosts, else {@link #RENT}. The feed is public, so nothing else
+     * it says is ever put behind a tap.
+     */
+    static String rentLink(Model.Station s) {
+        String u = s == null ? "" : s.rent;
+        if (u.length() < 12 || u.length() > 200 || !u.matches("https://[A-Za-z0-9.-]+(/[A-Za-z0-9._~/?&=%-]*)?")) return RENT;
+        int end = u.indexOf('/', 8);
+        String host = (end < 0 ? u.substring(8) : u.substring(8, end)).toLowerCase(Locale.US);
+        boolean ours = host.equals("lft.to") || host.endsWith(".lft.to") || host.equals("bluebikes.com") || host.endsWith(".bluebikes.com")
+                || host.equals("lyft.com") || host.endsWith(".lyft.com");
+        return ours ? u : RENT;
     }
 
     /**

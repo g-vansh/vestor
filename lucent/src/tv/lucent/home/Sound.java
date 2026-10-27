@@ -6,6 +6,9 @@ import android.content.IntentFilter;
 import android.media.AudioDeviceInfo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.hardware.display.DisplayManager;
+import android.util.DisplayMetrics;
+import android.view.Display;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -48,6 +51,48 @@ final class Sound {
             // not available
         }
         return describe(enc, channels);
+    }
+
+    /**
+     * The HDMI picture: the mode the stick is sending, the best one the TV offers (from its
+     * EDID) and the HDR kinds it accepts, the way Amazon's own 4K check reads them. Apps
+     * draw at 1080p on Fire TV whatever the mode; films decode straight to the 4K plane.
+     */
+    static Model.Picture picture(Context c) {
+        Model.Picture p = new Model.Picture();
+        try {
+            DisplayManager dm = (DisplayManager) c.getSystemService(Context.DISPLAY_SERVICE);
+            Display d = dm == null ? null : dm.getDisplay(Display.DEFAULT_DISPLAY);
+            if (d != null) {
+                Display.Mode now = d.getMode();
+                p.width = now.getPhysicalWidth();
+                p.height = now.getPhysicalHeight();
+                p.hz = Math.round(now.getRefreshRate());
+                for (Display.Mode m : d.getSupportedModes()) {
+                    int w = m.getPhysicalWidth(), h = m.getPhysicalHeight();
+                    if ((long) w * h > (long) p.maxWidth * p.maxHeight) {
+                        p.maxWidth = w;
+                        p.maxHeight = h;
+                    }
+                    if (w >= 3840) p.max4kHz = Math.max(p.max4kHz, Math.round(m.getRefreshRate()));
+                }
+                DisplayMetrics metrics = new DisplayMetrics();
+                d.getRealMetrics(metrics);
+                p.uiWidth = metrics.widthPixels;
+                p.uiHeight = metrics.heightPixels;
+                Display.HdrCapabilities hdr = d.getHdrCapabilities();
+                int[] types = hdr == null ? new int[0] : hdr.getSupportedHdrTypes();
+                // Display.HDR_TYPE_*: 1 Dolby Vision, 2 HDR10, 3 HLG, 4 HDR10+ (named on Android 10).
+                String[] names = {"", "Dolby Vision", "HDR10", "HLG", "HDR10+"};
+                for (int want : new int[] {2, 4, 3, 1}) {
+                    for (int t : types) if (t == want) p.hdr.add(names[want]);
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // an unreadable display says nothing rather than something wrong
+        }
+        p.describe();
+        return p;
     }
 
     static Model.Audio describe(Set<Integer> enc, int channels) {

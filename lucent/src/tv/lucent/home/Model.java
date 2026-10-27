@@ -56,6 +56,12 @@ final class Model {
         final List<Boolean> hourDay = new ArrayList<>();
         /** Chance of rain per hour in percent, -1 when unknown. */
         final List<Integer> hourRain = new ArrayList<>();
+        /** The next two hours ("Rain from 3:45 PM"), empty when unknown; see {@link Weather#nowcast}. */
+        String rain = "";
+        /** When rain starts (or started) and stops, 0 when not in the next two hours. */
+        long rainAt, rainUntil;
+        /** Rain or snow now or in the next two hours. */
+        boolean wetSoon;
 
         static int c(double c) {
             return (int) Math.round(c);
@@ -85,6 +91,8 @@ final class Model {
     /** One Bluebikes dock, its fixed facts from station_information and its live counts. */
     static final class Station {
         String id = "", name = "", shortName = "";
+        /** Where a phone opens Bluebikes for this dock (the feed's rental_uris), checked by {@link Gbfs#rentLink}. */
+        String rent = "";
         double lat, lon;
         int capacity;
         float metres;
@@ -253,6 +261,58 @@ final class Model {
         String headline = "HDMI audio";
         int channels;
         final List<String> formats = new ArrayList<>();
+    }
+
+    /**
+     * What the stick sends the TV: the HDMI mode now, the best mode the TV offers, and the HDR
+     * kinds it accepts. {@link #describe} turns it into one line and, when 4K or HDR is not
+     * getting through, the one setting that fixes it.
+     */
+    static final class Picture {
+        int width, height, hz, maxWidth, maxHeight, max4kHz, uiWidth, uiHeight;
+        final List<String> hdr = new ArrayList<>();
+        /** "4K, 60 Hz, HDR10 and HLG", empty when the display could not be read. */
+        String line = "";
+        /** When 4K or HDR is not reaching the TV: what is wrong and the one setting that fixes it, else empty. */
+        String problem = "", fix = "", advice = "";
+        /** How apps and films draw, when all is well. */
+        String note = "";
+
+        static String size(int w, int h) {
+            if (w >= 7680) return "8K";
+            if (w >= 3840) return "4K";
+            if (w >= 2560) return "1440p";
+            if (w >= 1920 || h >= 1080) return "1080p";
+            if (w >= 1280) return "720p";
+            return w + " by " + h;
+        }
+
+        void describe() {
+            line = problem = fix = advice = note = "";
+            if (width <= 0 || height <= 0) return;
+            StringBuilder b = new StringBuilder(size(width, height));
+            if (hz > 0) b.append(", ").append(hz).append(" Hz");
+            for (int i = 0; i < hdr.size(); i++) b.append(i == 0 ? ", " : i == hdr.size() - 1 ? " and " : ", ").append(hdr.get(i));
+            line = b.toString();
+            String plus = "Turn on Input Signal Plus for HDMI 1.", where = " On the Samsung: Settings, General, External Device Manager.";
+            if (maxWidth > 0 && maxWidth < 3840) {
+                problem = "The Samsung offers no 4K on this input.";
+                fix = plus;
+            } else if (max4kHz > 0 && max4kHz < 50) {
+                problem = "4K stops at " + max4kHz + " Hz on this input.";
+                fix = plus;
+            } else if (width < 3840) {
+                problem = "Fire TV is sending " + size(width, height) + ".";
+                fix = "Fire TV Settings: Video Resolution to Auto.";
+                where = " It is under Display and Sounds, Display.";
+            } else if (hdr.isEmpty()) {
+                problem = "No HDR reaches the TV.";
+                fix = plus;
+            }
+            if (!problem.isEmpty()) advice = problem + " " + fix + where;
+            else note = uiWidth > 0 && uiWidth < width ? "Apps draw at " + size(uiWidth, uiHeight) + ", films play at the full " + size(width, height) + "."
+                    : "Apps and films both draw at " + size(width, height) + ".";
+        }
     }
 
     /** A row in the settings sheet. */

@@ -386,7 +386,12 @@ final class Cards {
         float px = pair(g, "H ", w.hiC, x, t + dp(150), dp(14), a);
         px = pair(g, "   L ", w.loC, px, t + dp(150), dp(14), a);
         pair(g, "   Feels ", w.feelsC, px, t + dp(150), dp(14), a);
-        g.text(details(w), Gfx.TEXT_REGULAR, dp(13), 0, x, t + dp(172), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        if (w.wetSoon) {
+            // Rain in the next two hours matters more than the humidity: it takes the line, in cyan.
+            g.text(w.rain, Gfx.TEXT_SEMIBOLD, dp(13), 0, x, t + dp(172), Pixels.alpha(Tone.RAIN, a), Gfx.LEFT, 0);
+        } else {
+            g.text(details(w), Gfx.TEXT_REGULAR, dp(13), 0, x, t + dp(172), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        }
     }
 
     /** "Humidity 58%  ·  Wind 9 mph W", wind in the lead unit's system. */
@@ -694,7 +699,11 @@ final class Cards {
         float px = pair(g, "High ", w.hiC, cx, t + dp(90), dp(15), a);
         pair(g, "    Low ", w.loC, px, t + dp(90), dp(15), a);
         pair(g, "Feels like ", w.feelsC, cx, t + dp(112), dp(15), a);
-        g.text(details(w), Gfx.TEXT_REGULAR, dp(14), 0, cx, t + dp(134), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        if (w.wetSoon) {
+            g.text(w.rain, Gfx.TEXT_SEMIBOLD, dp(14), 0, cx, t + dp(134), Pixels.alpha(Tone.RAIN, a), Gfx.LEFT, 0);
+        } else {
+            g.text(details(w), Gfx.TEXT_REGULAR, dp(14), 0, cx, t + dp(134), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        }
         int n = Math.min(7, w.hourC.size());
         float lineY = t + dp(160);
         g.fillRect(l + dp(28), lineY, r - dp(28), lineY + Math.max(1, dp(1)), Tone.hairline(a));

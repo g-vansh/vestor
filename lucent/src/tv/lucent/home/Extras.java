@@ -9,12 +9,13 @@ import java.util.Map;
  * The smaller feeds around the weather: National Weather Service alerts (warnings, watches,
  * advisories for home) and Open-Meteo's air quality and UV. Both are public, keyless, and asked
  * for a position rounded to about 2 km, like the forecast. The NWS asks every client to name
- * itself in its User-Agent, so Lucent does, without anything that identifies the home.
+ * itself in its User-Agent, so Lucent does, without anything that identifies the home or its
+ * owner (a contact is optional; the name alone is enough).
  */
 final class Extras {
     private Extras() {}
 
-    static final String NWS_AGENT = "Lucent home screen (github.com/g-vansh/vestor)";
+    static final String NWS_AGENT = "Lucent/2.0 (home screen for Fire TV)";
 
     private static double round2(double v) {
         return Math.round(v * 50) / 50.0;

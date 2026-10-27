@@ -15,17 +15,33 @@ import java.util.Map;
  * topic can do little, by design: only these words do anything, nothing else is read, and each
  * message counts once and only within two minutes of being sent.
  *
- * - find-ebike: start bike finder (and wake the TV)
- * - stop-ebike: stop bike finder and silence the alarm
- * - night, day: the evening or daytime look
+ * - find-ebike, stop-ebike: start bike finder (and wake the TV), or stop it and the alarm
+ * - night, day, auto: the evening or daytime look, or back to following the sun
+ * - glare-on, glare-off: the Samsung's bright picture for a sunny room, or back again
+ * - lucent, firetv: bring Lucent to the front, or open Fire TV's own home
+ * - wifi, wifi-hide: show the guest Wi-Fi code on the TV, or put it away
  * - hearts: hearts float up the screen
+ *
+ * The same relay also carries alerts the other way, to phones running the ntfy app, on a
+ * second topic of their own ({@link #pushUrl}).
  */
 final class Ntfy {
     interface Sink {
         void command(String word);
     }
 
-    static final String[] WORDS = {"find-ebike", "stop-ebike", "night", "day", "hearts"};
+    static final String[] WORDS = {"find-ebike", "stop-ebike", "night", "day", "auto", "glare-on", "glare-off", "lucent",
+        "firetv", "wifi", "wifi-hide", "hearts"};
+
+    /** The commands an Alexa URL switch can send, as {name, what to say, word for on, word for off}. */
+    static final String[][] SWITCHES = {
+        {"Bike finder", "Alexa, turn on bike finder", "find-ebike", "stop-ebike"},
+        {"Glare mode", "Alexa, turn on glare mode", "glare-on", "glare-off"},
+        {"Night look", "Alexa, turn on night look", "night", "auto"},
+        {"Lucent", "Alexa, turn on Lucent", "lucent", "firetv"},
+        {"Guest Wi-Fi", "Alexa, turn on guest Wi-Fi", "wifi", "wifi-hide"},
+        {"Hearts", "Alexa, turn on hearts", "hearts", ""},
+    };
     private static final long FRESH_MS = 120000L;
 
     private final String topic;
@@ -57,9 +73,30 @@ final class Ntfy {
         return b.toString();
     }
 
-    /** The address an Alexa URL switch calls to start bike finder. */
+    /** The address an Alexa URL switch calls to send {@code word}. */
     static String publishUrl(String topic, String word) {
         return "https://ntfy.sh/" + topic + "/publish?message=" + word;
+    }
+
+    /**
+     * A notification for phones subscribed to {@code topic} in the ntfy app, published with a
+     * GET (ntfy takes every header as a parameter), so it goes through Net and its governor.
+     * {@code click} is opened when the notification is tapped, or empty.
+     */
+    static String pushUrl(String topic, String title, String message, int priority, String tags, String click) {
+        StringBuilder b = new StringBuilder("https://ntfy.sh/").append(topic).append("/publish?title=").append(enc(title))
+                .append("&message=").append(enc(message)).append("&priority=").append(Math.max(1, Math.min(5, priority)));
+        if (!tags.isEmpty()) b.append("&tags=").append(enc(tags));
+        if (!click.isEmpty()) b.append("&click=").append(enc(click));
+        return b.toString();
+    }
+
+    private static String enc(String s) {
+        try {
+            return java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20");
+        } catch (java.io.UnsupportedEncodingException e) {
+            return "";
+        }
     }
 
     synchronized void start() {

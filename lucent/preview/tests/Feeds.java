@@ -216,5 +216,15 @@ public final class Feeds {
             System.out.println("FAIL bell peak " + peak);
         }
         eq("bell ends silent", 0, (int) s[s.length - 1]);
+        // The alarm rings loud from the first second: its peak sits just under full scale.
+        short[] r = Bell.ring();
+        int rp = 0;
+        for (short v : r) rp = Math.max(rp, Math.abs(v));
+        checks++;
+        if (rp < 0.85 * 32767 || rp > 0.9 * 32767) {
+            failures++;
+            System.out.println("FAIL ring peak " + rp);
+        }
+        eq("ring ends silent", 0, (int) r[r.length - 1]);
     }
 }

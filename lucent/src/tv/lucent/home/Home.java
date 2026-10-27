@@ -204,6 +204,8 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
         tick();
         scene.enter(now);
         unseenNote(now);
+        // Asked for while Lucent was not running (Alexa, or a phone): the Wi-Fi card is still due.
+        if (hub.wifiUntil > now) showWifi(now);
         maybeRotate(false);
         keepAwake();
         ui.removeCallbacks(minutely);
@@ -365,9 +367,14 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 if (detail instanceof Keys.Pending) {
                     Keys.Pending p = (Keys.Pending) detail;
                     scene.setPairing(null, null, null, 0);
-                    scene.ask(p.id, p.name);
+                    scene.ask(p.id, p.name, p.match);
                     if (!resumed) Guard.wake(this, true);
+                } else if (Boolean.FALSE.equals(detail)) {
+                    scene.pairCodeOff();
                 }
+                break;
+            case Hub.SECURITY:
+                scene.toast("Phone control", String.valueOf(detail), Scene.TOAST_PHONE, now);
                 break;
             case Hub.WIFI:
                 showWifi(now);
@@ -441,6 +448,15 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
     }
 
     private void settingChanged(String key) {
+        long now = System.currentTimeMillis();
+        if (Prefs.GLARE.equals(key)) {
+            boolean on = hub.glare();
+            scene.toast(on ? "Glare on" : "Glare off", on ? "The brightest picture, until sunset" : "The picture is back", Scene.TOAST_INFO,
+                    now);
+        } else if ("glare!".equals(key)) {
+            String why = hub.samsung.error();
+            scene.toast("The Samsung did not switch", why.isEmpty() ? "Is the TV on?" : why, Scene.TOAST_INFO, now);
+        }
         applyLook();
         if (Prefs.ALBUM.equals(key)) listWalls(false);
         if (Prefs.CLOCK.equals(key)) tick();
@@ -789,6 +805,9 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
         }
         hub.audio = a;
         scene.setAudio(a);
+        Model.Picture pic = Sound.picture(this);
+        hub.picture = pic;
+        scene.setPicture(pic);
         view.kick();
     }
 
@@ -798,6 +817,15 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
         List<Model.Option> list = new ArrayList<>();
         list.add(option("look", "Look", new String[] {"auto", "day", "night"},
                 new String[] {"Day and Night by the Sun", "Day", "Night"}, prefs.get(Prefs.MODE, "auto")));
+        if (hub.samsung.connected()) {
+            String bright = hub.picked(Prefs.GLARE_MODE);
+            list.add(option("glare", "Glare", new String[] {"off", "on"}, new String[] {"Off", "On, " + bright + " Picture"},
+                    hub.glare() ? "on" : "off"));
+            list.add(choice(Prefs.PICTURE_FOLLOW, "TV Picture Follows the Sun", new String[] {"off", "on"}, new String[] {"No",
+                "Yes, " + hub.picked(Prefs.DAY_MODE) + " by Day, " + hub.picked(Prefs.NIGHT_MODE) + " at Night"}));
+        } else {
+            list.add(new Model.Option("glarehelp", "Glare", null, new String[] {"Connect the Samsung in Phone Settings"}));
+        }
         String[] wallValues = new String[walls.size()], wallNames = new String[walls.size()];
         for (int i = 0; i < walls.size(); i++) {
             wallValues[i] = walls.get(i).id;
@@ -808,11 +836,12 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 new String[] {"Ours and Nature", "Nature", "Ours Only"}));
         list.add(choice(Prefs.ROTATE, "Change Wallpaper", new String[] {"1m", "5m", "10m", "hour", "day", "off"},
                 new String[] {"Every Minute", "Every 5 Minutes", "Every 10 Minutes", "Every Hour", "Every Day", "Never"}));
-        list.add(choice(Prefs.QUALITY, "Picture", new String[] {"motion", "still"}, new String[] {"Slow Drift", "Still and Sharpest"}));
+        list.add(choice(Prefs.QUALITY, "Wallpaper Motion", new String[] {"motion", "still"},
+                new String[] {"Slow Drift", "Still and Sharpest"}));
         list.add(choice(Prefs.DIM, "Dim When Idle", new String[] {"5", "10", "30", "off"},
                 new String[] {"After 5 Minutes", "After 10 Minutes", "After 30 Minutes", "Never"}));
-        list.add(choice(Prefs.AMBIENT, "Hide the Dock", new String[] {"2", "5", "15", "off"},
-                new String[] {"After 2 Minutes", "After 5 Minutes", "After 15 Minutes", "Never"}));
+        list.add(choice(Prefs.AMBIENT, "Apps Go Back Down", new String[] {"2", "5", "15", "off"},
+                new String[] {"After 2 Idle Minutes", "After 5 Idle Minutes", "After 15 Idle Minutes", "Never"}));
         list.add(choice(Prefs.MOTION, "Motion", new String[] {"full", "reduced"}, new String[] {"Full", "Reduced"}));
         list.add(choice(Prefs.CLOCK, "Clock", new String[] {"auto", "12", "24"}, new String[] {"System", "12-Hour", "24-Hour"}));
         list.add(choice(Prefs.UNITS, "Weather", new String[] {"f", "c", "off"}, new String[] {"°F, with °C", "°C, with °F", "Off"}));
@@ -974,6 +1003,13 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
     public void option(String key, String value) {
         if ("look".equals(key)) {
             hub.setMode(value);
+        } else if ("glare".equals(key)) {
+            // The toast comes when the Samsung has switched (see settingChanged).
+            hub.glare("on".equals(value));
+        } else if (Prefs.PICTURE_FOLLOW.equals(key)) {
+            prefs.put(key, value);
+            hub.picture(hub.night, true);
+            hub.post(Hub.SETTINGS, key);
         } else if ("access".equals(key)) {
             // Who may reach the control center changes only here, on the TV.
             prefs.put(Prefs.ACCESS, value);
@@ -1091,13 +1127,8 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             return;
         }
         long now = System.currentTimeMillis();
-        long locked = hub.keys.lockedFor(now);
         if (hub.accessMode() == Console.OFF) {
             scene.toast("Phone control is off", "Settings, Phone Control Works On", Scene.TOAST_INFO, now);
-            return;
-        }
-        if (locked > 0) {
-            scene.toast("Too many wrong codes", "Pairing opens again in " + Math.max(1, locked / MINUTE) + " min", Scene.TOAST_INFO, now);
             return;
         }
         String[] w = hub.openPairing();
@@ -1140,6 +1171,9 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 break;
             case "sleep":
                 if (!Guard.sleep()) scene.toast("Sleep needs Lucent's HOME service", "Run install.sh again", Scene.TOAST_INFO, now);
+                break;
+            case "glarehelp":
+                scene.toast("Glare needs the Samsung connected", "On your phone: Settings, Samsung Picture", Scene.TOAST_INFO, now);
                 break;
             case "about":
                 scene.toast("Play/Pause plays music, Rewind and Fast Forward change the photo",

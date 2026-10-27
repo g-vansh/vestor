@@ -43,7 +43,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
 
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
-            ALARM = 18, FRONT = 19, WALL = 20;
+            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21;
 
     private static Hub instance;
 
@@ -61,6 +61,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     final Album album;
     final Media media;
     final Console console;
+    final Samsung samsung;
     private Ntfy ntfy;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService work = Executors.newSingleThreadExecutor();
@@ -77,6 +78,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     volatile List<Ical.Event> events = new ArrayList<>();
     volatile long eventsAt;
     volatile Model.Audio audio;
+    volatile Model.Picture picture;
     volatile boolean night, front;
     volatile long nextChange, wifiUntil, heartsAt;
     private volatile String[] window;
@@ -112,6 +114,22 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         live = new Live(c, this);
         media = new Media(c, this);
         console = new Console(this, keys);
+        samsung = new Samsung(new Samsung.Store() {
+            @Override
+            public String get(String key) {
+                return prefs.get(key, "");
+            }
+
+            @Override
+            public void put(String key, String value) {
+                prefs.putNow(key, value);
+            }
+        }, new Samsung.Web() {
+            @Override
+            public Net.Reply call(String method, String url, String[] headers, String contentType, byte[] body) {
+                return Net.call(method, url, 10000, Net.LIMIT_SMALL, headers, contentType, body);
+            }
+        });
         Finder.get().listen(this);
         Alarm.listen(this);
         applySettings();
@@ -123,7 +141,33 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         mode();
         importShared();
         main.postDelayed(tick, 30000);
+        main.postDelayed(watch, 3000);
     }
+
+    private boolean pinShown = true;
+
+    /**
+     * Every 3 s: what happened to paired phones (a key used from two places signs a phone out,
+     * too many wrong codes turn the code off) becomes a notice on the TV, and an open pairing
+     * card drops its code once the code stops working.
+     */
+    private final Runnable watch = new Runnable() {
+        @Override
+        public void run() {
+            for (String e : keys.events()) {
+                // A phone moving between home Wi-Fi and Tailscale changes address often. The phone
+                // page's device list shows the address, and the TV stays quiet about it.
+                if (!e.contains(" is now at ")) post(SECURITY, e);
+            }
+            long now = System.currentTimeMillis();
+            // Only while the window is still open: at its end the card simply closes.
+            if (window != null && pinShown && keys.windowOpen(now) && !keys.pinOpen(now)) {
+                pinShown = false;
+                post(PAIR, Boolean.FALSE);
+            }
+            main.postDelayed(this, 3000);
+        }
+    };
 
     /** Pictures pushed into the shared folder become album photos, through the sandbox. */
     void importShared() {
@@ -154,12 +198,29 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         return b == null ? null : new String(b, StandardCharsets.UTF_8);
     }
 
-    /** Every 30 s: the server's addresses, day and night, the alarm's limit, the Wi-Fi card. */
+    private long keptAt;
+
+    /** Every 30 s: the server's addresses, day and night, the Wi-Fi card, and once a day the Samsung sign-in. */
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
             console.refresh();
             mode();
+            long now = System.currentTimeMillis();
+            if (samsung.connected() && now - keptAt > 86400000L) {
+                keptAt = now;
+                runInBackground(new Runnable() {
+                    @Override
+                    public void run() {
+                        samsung.keepAlive();
+                        try {
+                            samsung.status();
+                        } catch (Samsung.Failed ignored) {
+                            // the modes stay as last read
+                        }
+                    }
+                });
+            }
             if (wifiUntil > 0 && System.currentTimeMillis() > wifiUntil) {
                 wifiUntil = 0;
                 post(WIFI, null);
@@ -208,6 +269,8 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         front = on;
         if (on) live.resume();
         else live.pause();
+        // A picture change missed while the TV was off is made when it is back.
+        if (on && pictureStale) picture(night, false);
         post(FRONT, on);
     }
 
@@ -292,6 +355,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         if (n != night) {
             night = n;
             post(MODE, n);
+            picture(n, true);
         }
     }
 
@@ -334,7 +398,13 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     private void weather(String json, long at, boolean fresh) {
         Model.Weather w = Weather.parse(json, prefs.city, is24h(), at, prefs.celsiusFirst());
         if (!w.ok) return;
-        if (System.currentTimeMillis() - at > 6 * 3600000L) w.ok = false;
+        long age = System.currentTimeMillis() - at;
+        if (age > 6 * 3600000L) w.ok = false;
+        // Two hours of rain timing is only worth showing while it is fresh.
+        if (age > 45 * 60000L) {
+            w.rain = "";
+            w.wetSoon = false;
+        }
         if (fresh) {
             prefs.put(Prefs.WEATHER_JSON, json);
             prefs.putLong(Prefs.WEATHER_AT, at);
@@ -410,6 +480,18 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
             soundedFor = f.ended;
             if ("ring".equals(prefs.choice(Prefs.ALARM))) Alarm.ring();
             else Chime.play();
+            if (pushOn()) {
+                final String where = f.station.isEmpty() ? "Westgate" : f.station;
+                final int n = f.ebikes;
+                final String link = Gbfs.rentLink(s);
+                runInBackground(new Runnable() {
+                    @Override
+                    public void run() {
+                        push("E-bike ready at " + where, (n == 1 ? "1 e-bike is" : n + " e-bikes are")
+                                + " docked now. Tap to open Bluebikes and reserve one for up to 10 minutes.", 5, "bike", link);
+                    }
+                });
+            }
         }
         post(FINDER, f);
     }
@@ -447,13 +529,137 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                     findBike();
                 } else if ("stop-ebike".equals(word)) {
                     stopFinding();
-                } else if ("night".equals(word) || "day".equals(word)) {
+                } else if ("night".equals(word) || "day".equals(word) || "auto".equals(word)) {
                     setMode(word);
+                } else if ("glare-on".equals(word) || "glare-off".equals(word)) {
+                    glare("glare-on".equals(word));
+                } else if ("lucent".equals(word)) {
+                    Guard.wake(app, true);
+                } else if ("firetv".equals(word)) {
+                    Guard.amazon(app);
+                } else if ("wifi".equals(word)) {
+                    if (prefs.get(Prefs.WIFI_SSID, "").isEmpty()) return;
+                    Guard.wake(app, true);
+                    wifiUntil = System.currentTimeMillis() + 120000L;
+                    post(WIFI, null);
+                } else if ("wifi-hide".equals(word)) {
+                    wifiUntil = 0;
+                    post(WIFI, null);
                 } else if ("hearts".equals(word)) {
                     hearts("hearts", "Alexa");
                 }
             }
         });
+    }
+
+    // ---- Phone alerts (ntfy) ---------------------------------------------------------------------
+
+    boolean pushOn() {
+        return "on".equals(prefs.get(Prefs.PUSH, "off")) && Ntfy.validTopic(prefs.get(Prefs.PUSH_TOPIC, ""));
+    }
+
+    /** "on", "off", or "new" for a fresh topic (phones then subscribe again). */
+    void setPush(String v) {
+        if ("new".equals(v) || !Ntfy.validTopic(prefs.get(Prefs.PUSH_TOPIC, ""))) prefs.put(Prefs.PUSH_TOPIC, Ntfy.newTopic(random));
+        prefs.put(Prefs.PUSH, "off".equals(v) ? "off" : "on");
+    }
+
+    /** One alert to every phone on the topic. False when ntfy did not take it. Slow: off the main thread. */
+    boolean push(String title, String message, int priority, String tags, String click) {
+        String t = prefs.get(Prefs.PUSH_TOPIC, "");
+        if (!Ntfy.validTopic(t)) return false;
+        Net.Reply r = Net.call("GET", Ntfy.pushUrl(t, title, message, priority, tags, click), 10000, Net.LIMIT_TINY, null, null, null);
+        return r != null && r.code == 200;
+    }
+
+    // ---- The Samsung's picture (SmartThings) -----------------------------------------------------
+
+    private volatile boolean pictureStale;
+
+    boolean glare() {
+        return "on".equals(prefs.get(Prefs.GLARE, "off"));
+    }
+
+    /**
+     * Glare on: the bright picture, for a sunny room. Glare off: the day or night picture when
+     * the picture follows the sun, else the one from before. Glare ends by itself at sunset.
+     */
+    void glare(final boolean on) {
+        if (!samsung.connected()) return;
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                boolean ok = true;
+                try {
+                    glareNow(on);
+                } catch (Samsung.Failed f) {
+                    // samsung.error() says why, on the TV and in the control center
+                    ok = false;
+                }
+                post(SETTINGS, ok ? Prefs.GLARE : "glare!");
+            }
+        });
+    }
+
+    /** {@link #glare} on the calling thread, which waits for Samsung's servers. */
+    void glareNow(boolean on) throws Samsung.Failed {
+        if (on) {
+            if (!glare()) {
+                // The mode on screen now, in case someone changed it with the Samsung's own remote.
+                try {
+                    samsung.status();
+                } catch (Samsung.Failed ignored) {
+                    // the last known mode will do
+                }
+                prefs.put(Prefs.GLARE_BACK, samsung.mode());
+            }
+            samsung.setMode(picked(Prefs.GLARE_MODE));
+            prefs.put(Prefs.GLARE, "on");
+        } else {
+            prefs.put(Prefs.GLARE, "off");
+            samsung.setMode(resting(night));
+        }
+    }
+
+    /**
+     * Day and night changed (or the TV is back after missing a change): glare ends at night, and
+     * the picture follows the sun when asked to. {@code changed} is false for a retry.
+     */
+    void picture(final boolean isNight, boolean changed) {
+        if (!samsung.connected()) return;
+        final boolean follow = "on".equals(prefs.choice(Prefs.PICTURE_FOLLOW));
+        final boolean endGlare = isNight && glare();
+        if (!follow && !endGlare || !isNight && glare()) return;
+        if (!changed && !pictureStale) return;
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                if (endGlare) prefs.put(Prefs.GLARE, "off");
+                try {
+                    samsung.setMode(resting(isNight));
+                    pictureStale = false;
+                } catch (Samsung.Failed f) {
+                    pictureStale = f.status >= 500;
+                }
+                post(SETTINGS, "picture");
+            }
+        });
+    }
+
+    /** The picture when glare is off. */
+    private String resting(boolean isNight) {
+        if ("on".equals(prefs.choice(Prefs.PICTURE_FOLLOW))) return picked(isNight ? Prefs.NIGHT_MODE : Prefs.DAY_MODE);
+        String back = prefs.get(Prefs.GLARE_BACK, "");
+        return samsung.modes().contains(back) ? back : picked(Prefs.DAY_MODE);
+    }
+
+    /** The mode chosen for glare, day or night, or a sensible one this TV has. */
+    String picked(String key) {
+        String v = prefs.get(key, "");
+        if (samsung.modes().contains(v)) return v;
+        if (Prefs.GLARE_MODE.equals(key)) return samsung.pick("Dynamic", "Vivid", "Standard");
+        if (Prefs.NIGHT_MODE.equals(key)) return samsung.pick("Movie", "Filmmaker Mode", "FILMMAKER MODE", "Natural", "Standard");
+        return samsung.pick("Standard", "Natural");
     }
 
     // ---- Notes and hearts ------------------------------------------------------------------------
@@ -487,6 +693,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         if (urls.isEmpty()) return null;
         String[] w = keys.open(System.currentTimeMillis());
         if (w == null) return null;
+        pinShown = !w[1].isEmpty();
         window = new String[] {urls.get(0) + "/#k=" + w[0], w[1], urls.get(0)};
         return window;
     }
@@ -579,13 +786,15 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                 return Actions.run(Hub.this, d, action, body);
             }
         });
-        if ("photodel".equals(action) || "photocap".equals(action)) {
+        // Steps that wait on another server run on the worker thread, never the screen's.
+        boolean slow = "samsung".equals(action) || "push".equals(action);
+        if (slow || "photodel".equals(action) || "photocap".equals(action)) {
             work.execute(task);
         } else {
             main.post(task);
         }
         try {
-            return task.get(20, TimeUnit.SECONDS);
+            return task.get(slow ? 50 : 20, TimeUnit.SECONDS);
         } catch (java.util.concurrent.ExecutionException e) {
             Throwable c = e.getCause();
             if (c instanceof Http.Refused) throw (Http.Refused) c;

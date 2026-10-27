@@ -110,6 +110,8 @@ final class Scene {
     private static final int[] FALLBACK_SKY = {0xFF0E1A2E, 0xFF1C2350, 0xFF07080D};
     private static final int[] EDGE_GLINT = {0x00FFFFFF, 0xD9FFFFFF, 0x00FFFFFF};
     private static final int[] RULE = {0x00F5F1EA, 0xCCF5F1EA, 0x00F5F1EA};
+    private static final int[] SCRIM = {0x99000000, 0x52000000, 0x00000000};
+    private static final float[] SCRIM_STOPS = {0f, 0.5f, 1f};
 
     final Host host;
 
@@ -125,6 +127,7 @@ final class Scene {
     private Model.Wall wall, oldWall;
     private Model.Weather weather;
     private Model.Audio audio;
+    private Model.Picture picture;
     private Model.Air air;
     private List<Model.Alert> alerts = new ArrayList<>();
     final Cards cards = new Cards();
@@ -151,7 +154,11 @@ final class Scene {
     private String[] pairWindow;
     private Object pairQr, wifiQr;
     private long pairUntil, wifiUntil;
-    private String askId = "", askName = "";
+    private String askId = "", askName = "", askMatch = "";
+    /** When the "Allow this device?" card came up, and the time of the latest frame or key. */
+    private long askAt, lastNow;
+    /** OK on the card counts only after this long, so a press meant for the screen before it cannot allow a device. */
+    static final long ASK_GUARD_MS = 1000;
     private String wifiSsid = "";
     private String mirrorApp;
     private String toastTitle = "", toastDetail = "";
@@ -159,7 +166,12 @@ final class Scene {
     private long toastAt = -100000;
     private int mirrorRow;
     /** The clock's words, rebuilt only when what they say changes (never once a frame). */
-    private String eyebrowText = "", skyText = "", nextText = "", greetText = "";
+    private String eyebrowText = "", skyText = "", nextText = "", greetText = "", todayCount = "";
+    /** The standfirst as drawn: whole sentences dropped from the end until it clears the pinned note. */
+    private String skyFit = "", skyFitFor = "";
+    private float skyFitW = -1;
+    private final float[] pinBox = new float[5];
+    private String[] todayLabel = new String[0], todayWhen = new String[0], todayWhat = new String[0];
     private long textKey = Long.MIN_VALUE;
     private int textVersion;
 
@@ -182,7 +194,17 @@ final class Scene {
     private int finderState = Model.Finder.IDLE;
     private final Spring scroll = new Spring(0, 0.5f, 0);
     private final Spring tiltX = new Spring(0, 0.6f, 0.25f), tiltY = new Spring(0, 0.6f, 0.25f);
-    private final Spring ambient = new Spring(0, 1.6f, 0), ui = new Spring(1, 0.55f, 0), dim = new Spring(0, 3.5f, 0);
+    private final Spring ambient = new Spring(1, 1.2f, 0), ui = new Spring(1, 0.55f, 0), dim = new Spring(0, 3.5f, 0);
+    /** 1 while the dashboard rests: no card grown, the top row put away. */
+    private final Spring rest = new Spring(1, 0.5f, 0);
+    /**
+     * The dashboard at rest: the photo, the clock and the day, the pinned note and the glance
+     * bar at the bottom. Down brings the apps up; any other move wakes the bar.
+     */
+    private boolean resting = true;
+    private long hintUntil;
+    private float barRight, clockBottom;
+    private static final long REST_MS = 30000;
     private final Spring sheet = new Spring(0, 0.45f, 0.06f), menu = new Spring(0, 0.34f, 0.12f), pop = new Spring(0, 0.34f, 0.1f);
     private final Spring glanceLight = new Spring(0, 0.5f, 0);
     private final Spring sheetScroll = new Spring(0, 0.4f, 0), sheetPill = new Spring(0, 0.28f, 0.08f), menuPill = new Spring(0, 0.25f, 0.08f);
@@ -310,6 +332,10 @@ final class Scene {
 
     void setAudio(Model.Audio a) {
         audio = a;
+    }
+
+    void setPicture(Model.Picture p) {
+        picture = p;
     }
 
     void setAir(Model.Air a) {
@@ -458,6 +484,11 @@ final class Scene {
         wake(now);
     }
 
+    /** Typing the code stopped working (too many wrong tries): the card keeps only the QR. */
+    void pairCodeOff() {
+        if (pairWindow != null) pairWindow = new String[] {pairWindow[0], "", pairWindow[2]};
+    }
+
     /** The pairing window: {QR link, code, address} and the QR's modules, or null when closed. */
     void setPairing(String[] window, Gfx g, boolean[][] qr, long until) {
         pairWindow = window;
@@ -473,8 +504,11 @@ final class Scene {
         }
     }
 
-    /** "Allow this phone?" for a device that scanned or typed the code, or null to clear. */
-    void ask(String id, String name) {
+    /**
+     * "Allow this phone?" for a device that scanned or typed the code, or null to clear. The
+     * three match digits are the ones the phone shows, so two requests at once cannot be mixed up.
+     */
+    void ask(String id, String name, String match) {
         if (id == null) {
             if (mode == ASK) {
                 mode = NONE;
@@ -485,6 +519,8 @@ final class Scene {
         }
         askId = id;
         askName = name;
+        askMatch = match == null || !match.matches("[0-9]{3}") ? "" : match.charAt(0) + " " + match.charAt(1) + " " + match.charAt(2);
+        askAt = lastNow;
         if (mode != ALARM) {
             mode = ASK;
             modal.to(1);
@@ -581,8 +617,13 @@ final class Scene {
     void enter(long now) {
         lastInput = now;
         enteredAt = now;
-        ambient.snap(0);
+        // Coming home always lands on the dashboard; the apps are one press of Down away.
+        ambient.snap(1);
         dim.snap(0);
+        resting = true;
+        zone = GLANCE;
+        rest.snap(1);
+        hintUntil = now + 9000;
         if (!reduced) ui.snap(0);
         ui.to(1);
         if (mode != ALARM && mode != ASK && mode != PAIR) closeOverlays();
@@ -597,14 +638,16 @@ final class Scene {
         }
         closeOverlays();
         notice.to(0);
-        zone = DOCK;
+        zone = GLANCE;
         focus = 0;
+        resting = true;
+        ambient.to(1);
+        hintUntil = now + 9000;
     }
 
     /** Anything worth seeing happened: the screen brightens and the dock comes back. */
     private void wake(long now) {
         lastInput = now;
-        ambient.to(0);
         dim.to(0);
     }
 
@@ -623,6 +666,7 @@ final class Scene {
         if (mode == PANEL) return Cards.name(panelKind);
         if (mode == ALARM) return "E-bike ready. Press OK to stop the alarm.";
         if (mode == ASK) return "Allow " + askName + " to use the control center? OK to allow, Back to refuse.";
+        if (resting && mode == NONE) return "Home. Press Down for your apps.";
         if (zone == DOCK && focus < apps.size()) return apps.get(focus).label;
         if (zone == GLANCE) return Cards.name(glanceFocus);
         return zone == TOP ? TOP_NAMES[topFocus] : "";
@@ -631,7 +675,8 @@ final class Scene {
     // ---- Keys --------------------------------------------------------------------------------
 
     boolean key(int k, long now) {
-        boolean wasDim = dim.target > 0.5f || ambient.target > 0.5f;
+        lastNow = now;
+        boolean wasDim = dim.target > 0.5f;
         lastInput = now;
         // The alarm takes every button: any press stops it.
         if (mode == ALARM) {
@@ -639,8 +684,8 @@ final class Scene {
             host.silenceAlarm();
             return true;
         }
+        if (resting && k != DOWN) hintUntil = Math.max(hintUntil, now + 6000);
         if (wasDim) {
-            ambient.to(0);
             dim.to(0);
             if (mode != ASK && mode != NOTE) return true;
         }
@@ -688,6 +733,7 @@ final class Scene {
                 }
                 return true;
             case ASK:
+                if (k == OK && now - askAt < ASK_GUARD_MS) return true;
                 if (k == OK || k == BACK) {
                     host.sound(k == OK);
                     host.decide(askId, k == OK);
@@ -731,6 +777,7 @@ final class Scene {
                     return true;
                 case UP:
                     zone = GLANCE;
+                    resting = false;
                     glanceFocus = nearestGlance(tileX(focus) + tileW / 2);
                     light.kick(-2f);
                     host.sound(false);
@@ -751,6 +798,7 @@ final class Scene {
                     return true;
                 case BACK:
                     if (focus != 0) moveFocus(0, -1);
+                    else closeDock();
                     return true;
                 default:
                     return false;
@@ -771,13 +819,19 @@ final class Scene {
             case DOWN: {
                 float[] r = topRect(topFocus, null);
                 zone = GLANCE;
+                resting = false;
                 glanceFocus = nearestGlance((r[0] + r[2]) / 2);
                 light.kick(2f);
                 host.sound(false);
                 return true;
             }
             case BACK:
-                zone = DOCK;
+                if (dockOpen()) {
+                    zone = DOCK;
+                } else {
+                    zone = GLANCE;
+                    resting = true;
+                }
                 light.kick(2f);
                 host.sound(false);
                 return true;
@@ -814,6 +868,24 @@ final class Scene {
     private boolean glanceKey(int k) {
         int[] kinds = glanceKinds();
         int at = indexOf(kinds, glanceFocus);
+        if (resting) {
+            // At rest the first press only wakes the bar where it is; Down brings up the apps.
+            switch (k) {
+                case LEFT:
+                case RIGHT:
+                    resting = false;
+                    light.kick(k == LEFT ? -1.2f : 1.2f);
+                    host.sound(false);
+                    return true;
+                case DOWN:
+                    openDock();
+                    return true;
+                case BACK:
+                    return true;
+                default:
+                    resting = false;
+            }
+        }
         switch (k) {
             case LEFT:
             case RIGHT: {
@@ -834,9 +906,15 @@ final class Scene {
                 host.sound(false);
                 return true;
             case DOWN:
+                openDock();
+                return true;
             case BACK:
-                zone = DOCK;
-                light.kick(2f);
+                if (dockOpen()) {
+                    zone = DOCK;
+                    light.kick(2f);
+                } else {
+                    resting = true;
+                }
                 host.sound(false);
                 return true;
             case OK:
@@ -1096,6 +1174,28 @@ final class Scene {
         host.order(ids);
     }
 
+    private boolean dockOpen() {
+        return ambient.target < 0.5f;
+    }
+
+    /** Down from the dashboard: the apps rise into view and take focus. */
+    private void openDock() {
+        ambient.to(0);
+        zone = DOCK;
+        resting = false;
+        light.kick(2f);
+        host.sound(false);
+    }
+
+    /** Back from the apps: the dashboard again, at rest. */
+    private void closeDock() {
+        ambient.to(1);
+        zone = GLANCE;
+        resting = true;
+        light.kick(-2f);
+        host.sound(false);
+    }
+
     private void openSheet() {
         mode = SETTINGS;
         sheet.to(1);
@@ -1263,14 +1363,24 @@ final class Scene {
 
     /** Advances the animation; returns whether anything still needs fast frames. */
     boolean step(float dt, long now) {
+        lastNow = now;
         nowMs = now;
         cards.now = now;
         if (start < 0) start = now;
         cards.time = (now - start) / 1000f;
         if (wallSince < 0) wallSince = now;
         boolean idleModes = mode == NONE && notice.target < 0.5f && !ringing;
-        if (idleModes && ambientAfter > 0 && now - lastInput > ambientAfter) ambient.to(1);
-        if (idleModes && dimAfter > 0 && now - lastInput > dimAfter + Math.max(0, ambientAfter)) dim.to(1);
+        // Left alone, the apps go back down and then the bar settles; later the screen dims.
+        if (idleModes && ambientAfter > 0 && now - lastInput > ambientAfter && dockOpen()) {
+            ambient.to(1);
+            zone = GLANCE;
+            resting = true;
+        }
+        if (idleModes && !resting && !dockOpen() && now - lastInput > REST_MS) {
+            resting = true;
+            zone = GLANCE;
+        }
+        if (idleModes && dimAfter > 0 && now - lastInput > dimAfter) dim.to(1);
         if (notice.target > 0.5f && now > noticeUntil) notice.to(0);
         if (mode == NOTE && popNote != null && now - noteAt > 30000) {
             mode = NONE;
@@ -1300,7 +1410,7 @@ final class Scene {
         // its neighbour instead of resting on something invisible.
         if (!shown && kinds.length > 0) glanceFocus = kinds[Math.min(kinds.length - 1, indexOf(kinds, Cards.BIKES))];
         for (int k = 0; k < Cards.COUNT; k++) {
-            boolean on = zone == GLANCE && glanceFocus == k && (mode == NONE || mode == PANEL) && ambient.target < 0.5f;
+            boolean on = zone == GLANCE && glanceFocus == k && (mode == NONE || mode == PANEL) && !resting;
             grow[k].to(on ? 1 : 0);
         }
         int n = apps.size();
@@ -1334,6 +1444,8 @@ final class Scene {
         moving |= light.step(dt, instant);
         moving |= glanceLight.step(dt, instant);
         moving |= ambient.step(dt, false);
+        rest.to(resting && zone != TOP && mode == NONE ? 1 : 0);
+        moving |= rest.step(dt, false);
         moving |= dim.step(dt, false);
         moving |= ui.step(dt, instant);
         moving |= sheet.step(dt, instant);
@@ -1398,12 +1510,15 @@ final class Scene {
 
         float amb = ambient.value;
         float uiA = ui.value * (1 - amb);
+        float topA = ui.value * (1 - rest.value);
         drawClock(g, amb, now);
-        drawCaption(g, uiA, amb);
-        drawTop(g, uiA, t);
-        drawPinned(g, uiA, t);
+        drawToday(g, ui.value * amb, now);
+        drawCaption(g, uiA, rest.value);
+        drawTop(g, topA, t);
+        drawPinned(g, ui.value * amb, t);
         drawDock(g, uiA, t);
         drawGlance(g, ui.value, t);
+        drawHint(g, amb, now);
 
         float modalDim = Math.max(sheet.value, Math.max(menu.value * 0.75f, Math.max(pop.value * 0.55f, panel.value * 0.6f)));
         modalDim = Math.max(modalDim, Math.max(modal.value * 0.7f, Math.max(noteSpring.value * 0.6f, alarmSpring.value * 0.45f)));
@@ -1470,15 +1585,15 @@ final class Scene {
      * while moving an app the same line gives the instructions. In ambient mode it rises to where
      * the controls were.
      */
-    private void drawCaption(Gfx g, float uiA, float amb) {
+    private void drawCaption(Gfx g, float uiA, float restV) {
         boolean instruct = !hint.isEmpty();
         String text = instruct ? hint : wall == null ? "" : wall.title;
         if (text.isEmpty() || notice.value > 0.98f) return;
         float topLit = 0;
         for (Spring sp : topSpring) topLit = Math.max(topLit, sp.value);
-        float a = (instruct ? uiA : 0.82f * Math.max(uiA, amb) * (1 - Math.min(1, topLit))) * (1 - notice.value) * (1 - alarmSpring.value);
+        float a = (instruct ? uiA : 0.82f * ui.value * (1 - Math.min(1, topLit))) * (1 - notice.value) * (1 - alarmSpring.value);
         if (a <= 0.003f) return;
-        float y = lerp(top + capH + dp(34), top + dp(26), amb);
+        float y = lerp(top + capH + dp(34), top + dp(26), restV);
         float r = width - side - dp(2);
         int face = instruct ? Gfx.TEXT_MEDIUM : Gfx.MONO;
         float size = instruct ? dp(14.5f) : dp(11.5f);
@@ -1532,6 +1647,13 @@ final class Scene {
      * the same pixels all day.
      */
     private void drawClock(Gfx g, float amb, long now) {
+        // A soft shade behind the words, only as strong as the photograph under them is bright, so
+        // white type reads on a sunlit sky and a dark photo is left alone.
+        float lum = luminance(0, top, width * 0.45f, barBottom() - barH);
+        float shade = clamp01((lum - 0.28f) / 0.42f) * ui.value;
+        if (shade > 0.01f) {
+            g.fillRectLinear(0, 0, width * 0.62f, barBottom() - barH * 0.5f, 0, 0, width * 0.62f, 0, SCRIM, SCRIM_STOPS, 0.8f * shade);
+        }
         float shiftT = (now % (37 * 60000L)) / (37 * 60000f) * (float) Math.PI * 2;
         float ox = dp(5) * (float) Math.sin(shiftT) * (0.4f + 0.6f * dim.value);
         float oy = dp(4) * (float) Math.cos(shiftT * 1.3f) * (0.4f + 0.6f * dim.value);
@@ -1559,7 +1681,10 @@ final class Scene {
         float rise = (1 - easeOut(appear)) * dp(10);
         g.text(greet, Gfx.SERIF_ITALIC, gs, 0, x, sy + rise, Pixels.alpha(on, a * appear), Gfx.LEFT, 0.6f);
         float gx = x + g.measure(greet, Gfx.SERIF_ITALIC, gs, 0) + dp(9);
-        String sky = skyText;
+        // Clear of the pinned note where it reaches down beside the standfirst.
+        float right = pinnedBox(pinBox) && pinBox[3] > sy - gs ? pinBox[0] - dp(24) : width - side;
+        float maxW = right - gx;
+        String sky = fitSky(g, skyText, gs * 0.86f, maxW);
         if (!sky.isEmpty()) {
             float appear2 = reduced ? 1 : Math.max(0, Math.min(1, (now - enteredAt - 550) / 700f));
             g.text(sky, Gfx.SERIF, gs * 0.86f, 0, gx, sy + (1 - easeOut(appear2)) * dp(10), Pixels.alpha(on, 0.86f * a * appear2),
@@ -1581,12 +1706,80 @@ final class Scene {
                     Gfx.TEXT_SEMIBOLD, dp(15), 0, x + dp(16), ay, Pixels.alpha(0xFFFFB866, a), Gfx.LEFT, 0.6f);
             ay += dp(26);
         }
-        // What is next on the shared calendar, today.
-        if (!nextText.isEmpty()) {
+        clockBottom = ay;
+        // What is next on the shared calendar. On the dashboard the day's list says it instead.
+        float nextA = a * (1 - amb);
+        if (!nextText.isEmpty() && nextA > 0.003f) {
             float appear3 = reduced ? 1 : Math.max(0, Math.min(1, (now - enteredAt - 850) / 700f));
-            g.fillCircle(x + dp(5), ay - dp(5), dp(3.5f), Pixels.alpha(Tone.ROSE, a * appear3));
-            g.text(nextText, Gfx.TEXT_SEMIBOLD, dp(15), 0, x + dp(16), ay, Pixels.alpha(on, 0.86f * a * appear3), Gfx.LEFT, 0.6f);
+            g.fillCircle(x + dp(5), ay - dp(5), dp(3.5f), Pixels.alpha(Tone.ROSE, nextA * appear3));
+            g.text(nextText, Gfx.TEXT_SEMIBOLD, dp(15), 0, x + dp(16), ay, Pixels.alpha(on, 0.86f * nextA * appear3), Gfx.LEFT, 0.6f);
         }
+    }
+
+    /**
+     * The dashboard's day, under the clock: what is on today and tomorrow from the shared
+     * calendar, and the nearest countdown. Built once when the calendar or the minute changes.
+     */
+    private void drawToday(Gfx g, float a, long now) {
+        float grown = panel.value;
+        for (Spring gs : grow) grown = Math.max(grown, gs.value);
+        a *= 1 - clamp01(grown * 1.4f);
+        if (a <= 0.003f || todayWhat.length == 0 && todayCount.isEmpty()) return;
+        float appear = reduced ? 1 : Math.max(0, Math.min(1, (now - enteredAt - 900) / 700f));
+        a *= appear * (1 - 0.15f * dim.value);
+        float x = side + dp(2), y = clockBottom + dp(8);
+        float limit = barBottom() - barH - dp(34);
+        int on = ON_PHOTO;
+        for (int i = 0; i < todayWhat.length; i++) {
+            if (todayLabel[i] != null) {
+                if (y + dp(24) > limit) break;
+                g.text(todayLabel[i], Gfx.MONO, dp(11.5f), 0.1f, x, y + dp(4), Pixels.alpha(on, 0.78f * a), Gfx.LEFT, 0.5f);
+                y += dp(24);
+            }
+            if (y + dp(28) > limit) break;
+            g.text(todayWhen[i], Gfx.MONO, dp(13), 0.02f, x, y + dp(4), Pixels.alpha(on, 0.78f * a), Gfx.LEFT, 0.5f);
+            g.text(Text.fit(g, todayWhat[i], Gfx.TEXT_MEDIUM, dp(18), dp(440)), Gfx.TEXT_MEDIUM, dp(18), 0, x + dp(92), y + dp(5),
+                    Pixels.alpha(on, 0.94f * a), Gfx.LEFT, 0.6f);
+            y += dp(30);
+        }
+        if (!todayCount.isEmpty() && y + dp(34) <= limit) {
+            g.text(todayCount, Gfx.SERIF_ITALIC, dp(22), 0, x, y + dp(14), Pixels.alpha(on, 0.9f * a), Gfx.LEFT, 0.6f);
+        }
+    }
+
+    /** "Apps" with a down arrow beside the bar for a few seconds, so the dock is never a secret. */
+    private void drawHint(Gfx g, float amb, long now) {
+        if (!resting || mode != NONE) return;
+        float a = Math.max(0, Math.min(1, (hintUntil - now) / 900f)) * amb * ui.value * (1 - dim.value);
+        if (a <= 0.003f) return;
+        float cy = barBottom() - barH / 2, x = barRight + dp(18);
+        if (x + dp(110) > dockR) return;
+        int ink = Pixels.alpha(ON_PHOTO, 0.8f * a);
+        g.line(x + dp(2), cy - dp(3), x + dp(8), cy + dp(3), dp(2), ink);
+        g.line(x + dp(8), cy + dp(3), x + dp(14), cy - dp(3), dp(2), ink);
+        g.text("APPS", Gfx.MONO, dp(12), 0.12f, x + dp(24), cy + g.capHeight(Gfx.MONO, dp(12)) / 2, Pixels.alpha(ON_PHOTO, 0.8f * a), Gfx.LEFT, 0.6f);
+    }
+
+    /**
+     * The standfirst within {@code maxW}: "Partly cloudy, 53°. Rain from 3:45 PM. Sunset 5:25."
+     * loses its last sentences first, so it never runs under the pinned note. Measured only when
+     * the words or the room change.
+     */
+    private String fitSky(Gfx g, String sky, float size, float maxW) {
+        if (sky.equals(skyFitFor) && Math.abs(maxW - skyFitW) < 1) return skyFit;
+        skyFitFor = sky;
+        skyFitW = maxW;
+        String fit = sky;
+        while (g.measure(fit, Gfx.SERIF, size, 0) > maxW) {
+            int cut = fit.lastIndexOf(". ", fit.length() - 2);
+            if (cut < 0) {
+                fit = Text.fit(g, fit, Gfx.SERIF, size, Math.max(0, maxW));
+                break;
+            }
+            fit = fit.substring(0, cut + 1);
+        }
+        skyFit = fit;
+        return fit;
     }
 
     /** Rebuilds the clock's words when the minute, the weather, the calendar or the look changes. */
@@ -1598,6 +1791,41 @@ final class Scene {
         greetText = greeting() + ".";
         skyText = standfirst(now);
         nextText = nextEvent(now);
+        today(now);
+    }
+
+    /** Up to four events from now to the end of tomorrow, labelled by day, and the nearest countdown. */
+    private void today(long now) {
+        List<String> label = new ArrayList<>(), when = new ArrayList<>(), what = new ArrayList<>();
+        List<Ical.Event> list = cards.events;
+        java.util.TimeZone zone = java.util.TimeZone.getDefault();
+        long dayStart = Sun.startOfDay(now, zone), tomorrow = Sun.startOfDay(dayStart + 36 * 3600000L, zone);
+        long end = Sun.startOfDay(tomorrow + 36 * 3600000L, zone);
+        java.text.SimpleDateFormat f = new java.text.SimpleDateFormat(cards.h24 ? "H:mm" : "h:mm a", Locale.US);
+        String lastDay = null;
+        for (int i = 0; list != null && i < list.size() && what.size() < 4; i++) {
+            Ical.Event e = list.get(i);
+            if (e.end <= now || e.start >= end) continue;
+            String day = e.start < tomorrow ? "TODAY" : "TOMORROW";
+            label.add(day.equals(lastDay) ? null : day);
+            lastDay = day;
+            when.add(e.allDay ? "All day" : e.start <= now ? "Now" : f.format(new java.util.Date(e.start)));
+            what.add(e.title.isEmpty() ? "Busy" : e.title);
+        }
+        todayLabel = label.toArray(new String[0]);
+        todayWhen = when.toArray(new String[0]);
+        todayWhat = what.toArray(new String[0]);
+        String count = "";
+        int best = Integer.MAX_VALUE;
+        List<Plans.Countdown> cds = cards.countdowns;
+        for (int i = 0; cds != null && i < cds.size(); i++) {
+            Plans.Countdown c = cds.get(i);
+            int d = Plans.daysTo(c.date, now, zone);
+            if (d < 0 || d >= best) continue;
+            best = d;
+            count = d == 0 ? c.title + " is today" : d == 1 ? "Tomorrow, " + c.title : d + " days to " + c.title;
+        }
+        todayCount = count;
     }
 
     /** "Now  ·  Seminar, until 3:30 PM" or "Next  ·  Dinner at 6:30 PM", for the coming eight hours. */
@@ -1623,6 +1851,7 @@ final class Scene {
         Model.Weather w = weather;
         if (weatherOn && w != null && w.ok) {
             b.append(w.condition).append(", ").append(w.lead(w.tempC)).append('°').append('.');
+            if (w.wetSoon) b.append(' ').append(w.rain).append('.');
         }
         if (sunset > 0) {
             boolean beforeSunset = now < sunset && now > sunrise;
@@ -1923,22 +2152,36 @@ final class Scene {
     private void drawPinned(Gfx g, float uiA, float t) {
         Notes.Note n = pinned;
         float p = pinSpring.value;
-        if (n == null || p <= 0.003f || mode == NOTE) return;
-        float a = p * Math.max(0.55f, uiA) * (1 - modal.value) * (1 - notice.value);
+        if (!pinnedBox(pinBox)) return;
+        // The note belongs to the dashboard: it steps away while the apps are up.
+        float a = p * uiA * (1 - modal.value) * (1 - notice.value);
         if (a <= 0.003f) return;
-        // The card is the popped-up note at a smaller scale, sized to the room between the
-        // wallpaper's caption and the glance bar, so a drawing never runs under the bar.
-        float[] size = Pop.noteSize(n, PIN_DRAW, sizeBuf);
-        float tp = top + capH + dp(60);
-        float room = barB - barH - dp(18) - tp;
-        float k = Math.max(0.3f, Math.min(PIN_SCALE, room / dp(size[1])));
-        float w = dp(size[0]) * k, h = dp(size[1]) * k;
-        float r = width - side, l = r - w;
+        float l = pinBox[0], tp = pinBox[1], r = pinBox[2], h = pinBox[3] - tp, k = pinBox[4];
         int save = g.save();
         if (!reduced) g.tilt(1.5f, -6f + 1.2f * (float) Math.sin(t * 0.7), (l + r) / 2, tp + h / 2);
         g.translate((1 - p) * dp(30), 0);
         Pop.note(g, n, pinnedInk, l, tp, r, tp + h, d * k, Math.min(1, p * 1.2f), a, t, cards.h24);
         g.restore(save);
+    }
+
+    /**
+     * Where the pinned note sits, as {left, top, right, bottom, scale}: the popped-up note at a
+     * smaller scale, sized to the room between the wallpaper's caption and the glance bar, so a
+     * drawing never runs under the bar. False when no note is pinned.
+     */
+    private boolean pinnedBox(float[] out) {
+        Notes.Note n = pinned;
+        if (n == null || pinSpring.value <= 0.003f || mode == NOTE) return false;
+        float[] size = Pop.noteSize(n, PIN_DRAW, sizeBuf);
+        float tp = lerp(top + capH + dp(60), top + dp(52), rest.value);
+        float room = dockB - barH - dp(18) - tp;
+        float k = Math.max(0.3f, Math.min(PIN_SCALE, room / dp(size[1])));
+        out[0] = width - side - dp(size[0]) * k;
+        out[1] = tp;
+        out[2] = width - side;
+        out[3] = tp + dp(size[1]) * k;
+        out[4] = k;
+        return true;
     }
 
     // ---- Glance bar ----------------------------------------------------------------------------
@@ -1961,6 +2204,7 @@ final class Scene {
         int save = g.save();
         g.translate(glanceLight.value * dp(1.5f), drop);
         float l = barL, r = barL + total, rad = barH / 2;
+        barRight = r;
         glass(g, l, topY, r, bottom, rad, alpha, 0, t);
         float x = l;
         float grown = 0;
@@ -2116,7 +2360,7 @@ final class Scene {
         float tw = Math.max(g.measure(toastTitle, Gfx.TEXT_SEMIBOLD, dp(17), 0), g.measure(toastDetail, Gfx.TEXT_MEDIUM, dp(14), 0));
         float w = dp(84) + tw + dp(28);
         // Bottom left, above the glance bar: clear of the clock, the top controls and the pinned note.
-        float l = side - dp(8), tp = barB - barH - dp(22) - h + (1 - p) * dp(24);
+        float l = side - dp(8), tp = barBottom() - barH - dp(22) - h + (1 - p) * dp(24);
         glassLifted(g, l, tp, l + w, tp + h, h / 2, p, 1, t, 0.1f);
         float ix = l + dp(38), iy = tp + h / 2;
         g.fillCircle(ix, iy, dp(22), Tone.focus(0.9f * p));
@@ -2173,12 +2417,18 @@ final class Scene {
         g.text("Scan with your phone", Gfx.SERIF, dp(36), -0.01f, x, tp + dp(116), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
         Pop.lines(g, "Your phone opens Lucent's control center. Then press OK on the remote to let it in.", Gfx.TEXT_MEDIUM, dp(16), x,
                 tp + dp(152), right - x, dp(23), 3, Tone.text(Tone.SECONDARY, p));
-        g.text("OR TYPE THIS CODE AT", Gfx.MONO, dp(11.5f), 0.1f, x, tp + dp(242), Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
-        g.text(Text.fit(g, pairWindow[2], Gfx.TEXT_SEMIBOLD, dp(17), right - x), Gfx.TEXT_SEMIBOLD, dp(17), 0, x, tp + dp(268),
-                Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
         String pin = pairWindow[1];
-        String shown = pin.length() == 6 ? pin.substring(0, 3) + " " + pin.substring(3) : pin;
-        g.text(shown, Gfx.SERIF_LIGHT, dp(64), 0.04f, x - dp(2), tp + dp(338), Pixels.alpha(Tone.ACCENT, p), Gfx.LEFT, 0);
+        if (pin.length() == 6) {
+            g.text("OR TYPE THIS CODE AT", Gfx.MONO, dp(11.5f), 0.1f, x, tp + dp(242), Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
+            g.text(Text.fit(g, pairWindow[2], Gfx.TEXT_SEMIBOLD, dp(17), right - x), Gfx.TEXT_SEMIBOLD, dp(17), 0, x, tp + dp(268),
+                    Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+            String shown = pin.substring(0, 3) + " " + pin.substring(3);
+            g.text(shown, Gfx.SERIF_LIGHT, dp(64), 0.04f, x - dp(2), tp + dp(338), Pixels.alpha(Tone.ACCENT, p), Gfx.LEFT, 0);
+        } else {
+            // After too many wrong codes only the QR works, which holds a secret no one can guess.
+            Pop.lines(g, "Typing a code is off for now after too many wrong tries. Scanning still works.", Gfx.TEXT_MEDIUM, dp(15),
+                    x, tp + dp(262), right - x, dp(22), 3, Pixels.alpha(Tone.AMBER, p));
+        }
         long left = Math.max(0, pairUntil - now);
         float frac = left / (float) Keys.WINDOW_MS;
         float cx = right - dp(22), cy = tp + dp(66);
@@ -2197,8 +2447,15 @@ final class Scene {
         Icons.phone(g, cx, cy, dp(36), Tone.onFocus(1, p));
         float x = l + dp(132), right = l + w - dp(40);
         g.text("ALLOW THIS DEVICE?", Gfx.MONO, dp(12.5f), 0.1f, x, tp + dp(72), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
-        float ns = Pop.fitSize(g, askName, Gfx.SERIF, dp(36), dp(24), right - x, d);
-        g.text(Text.fit(g, askName, Gfx.SERIF, ns, right - x), Gfx.SERIF, ns, -0.01f, x, tp + dp(116), Tone.text(Tone.PRIMARY, p),
+        // The three digits the phone shows share the name's row, so two requests cannot be mixed up.
+        float nameRight = right;
+        if (!askMatch.isEmpty()) {
+            g.text("THE PHONE SHOWS", Gfx.MONO, dp(11.5f), 0.1f, right, tp + dp(72), Tone.text(Tone.TERTIARY, p), Gfx.RIGHT, 0);
+            g.text(askMatch, Gfx.SERIF_LIGHT, dp(40), 0.02f, right, tp + dp(116), Pixels.alpha(Tone.ACCENT, p), Gfx.RIGHT, 0);
+            nameRight = right - dp(150);
+        }
+        float ns = Pop.fitSize(g, askName, Gfx.SERIF, dp(36), dp(24), nameRight - x, d);
+        g.text(Text.fit(g, askName, Gfx.SERIF, ns, nameRight - x), Gfx.SERIF, ns, -0.01f, x, tp + dp(116), Tone.text(Tone.PRIMARY, p),
                 Gfx.LEFT, 0);
         Pop.lines(g, "It will see what is on the home screen, send notes and photos, and change Lucent's settings.", Gfx.TEXT_MEDIUM, dp(15.5f),
                 x, tp + dp(150), right - x, dp(22), 2, Tone.text(Tone.SECONDARY, p));
@@ -2264,7 +2521,7 @@ final class Scene {
 
     private void drawDock(Gfx g, float uiA, float t) {
         if (uiA <= 0.003f) return;
-        float drop = (1 - ui.value) * dp(26);
+        float drop = (1 - ui.value) * dp(26) + ambient.value * dp(64);
         int save = g.save();
         g.translate(0, drop);
         glassBody(g, dockL, dockT, dockR, dockB, dockRad, uiA, 0);
@@ -2452,8 +2709,11 @@ final class Scene {
         float l = r - w;
         float top0 = anchor[3] + dp(14);
         float h = audioHeight();
+        // Many formats and the Picture lines can make the card taller than the room below the
+        // top row: then it is drawn smaller rather than cut off by the screen's edge.
+        float fit = Math.min(1f, (height - top0 - dp(24)) / h);
         int save = g.save();
-        g.scale(0.9f + 0.1f * p, (anchor[0] + anchor[2]) / 2, anchor[3]);
+        g.scale((0.9f + 0.1f * p) * fit, (anchor[0] + anchor[2]) / 2, anchor[3]);
         float rad = dp(30);
         glass(g, l, top0, r, top0 + h, rad, p, 0.1f, t);
         drawAudio(g, l, top0, r, p, rad);
@@ -2462,7 +2722,13 @@ final class Scene {
 
     private float audioHeight() {
         int n = audio == null ? 0 : audio.formats.size();
-        return dp(250) + Math.max(1, n) * dp(30);
+        return dp(250) + Math.max(1, n) * dp(30) + pictureHeight();
+    }
+
+    /** The Picture lines in the Sound card: the HDMI mode, then a fix or how apps and films draw. */
+    private float pictureHeight() {
+        Model.Picture pic = picture;
+        return pic == null || pic.line.isEmpty() ? 0 : dp(84);
     }
 
     private void drawAudio(Gfx g, float l, float top0, float r, float p, float rad) {
@@ -2481,6 +2747,19 @@ final class Scene {
                 g.text(f, Gfx.TEXT_MEDIUM, dp(16), 0, l + dp(54), y, Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
                 y += dp(30);
             }
+        }
+        Model.Picture pic = picture;
+        if (pic != null && !pic.line.isEmpty()) {
+            g.text("PICTURE OVER HDMI", Gfx.MONO, dp(11), 0.1f, l + dp(27), y + dp(8), Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
+            Icons.check(g, l + dp(36), y + dp(31), dp(14), Tone.text(0.9f, p));
+            g.text(pic.line, Gfx.TEXT_MEDIUM, dp(16), 0, l + dp(54), y + dp(36), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+            if (pic.problem.isEmpty()) {
+                g.text(pic.note, Gfx.TEXT_REGULAR, dp(13), 0, l + dp(27), y + dp(58), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+            } else {
+                g.text(pic.problem, Gfx.TEXT_SEMIBOLD, dp(13), 0, l + dp(27), y + dp(58), Pixels.alpha(Tone.AMBER, p), Gfx.LEFT, 0);
+                g.text(pic.fix, Gfx.TEXT_REGULAR, dp(13), 0, l + dp(27), y + dp(77), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+            }
+            y += pictureHeight();
         }
         y += dp(6);
         g.text(bt ? "Headphones play in stereo, the soundbar rests." : "For music: soundbar Music mode, Virtual:X on, surround up.",

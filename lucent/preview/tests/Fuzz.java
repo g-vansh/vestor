@@ -161,7 +161,7 @@ public final class Fuzz {
                 break;
             }
             case 3:
-                s.ask(rnd.nextBoolean() ? "p" + rnd.nextInt(9) : null, "A phone with a very long name that goes on and on");
+                s.ask(rnd.nextBoolean() ? "p" + rnd.nextInt(9) : null, "A phone with a very long name that goes on and on", rnd.nextBoolean() ? "" + (100 + rnd.nextInt(900)) : "x1");
                 break;
             case 4:
                 s.setWifi(rnd.nextBoolean() ? "Guest" : null, g, Qr.encode("WIFI:T:WPA;S:Guest;P:x;;"), now + rnd.nextInt(130000));

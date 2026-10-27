@@ -70,7 +70,8 @@ final class Pace {
         set("hexdb.io", 1000, 30);
         // adsbdb allows 512 a minute. Routes are looked up once per new flight and kept.
         set("api.adsbdb.com", 500, 60);
-        set("api.open-meteo.com", 20000, 3);
+        // The forecast and the next hour's rain are two calls every 15 minutes, so a short gap.
+        set("api.open-meteo.com", 5000, 4);
         set("air-quality-api.open-meteo.com", 20000, 3);
         set("api.weather.gov", 10000, 4);
         set("calendar.google.com", 5000, 6);
@@ -78,6 +79,8 @@ final class Pace {
         set("outlook.office365.com", 5000, 6);
         set("outlook.live.com", 5000, 6);
         set("ntfy.sh", 5000, 4);
+        // SmartThings: a picture-mode change or two, a status read, a token refresh a day.
+        set("api.smartthings.com", 1500, 12);
     }
 
     private static void set(String host, long gapMs, int perMinute) {

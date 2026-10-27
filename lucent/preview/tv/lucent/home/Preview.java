@@ -30,34 +30,36 @@ public final class Preview {
         out.mkdirs();
         String wallFile = args.length > 1 ? args[1] : "nature-01.jpg";
         int U = Scene.UP, D = Scene.DOWN, L = Scene.LEFT, R = Scene.RIGHT, OK = Scene.OK, B = Scene.BACK;
+        // Home rests on the dashboard: the first Left or Right wakes the bar, Down brings up the apps.
         shot(out, "01-home", wallFile, new int[0], 0);
-        shot(out, "02-glance-bikes", wallFile, new int[] {U, R}, 0);
-        shot(out, "03-glance-weather", wallFile, new int[] {U}, 0);
-        shot(out, "04-glance-shuttles", wallFile, new int[] {U, R, R}, 0);
-        shot(out, "05-glance-sky", wallFile, new int[] {U, R, R, R}, 0);
-        shot(out, "06-bikes-panel-finding", wallFile, new int[] {U, R, OK}, 3);
-        shot(out, "07-weather-panel", wallFile, new int[] {U, OK}, 0);
-        shot(out, "08-shuttles-panel", wallFile, new int[] {U, R, R, OK}, 0);
-        shot(out, "09-sky-panel", wallFile, new int[] {U, R, R, R, OK}, 0);
-        shot(out, "10-finding-home", wallFile, new int[] {U, R, OK, B, B}, 3);
+        shot(out, "02-glance-bikes", wallFile, new int[] {R}, 0);
+        shot(out, "03-glance-weather", wallFile, new int[] {L, L}, 0);
+        shot(out, "04-glance-shuttles", wallFile, new int[] {R, R}, 0);
+        shot(out, "05-glance-sky", wallFile, new int[] {R, R, R}, 0);
+        shot(out, "06-bikes-panel-finding", wallFile, new int[] {OK}, 3);
+        shot(out, "07-weather-panel", wallFile, new int[] {L, L, OK}, 0);
+        shot(out, "08-shuttles-panel", wallFile, new int[] {R, R, OK}, 0);
+        shot(out, "09-sky-panel", wallFile, new int[] {R, R, R, OK}, 0);
+        shot(out, "10-finding-home", wallFile, new int[] {OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
-        shot(out, "12-ambient", wallFile, new int[0], 1);
-        shot(out, "13-settings", wallFile, new int[] {U, U, R, R, R, R, R, OK, D, D, D, D, D, D}, 0);
-        shot(out, "14-dock-scrolled", wallFile, new int[] {R, R, R, R}, 0);
-        shot(out, "15-sound", wallFile, new int[] {U, U, L, L, L, L, R, R, R, OK}, 0);
-        shot(out, "18-home-forest", "nature-02.jpg", new int[] {U, R}, 0);
+        shot(out, "12-apps", wallFile, new int[] {D}, 0);
+        shot(out, "13-settings", wallFile, new int[] {U, R, R, R, R, R, OK, D}, 0);
+        shot(out, "14-dock-scrolled", wallFile, new int[] {D, R, R, R, R}, 0);
+        shot(out, "15-sound", wallFile, new int[] {U, L, L, L, L, R, R, R, OK}, 0);
+        shot(out, "18-home-forest", "nature-02.jpg", new int[] {R}, 0);
         shot(out, "19-home-night", "nature-04.jpg", new int[0], 0);
         shot(out, "20-day", "nature-11.jpg", new int[0], 5);
         shot(out, "21-note", "nature-06.jpg", new int[0], 6);
         shot(out, "22-bike-alarm", "nature-04.jpg", new int[0], 7);
         shot(out, "23-pair-phone", "nature-01.jpg", new int[0], 8);
-        shot(out, "24-plans-and-music", "nature-03.jpg", new int[] {U}, 9);
-        shot(out, "25-plans-panel", "nature-03.jpg", new int[] {U, L, L, R, R, R, R, OK}, 5);
-        shot(out, "26-mirror", "nature-10.jpg", new int[] {U, U, L, L, L, L, R, OK}, 0);
+        shot(out, "24-plans-and-music", "nature-03.jpg", new int[] {L, L, L}, 9);
+        shot(out, "25-plans-panel", "nature-03.jpg", new int[] {R, R, R, OK}, 5);
+        shot(out, "26-mirror", "nature-10.jpg", new int[] {U, L, L, L, L, R, OK}, 0);
         shot(out, "27-allow-phone", "nature-04.jpg", new int[0], 11);
-        shot(out, "28-headphones", "nature-05.jpg", new int[] {U, U, L, L, L, L, R, R, R, OK}, 12);
+        shot(out, "28-headphones", "nature-05.jpg", new int[] {U, L, L, L, L, R, R, R, OK}, 12);
         shot(out, "29-hearts", "nature-04.jpg", new int[0], 13);
         shot(out, "30-guest-wifi", "nature-12.jpg", new int[0], 14);
+        shot(out, "31-day-apps", "nature-11.jpg", new int[] {D}, 5);
         overlay(out, "16-alert-over-video", false);
         overlay(out, "17-reminder-over-video", true);
     }
@@ -161,8 +163,13 @@ public final class Preview {
         scene.setSize(w, h, 2f);
         scene.setApps(apps());
         scene.setWall(wall(new File(ROOT, "assets/wallpapers/" + wallFile), "Moraine Lake", "Banff National Park, Canada"));
-        scene.setWeather(Weather.parse(fixture("weather.json"), "Cambridge", false, NOW - 9 * 60000L, false));
+        Model.Weather weather = Weather.parse(fixture("weather.json"), "Cambridge", false, NOW - 9 * 60000L, false);
+        // HRRR's two-hour rain line, as a showery afternoon would have it.
+        weather.rain = "Rain from 3:45 PM";
+        weather.wetSoon = true;
+        scene.setWeather(weather);
         scene.setAudio(audio());
+        scene.setPicture(picture());
         scene.setBikes(bikes(extra == 4));
         scene.setTransit(transit());
         scene.setSky(sky());
@@ -215,7 +222,7 @@ public final class Preview {
             scene.setPairing(window, new AwtGfx(scratch.createGraphics(), new File(ROOT, "assets/fonts")), Qr.encode(window[0]),
                     now + Keys.WINDOW_MS - 37000);
         }
-        if (extra == 11) scene.ask("p1", "Sam's iPhone");
+        if (extra == 11) scene.ask("p1", "Sam's iPhone", "441");
         if (extra == 12) {
             Model.Audio a = audio();
             a.route = "Bluetooth";
@@ -528,6 +535,24 @@ public final class Preview {
         return m;
     }
 
+    /** The Fire TV on the Samsung's HDMI 1 with Input Signal Plus on. */
+    private static Model.Picture picture() {
+        Model.Picture p = new Model.Picture();
+        p.width = 3840;
+        p.height = 2160;
+        p.hz = 60;
+        p.maxWidth = 3840;
+        p.maxHeight = 2160;
+        p.max4kHz = 60;
+        p.uiWidth = 1920;
+        p.uiHeight = 1080;
+        p.hdr.add("HDR10");
+        p.hdr.add("HDR10+");
+        p.hdr.add("HLG");
+        p.describe();
+        return p;
+    }
+
     private static Model.Audio audio() {
         Model.Audio a = new Model.Audio();
         a.known = true;
@@ -545,12 +570,15 @@ public final class Preview {
     private static List<Model.Option> options() {
         List<Model.Option> list = new ArrayList<>();
         list.add(new Model.Option("look", "Look", new String[] {"auto", "day", "night"}, new String[] {"Day and Night by the Sun", "Day", "Night"}));
+        list.add(new Model.Option("glare", "Glare", new String[] {"off", "on"}, new String[] {"Off", "On, Dynamic Picture"}));
+        list.add(new Model.Option("picture_follow", "TV Picture Follows the Sun", new String[] {"off", "on"},
+                new String[] {"No", "Yes, Standard by Day, Movie at Night"}));
         list.add(new Model.Option("wall", "Wallpaper", new String[] {"0", "1"}, new String[] {"Moraine Lake", "Spruce Forest"}));
         list.add(new Model.Option("album", "Photos", new String[] {"both", "nature", "ours"}, new String[] {"Ours and Nature", "Nature", "Ours Only"}));
         list.add(new Model.Option("rotate", "Change Wallpaper", new String[] {"10m", "hour"}, new String[] {"Every 10 Minutes", "Every Hour"}));
-        list.add(new Model.Option("wall_quality", "Picture", new String[] {"motion", "still"}, new String[] {"Slow Drift", "Still and Sharpest"}));
+        list.add(new Model.Option("wall_quality", "Wallpaper Motion", new String[] {"motion", "still"}, new String[] {"Slow Drift", "Still and Sharpest"}));
         list.add(new Model.Option("dim", "Dim When Idle", new String[] {"10", "off"}, new String[] {"After 10 Minutes", "Never"}));
-        list.add(new Model.Option("ambient", "Hide the Dock", new String[] {"5", "off"}, new String[] {"After 5 Minutes", "Never"}));
+        list.add(new Model.Option("ambient", "Apps Go Back Down", new String[] {"2", "off"}, new String[] {"After 2 Idle Minutes", "Never"}));
         list.add(new Model.Option("units", "Weather", new String[] {"f", "c", "off"}, new String[] {"\u00b0F, with \u00b0C", "\u00b0C, with \u00b0F", "Off"}));
         list.add(new Model.Option("bike_station", "Bike Station", new String[] {"auto", "p"}, new String[] {"Westgate", "Pacific St"}));
         list.add(new Model.Option("alarm", "When an E-Bike Is Found", new String[] {"ring", "chime"}, new String[] {"Ring Until Stopped", "Chime Once"}));

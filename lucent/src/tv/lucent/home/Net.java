@@ -53,7 +53,7 @@ final class Net {
             "api.open-meteo.com", "air-quality-api.open-meteo.com", "api.weather.gov",
             "gbfs.lyft.com", "passio3.com", "api-v3.mbta.com",
             "api.adsb.lol", "api.airplanes.live", "opendata.adsb.fi", "hexdb.io", "api.adsbdb.com",
-            "calendar.google.com", "outlook.office365.com", "outlook.live.com", "ntfy.sh"));
+            "calendar.google.com", "outlook.office365.com", "outlook.live.com", "ntfy.sh", "api.smartthings.com"));
 
     /** Whether {@code host} is one Lucent may contact. iCloud serves published calendars from pNN-caldav or pNN-calendars. */
     static boolean allowedHost(String host) {
@@ -234,6 +234,84 @@ final class Net {
             // A connection read to its end goes back to the pool for the next poll. Anything
             // else is closed.
             if (conn != null && !keep) conn.disconnect();
+        }
+    }
+
+    /** An answer with its status, for APIs whose errors mean something (401: sign in again). */
+    static final class Reply {
+        final int code;
+        final byte[] body;
+
+        Reply(int code, byte[] body) {
+            this.code = code;
+            this.body = body;
+        }
+
+        String text() {
+            return body == null ? "" : new String(body, StandardCharsets.UTF_8);
+        }
+    }
+
+    /**
+     * A GET or a POST that reports the status code, under the same rules as {@link #get}: the
+     * allowlist, the governor, the deadline and the size cap. Redirects are refused outright,
+     * and nothing is cached. Returns null when nothing came back.
+     */
+    static Reply call(String method, String url, int timeoutMs, int maxBytes, String[] headers, String contentType, byte[] body) {
+        if (!allowed(url) || !("GET".equals(method) || "POST".equals(method))) return null;
+        long deadline = System.nanoTime() + 3L * timeoutMs * 1000000L;
+        HttpURLConnection conn = null;
+        Cut cut = new Cut();
+        ScheduledFuture<?> alarm;
+        try {
+            alarm = WATCHDOG.schedule(cut, 3L * timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (RuntimeException e) {
+            return null;
+        }
+        String host = "";
+        try {
+            URL target = new URL(url);
+            host = target.getHost();
+            if (!Pace.take(host, System.currentTimeMillis())) return null;
+            conn = (HttpURLConnection) target.openConnection();
+            cut.conn = conn;
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(timeoutMs);
+            conn.setReadTimeout(timeoutMs);
+            conn.setUseCaches(false);
+            conn.setRequestMethod(method);
+            conn.setRequestProperty("User-Agent", AGENT);
+            conn.setRequestProperty("Accept", "application/json");
+            if (headers != null) {
+                for (int i = 0; i + 1 < headers.length; i += 2) conn.setRequestProperty(headers[i], headers[i + 1]);
+            }
+            if (body != null) {
+                conn.setDoOutput(true);
+                conn.setRequestProperty("Content-Type", contentType);
+                conn.setFixedLengthStreamingMode(body.length);
+                java.io.OutputStream out = conn.getOutputStream();
+                try {
+                    out.write(body);
+                } finally {
+                    out.close();
+                }
+            }
+            int code = conn.getResponseCode();
+            long t = System.currentTimeMillis();
+            Pace.answered(host, code, conn.getHeaderField("Retry-After"), t);
+            Pace.quota(host, conn.getHeaderField("X-RateLimit-Remaining"), conn.getHeaderField("X-RateLimit-Reset"), t);
+            if (code >= 300 && code < 400) return new Reply(code, null);
+            if (conn.getContentLength() > maxBytes) return new Reply(code, null);
+            InputStream in = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+            byte[] got = in == null ? new byte[0] : read(in, maxBytes, deadline);
+            return new Reply(code, got);
+        } catch (IOException | RuntimeException e) {
+            if (!host.isEmpty()) Pace.unreachable(host, System.currentTimeMillis());
+            return null;
+        } finally {
+            alarm.cancel(false);
+            cut.conn = null;
+            if (conn != null) conn.disconnect();
         }
     }
 

@@ -8,10 +8,11 @@ import android.os.Looper;
 
 /**
  * Bike finder's alarm: when an e-bike can be rented, the ringtone ({@link Bell#ring}) loops
- * until someone stops it, from the remote (OK or Back on the alert), the control center, or
- * Alexa. It starts at half volume and rises to full over 20 seconds, like a gentle phone alarm,
- * and gives up by itself after the chosen limit (10 minutes unless changed) so a house left
- * empty is not rung at all evening. It is mixed over whatever plays and never pauses it.
+ * until someone stops it, from the remote (any button on the alert), the control center, or
+ * Alexa. It rings at full volume from the first second (the TV's or soundbar's own volume sets
+ * how loud that is), and gives up by itself after the chosen limit (10 minutes unless changed)
+ * so a house left empty is not rung at all evening. It is mixed over whatever plays and never
+ * pauses it.
  */
 final class Alarm {
     interface Listener {
@@ -20,7 +21,6 @@ final class Alarm {
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static AudioTrack track;
-    private static long started;
     private static long limitMs = 10 * 60000L;
     private static Listener listener;
 
@@ -58,11 +58,10 @@ final class Alarm {
                     .build();
             t.write(s, 0, s.length);
             t.setLoopPoints(0, s.length, -1);
-            t.setVolume(0.5f);
+            t.setVolume(1f);
             t.play();
             track = t;
-            started = System.currentTimeMillis();
-            MAIN.post(swell);
+            MAIN.postDelayed(limit, limitMs);
             notifyListener(true);
         } catch (RuntimeException e) {
             // No alarm sound is better than a crash. The visual alert still shows.
@@ -73,7 +72,7 @@ final class Alarm {
 
     /** Stops ringing (main thread). */
     static void silence() {
-        MAIN.removeCallbacks(swell);
+        MAIN.removeCallbacks(limit);
         AudioTrack t = track;
         track = null;
         if (t != null) {
@@ -88,22 +87,11 @@ final class Alarm {
         }
     }
 
-    private static final Runnable swell = new Runnable() {
+    /** The house is empty: the limit passed and nobody stopped it. */
+    private static final Runnable limit = new Runnable() {
         @Override
         public void run() {
-            AudioTrack t = track;
-            if (t == null) return;
-            long ms = System.currentTimeMillis() - started;
-            if (ms > limitMs) {
-                silence();
-                return;
-            }
-            try {
-                t.setVolume(Math.min(1f, 0.5f + 0.5f * ms / 20000f));
-            } catch (RuntimeException ignored) {
-                // volume stays where it is
-            }
-            MAIN.postDelayed(this, 500);
+            silence();
         }
     };
 

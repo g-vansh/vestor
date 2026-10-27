@@ -50,6 +50,7 @@ final class State {
         w.key("list").raw(plans.substring(plans.indexOf('['), plans.indexOf("],\"countdowns\"") + 1));
         media(w, h.media.snapshot());
         audio(w, h.audio);
+        picture(w, h.picture);
         settings(w, h);
         w.key("stations").arr().obj().put("id", "auto").put("name", "Westgate").end();
         Model.Bikes b = h.bikes;
@@ -70,11 +71,46 @@ final class State {
                     .put("perMinute", Long.parseLong(r[7])).end();
         }
         w.endArr();
-        boolean alexa = "on".equals(h.prefs.get(Prefs.ALEXA, "off"));
-        String topic = h.prefs.get(Prefs.ALEXA_TOPIC, "");
-        w.key("alexa").obj().put("on", alexa).put("url", alexa && Ntfy.validTopic(topic) ? Ntfy.publishUrl(topic, "find-ebike") : "")
-                .put("stopUrl", alexa && Ntfy.validTopic(topic) ? Ntfy.publishUrl(topic, "stop-ebike") : "").end();
+        alexa(w, h);
+        push(w, h);
+        samsung(w, h);
         return w.end().toString();
+    }
+
+    /** The Alexa link: one URL switch per command, each with the phrase that turns it on. */
+    private static void alexa(Jw w, Hub h) {
+        String topic = h.prefs.get(Prefs.ALEXA_TOPIC, "");
+        boolean on = "on".equals(h.prefs.get(Prefs.ALEXA, "off")) && Ntfy.validTopic(topic);
+        w.key("alexa").obj().put("on", on).put("url", on ? Ntfy.publishUrl(topic, "find-ebike") : "")
+                .put("stopUrl", on ? Ntfy.publishUrl(topic, "stop-ebike") : "");
+        if (on) {
+            w.key("commands").arr();
+            for (String[] c : Ntfy.SWITCHES) {
+                w.obj().put("name", c[0]).put("say", c[1]).put("on", Ntfy.publishUrl(topic, c[2]))
+                        .put("off", c[3].isEmpty() ? "" : Ntfy.publishUrl(topic, c[3])).end();
+            }
+            w.endArr();
+        }
+        w.end();
+    }
+
+    private static void push(Jw w, Hub h) {
+        String topic = h.prefs.get(Prefs.PUSH_TOPIC, "");
+        boolean on = h.pushOn();
+        w.key("push").obj().put("on", on).put("topic", on ? topic : "").put("url", on ? "https://ntfy.sh/" + topic : "").end();
+    }
+
+    /** Only what the page shows: never the app's secret or the tokens. */
+    private static void samsung(Jw w, Hub h) {
+        Samsung s = h.samsung;
+        Prefs p = h.prefs;
+        boolean connected = s.connected();
+        w.key("samsung").obj().put("connected", connected).put("device", connected ? s.device() : "").key("modes").arr();
+        if (connected) for (String m : s.modes()) w.val(m);
+        w.endArr().put("mode", connected ? s.mode() : "").put("glare", connected && h.glare())
+                .put("follow", p.choice(Prefs.PICTURE_FOLLOW)).put("dayMode", connected ? h.picked(Prefs.DAY_MODE) : "")
+                .put("nightMode", connected ? h.picked(Prefs.NIGHT_MODE) : "").put("glareMode", connected ? h.picked(Prefs.GLARE_MODE) : "")
+                .put("error", s.error()).put("setup", s.begun() ? "begun" : "none").end();
     }
 
     private static void weather(Jw w, Model.Weather x) {
@@ -83,13 +119,15 @@ final class State {
                 .put("feelsF", Model.Weather.f(x.feelsC)).put("hiF", Model.Weather.f(x.hiC)).put("loF", Model.Weather.f(x.loC))
                 .put("condition", x.condition).put("code", x.code).put("day", x.day).put("humidity", x.humidity)
                 .put("windMph", x.windKph < 0 ? -1 : Math.round(x.windKph / 1.609344)).put("windDir", Weather.compass(x.windDir))
-                .put("updated", x.updated).key("hours").arr();
+                .put("updated", x.updated).put("model", Weather.SOURCE).key("hours").arr();
         for (int i = 0; i < x.hourC.size(); i++) {
             w.obj().put("label", x.hourLabel.get(i)).put("f", Model.Weather.f(x.hourC.get(i))).put("c", Model.Weather.c(x.hourC.get(i)))
                     .put("code", x.hourCode.get(i)).put("day", x.hourDay.get(i)).put("rain", i < x.hourRain.size() ? x.hourRain.get(i) : -1)
                     .end();
         }
-        w.endArr().end();
+        w.endArr();
+        if (!x.rain.isEmpty()) w.key("rain").obj().put("summary", x.rain).put("at", x.rainAt).put("until", x.rainUntil).end();
+        w.end();
     }
 
     private static void bikes(Jw w, Model.Bikes b) {
@@ -172,6 +210,13 @@ final class State {
             w.endArr();
         }
         w.end();
+    }
+
+    private static void picture(Jw w, Model.Picture p) {
+        if (p == null || p.line.isEmpty()) return;
+        w.key("display").obj().put("width", p.width).put("height", p.height).put("hz", p.hz).key("hdr").arr();
+        for (String x : p.hdr) w.val(x);
+        w.endArr().put("uiWidth", p.uiWidth).put("uiHeight", p.uiHeight).put("line", p.line).put("advice", p.advice).end();
     }
 
     private static void settings(Jw w, Hub h) {

@@ -82,7 +82,7 @@ final class Live {
     private volatile String stationChoice = "auto";
     private volatile double skyLat = Gbfs.WESTGATE_LAT, skyLon = Gbfs.WESTGATE_LON;
     private volatile double queryLat = coarse(Gbfs.WESTGATE_LAT), queryLon = coarse(Gbfs.WESTGATE_LON);
-    private volatile double placeLat = 42.3736, placeLon = -71.1097;
+    private volatile double placeLat = Gbfs.WESTGATE_LAT, placeLon = Gbfs.WESTGATE_LON;
     private volatile boolean skyOn = true;
     private volatile String mbtaKey = "";
     private volatile List<String> calendars = new ArrayList<>();

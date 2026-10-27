@@ -45,7 +45,13 @@
     "day": true,
     "rain": 10
    }
-  ]
+  ],
+  "model": "NOAA HRRR and NBM",
+  "rain": {
+   "summary": "Rain from 3:45 PM",
+   "at": 0,
+   "until": 0
+  }
  },
  "air": {
   "aqi": 44,
@@ -246,7 +252,8 @@
   "mbtaKey": "set",
   "wifiSsid": "Home",
   "wifiSet": true,
-  "theme": "auto"
+  "theme": "auto",
+  "pictureFollow": "on"
  },
  "stations": [
   {
@@ -280,7 +287,83 @@
   }
  ],
  "alexa": {
-  "on": false,
-  "url": ""
+  "on": true,
+  "url": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=find-ebike",
+  "stopUrl": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=stop-ebike",
+  "commands": [
+   {
+    "name": "Bike finder",
+    "say": "Alexa, turn on bike finder",
+    "on": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=find-ebike",
+    "off": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=stop-ebike"
+   },
+   {
+    "name": "Glare mode",
+    "say": "Alexa, turn on glare mode",
+    "on": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=glare-on",
+    "off": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=glare-off"
+   },
+   {
+    "name": "Night look",
+    "say": "Alexa, turn on night look",
+    "on": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=night",
+    "off": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=auto"
+   },
+   {
+    "name": "Lucent",
+    "say": "Alexa, turn on Lucent",
+    "on": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=lucent",
+    "off": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=firetv"
+   },
+   {
+    "name": "Guest Wi-Fi",
+    "say": "Alexa, turn on guest Wi-Fi",
+    "on": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=wifi",
+    "off": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=wifi-hide"
+   },
+   {
+    "name": "Hearts",
+    "say": "Alexa, turn on hearts",
+    "on": "https://ntfy.sh/lc-abcdefghijklmnopqrstuvwxyz/publish?message=hearts",
+    "off": ""
+   }
+  ]
+ },
+ "push": {
+  "on": true,
+  "topic": "lc-zyxwvutsrqponmlkjihgfedcb",
+  "url": "https://ntfy.sh/lc-zyxwvutsrqponmlkjihgfedcb"
+ },
+ "samsung": {
+  "connected": true,
+  "device": "Living Room TV",
+  "modes": [
+   "Dynamic",
+   "Standard",
+   "Natural",
+   "Movie"
+  ],
+  "mode": "Standard",
+  "glare": false,
+  "follow": "on",
+  "dayMode": "Standard",
+  "nightMode": "Movie",
+  "glareMode": "Dynamic",
+  "error": "",
+  "setup": "none"
+ },
+ "display": {
+  "width": 3840,
+  "height": 2160,
+  "hz": 60,
+  "hdr": [
+   "HDR10",
+   "HDR10+",
+   "HLG"
+  ],
+  "uiWidth": 1920,
+  "uiHeight": 1080,
+  "line": "4K, 60 Hz, HDR10, HDR10+ and HLG",
+  "advice": ""
  }
 }

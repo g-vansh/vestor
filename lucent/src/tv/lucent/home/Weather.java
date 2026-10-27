@@ -9,11 +9,23 @@ import java.util.Map;
 
 /**
  * Current conditions and the next hours from Open-Meteo (no account, no key; data CC BY 4.0,
- * credited in the weather card). Only a city-level coordinate is sent. Fetched in Celsius and
- * shown in both units.
+ * credited in the weather card). Only a neighbourhood-level coordinate is sent. Fetched in
+ * Celsius and shown in both units.
+ *
+ * Open-Meteo's default ("best match") is the right one for Westgate: in the United States it
+ * takes NOAA's HRRR (3 km, a new run every hour) for the next day and a half, NOAA's National
+ * Blend of Models for the chance of rain, and GFS beyond. The same request asks for HRRR's
+ * 15-minute precipitation over the next two hours, which becomes "Rain from 3:45 PM" or
+ * "Dry for the next 2 hours".
  */
 final class Weather {
     private Weather() {}
+
+    /** Two hours of 15-minute steps. */
+    static final int NOWCAST_SLOTS = 8;
+    /** Rain worth a word: 0.1 mm in 15 minutes, a light rain of about 0.4 mm an hour. */
+    private static final double WET_MM = 0.1;
+    static final String SOURCE = "NOAA HRRR and NBM";
 
     /**
      * The forecast for a point snapped to a 0.02 degree grid (about 2 km), finer than the
@@ -26,6 +38,7 @@ final class Weather {
                         + "wind_speed_10m,wind_direction_10m"
                         + "&hourly=temperature_2m,weather_code,is_day,precipitation_probability"
                         + "&daily=temperature_2m_max,temperature_2m_min"
+                        + "&minutely_15=precipitation,weather_code&forecast_minutely_15=" + NOWCAST_SLOTS
                         + "&timezone=auto&forecast_days=2&forecast_hours=7",
                 Math.round(lat * 50) / 50.0, Math.round(lon * 50) / 50.0);
     }
@@ -85,6 +98,7 @@ final class Weather {
                             ? (int) Math.round((Double) rain.get(i)) : -1);
                 }
             }
+            nowcast(root, w, h24);
             w.condition = Icons.describe(w.code);
             w.city = city;
             w.updated = new SimpleDateFormat(h24 ? "HH:mm" : "h:mm a", Locale.US).format(new Date(fetchedAt));
@@ -95,6 +109,60 @@ final class Weather {
             w.ok = false;
         }
         return w;
+    }
+
+    /**
+     * The next two hours of rain, from HRRR's 15-minute steps: "Rain until 4:15 PM" while it
+     * rains, "Rain from 3:45 PM" when it is coming, "Dry for the next 2 hours" when it is not.
+     * Snow says snow. Left empty when the forecast has no 15-minute steps.
+     */
+    static void nowcast(Map<String, Object> root, Model.Weather w, boolean h24) {
+        Map<String, Object> m = Json.obj(root, "minutely_15");
+        List<Object> times = Json.arr(m, "time"), mm = Json.arr(m, "precipitation"), codes = Json.arr(m, "weather_code");
+        if (times == null || mm == null || times.isEmpty()) return;
+        long offset = (long) Json.num(root, "utc_offset_seconds", 0) * 1000L;
+        SimpleDateFormat in = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US);
+        in.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+        int n = Math.min(NOWCAST_SLOTS, Math.min(times.size(), mm.size()));
+        long[] at = new long[n];
+        boolean[] wet = new boolean[n];
+        boolean snow = false;
+        for (int i = 0; i < n; i++) {
+            if (!(times.get(i) instanceof String) || !(mm.get(i) instanceof Double)) return;
+            try {
+                Date d = in.parse((String) times.get(i));
+                if (d == null) return;
+                at[i] = d.getTime() - offset;
+            } catch (ParseException e) {
+                return;
+            }
+            wet[i] = (Double) mm.get(i) >= WET_MM;
+            if (wet[i] && codes != null && i < codes.size() && codes.get(i) instanceof Double) {
+                int c = (int) Math.round((Double) codes.get(i));
+                if (c >= 71 && c <= 77 || c == 85 || c == 86) snow = true;
+            }
+        }
+        if (n == 0) return;
+        SimpleDateFormat out = new SimpleDateFormat(h24 ? "HH:mm" : "h:mm a", Locale.US);
+        String what = snow ? "Snow" : "Rain";
+        int first = -1, dry = -1;
+        for (int i = 0; i < n; i++) {
+            if (wet[i] && first < 0) first = i;
+            if (!wet[i] && first >= 0 && dry < 0) dry = i;
+        }
+        String hours = n >= 8 ? "2 hours" : n * 15 + " minutes";
+        if (first < 0) {
+            w.rain = "Dry for the next " + hours;
+        } else if (first == 0) {
+            w.rain = dry < 0 ? what + " for the next " + hours : what + " until " + out.format(new Date(at[dry]));
+            w.rainAt = at[0];
+            w.rainUntil = dry < 0 ? 0 : at[dry];
+        } else {
+            w.rain = what + " from " + out.format(new Date(at[first]));
+            w.rainAt = at[first];
+            w.rainUntil = dry < 0 ? 0 : at[dry];
+        }
+        w.wetSoon = first >= 0;
     }
 
     private static void toCelsius(Map<String, Object> root) {

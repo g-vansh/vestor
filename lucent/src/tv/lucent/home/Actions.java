@@ -132,6 +132,16 @@ final class Actions {
                 h.live.wake(120000);
                 h.live.refreshBikes();
                 return OK;
+            case "samsung":
+                return samsung(h, Json.str(body, "do", ""), body);
+            case "push": {
+                if (!"test".equals(Json.str(body, "do", ""))) throw new Http.Refused(400, "push");
+                if (!h.pushOn()) throw new Http.Refused(409, "phone alerts are off");
+                if (!h.push("Lucent", "Phone alerts work. Bike finder will buzz here when an e-bike docks.", 3, "tv", "")) {
+                    throw new Http.Refused(503, "ntfy did not answer");
+                }
+                return OK;
+            }
             default:
                 throw new Http.Refused(404, "no such action");
         }
@@ -180,6 +190,17 @@ final class Actions {
             // Printable text only: these go into a QR code, never into anything that runs.
             if (v == null || v.length() > 63 || !v.matches("[\\x20-\\x7E]*")) throw new Http.Refused(400, "wifi");
             p.put("wifiSsid".equals(apiKey) ? Prefs.WIFI_SSID : Prefs.WIFI_PASS, v);
+        } else if ("dayMode".equals(apiKey) || "nightMode".equals(apiKey) || "glareMode".equals(apiKey)) {
+            if (v == null || !h.samsung.modes().contains(v)) throw new Http.Refused(400, "picture mode");
+            p.put(key, v);
+            h.picture(h.night, true);
+            h.post(Hub.SETTINGS, key);
+            return;
+        } else if ("push".equals(apiKey)) {
+            if (!"on".equals(v) && !"off".equals(v) && !"new".equals(v)) throw new Http.Refused(400, "push");
+            h.setPush(v);
+            h.post(Hub.SETTINGS, Prefs.PUSH);
+            return;
         } else if ("alexa".equals(apiKey)) {
             if (!"on".equals(v) && !"off".equals(v) && !"new".equals(v)) throw new Http.Refused(400, "alexa");
             if ("new".equals(v)) {
@@ -193,7 +214,48 @@ final class Actions {
         }
         h.applySettings();
         if (Prefs.UNITS.equals(key) || Prefs.CLOCK.equals(key)) h.reweather();
+        if (Prefs.PICTURE_FOLLOW.equals(key)) h.picture(h.night, true);
         h.post(Hub.SETTINGS, key);
+    }
+
+    /**
+     * The Samsung's picture through SmartThings. Runs on Lucent's worker thread, since each step
+     * waits for Samsung's servers. Nothing secret comes back: setup answers only the sign-in
+     * address, and the page learns no more than "connected" and the TV's name.
+     */
+    private static String samsung(Hub h, String what, Map<String, Object> body) throws Http.Refused {
+        Samsung s = h.samsung;
+        try {
+            if ("begin".equals(what)) {
+                String url = s.begin(Json.str(body, "clientId", ""), Json.str(body, "clientSecret", ""));
+                h.post(Hub.SETTINGS, "samsung");
+                return new Jw().obj().put("ok", true).put("authorize", url).end().toString();
+            }
+            if ("finish".equals(what)) {
+                String device = s.finish(Json.str(body, "code", ""));
+                h.post(Hub.SETTINGS, "samsung");
+                return new Jw().obj().put("ok", true).put("device", device).end().toString();
+            }
+            if ("disconnect".equals(what)) {
+                s.disconnect();
+                h.prefs.put(Prefs.GLARE, "off");
+                h.post(Hub.SETTINGS, "samsung");
+                return OK;
+            }
+            if (!s.connected()) throw new Http.Refused(409, "connect the Samsung first");
+            if ("glare".equals(what)) {
+                h.glareNow(Json.bool(body, "on", false));
+                h.post(Hub.SETTINGS, Prefs.GLARE);
+            } else if ("mode".equals(what)) {
+                s.setMode(Json.str(body, "mode", ""));
+                h.post(Hub.SETTINGS, "picture");
+            } else {
+                throw new Http.Refused(400, "samsung");
+            }
+            return OK;
+        } catch (Samsung.Failed f) {
+            throw new Http.Refused(f.status, f.getMessage());
+        }
     }
 
     private static void calendars(Hub h, Object value) throws Http.Refused {

@@ -20,8 +20,8 @@ import java.util.Set;
  *
  * <pre>
  * city=Cambridge
- * lat=42.3736
- * lon=-71.1097
+ * lat=42.3556
+ * lon=-71.1040
  * bike_station=f835141c-0de8-11e7-991c-3863bb43a7d0
  * </pre>
  *
@@ -41,6 +41,9 @@ final class Prefs {
             MBTA_KEY = "mbta_key", CALENDARS = "calendars", WIFI_SSID = "wifi_ssid", WIFI_PASS = "wifi_pass",
             ALEXA = "alexa", ALEXA_TOPIC = "alexa_topic", ACCESS = "access", TAKEOVER = "takeover", WALLPAPER = "wallpaper",
             QUALITY = "wall_quality", SEEN_DAY = "seen_day", NOTE_SEEN = "note_seen";
+    /** Phone alerts through ntfy, and the Samsung's picture modes (see {@link Samsung}). */
+    static final String PUSH = "push", PUSH_TOPIC = "push_topic", PICTURE_FOLLOW = "picture_follow", DAY_MODE = "day_mode",
+            NIGHT_MODE = "night_mode", GLARE_MODE = "glare_mode", GLARE = "glare", GLARE_BACK = "glare_back";
 
     /** Every setting the control center may change, with its allowed values (null: free text checked elsewhere). */
     static final String[][] CHOICES = {
@@ -57,11 +60,13 @@ final class Prefs {
         {ALARM_FOR, "10", "2", "5", "30"},
         {WAKE_NOTES, "never", "day", "always"},
         {QUALITY, "motion", "still"},
+        {PICTURE_FOLLOW, "off", "on"},
     };
 
     /** Names the control center uses where they differ from the stored key. */
     private static final String[][] API = {
         {"findFor", FIND_FOR}, {"wakeForNotes", WAKE_NOTES}, {"alarmFor", ALARM_FOR}, {"quality", QUALITY},
+        {"pictureFollow", PICTURE_FOLLOW}, {"dayMode", DAY_MODE}, {"nightMode", NIGHT_MODE}, {"glareMode", GLARE_MODE},
     };
 
     static String api(String key) {
@@ -114,7 +119,8 @@ final class Prefs {
     private final SharedPreferences p;
     private final File media;
     String city = "Cambridge";
-    double lat = 42.3736, lon = -71.1097;
+    /** Westgate, for the weather, sunrise and sunset (sent rounded to about 2 km, see {@link Weather#url}). */
+    double lat = Gbfs.WESTGATE_LAT, lon = Gbfs.WESTGATE_LON;
 
     /** The media dir is deprecated on Android 11 but it is the one folder adb can still write. */
     @SuppressWarnings("deprecation")
@@ -158,6 +164,11 @@ final class Prefs {
 
     void put(String key, String value) {
         p.edit().putString(key, value).apply();
+    }
+
+    /** Written to disk before returning, for values that cannot be lost to a crash (a refresh token works once). */
+    void putNow(String key, String value) {
+        p.edit().putString(key, value).commit();
     }
 
     void remove(String key) {

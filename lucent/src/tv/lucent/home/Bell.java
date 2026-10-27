@@ -7,6 +7,9 @@ package tv.lucent.home;
  * check it for clipping.
  */
 final class Bell {
+    /** The ringtone's loudest sample, as a fraction of full scale. */
+    static final double RING_PEAK = 0.89;
+
     private Bell() {}
 
     static final int RATE = 48000;
@@ -49,7 +52,9 @@ final class Bell {
         }
         double peak = 0;
         for (double v : mix) peak = Math.max(peak, Math.abs(v));
-        double scale = peak > 0 ? 0.5 / peak : 0;
+        // Near full scale (-1 dB): an alarm should be heard over a film, at whatever volume the
+        // soundbar is set to, from its first ring.
+        double scale = peak > 0 ? RING_PEAK / peak : 0;
         short[] out = new short[n];
         // The tail fades to silence, so the loop point never clicks.
         int fadeFrom = n - RATE / 5;
