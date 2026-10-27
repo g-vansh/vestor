@@ -1488,6 +1488,21 @@ add airline branding.
 - Next: install VestorOS, re-pair phones, allow it on the Samsung, run
   `./install.sh --claude-key claude-key.txt`, then `adb uninstall tv.lucent.home` once happy.
 
+### 2026-10-27: Ask Vestor prompt caching
+- Did: kept the 5-minute cache marker on the instructions and tools (5,959 tokens on
+  Haiku, 8,580 on Opus) and added top-level automatic caching, so the second round of a
+  question reads the first round back. Fixed the cost guard: Sonnet 5.5 cache reads are
+  $0.10 per million (not $0.20), 1-hour writes are priced at 2x, Haiku prompts over
+  100,000 tokens at 5x, and the pre-charge uses the cache-write price.
+- Verified: live probe before and after. "Play Better Call Saul" round two fell from
+  0.083 to 0.021 cents on Haiku (7,579 uncached tokens became a 14,095-token cache
+  read) and to 0.27 cents on Opus (from about 3.5). ClaudeTest 97 checks, including a
+  byte-for-byte check that tools and instructions never change between requests.
+- Changed from brief: no 1-hour TTL, keep-alive or pre-warming, and the advisor's own
+  cache stays off (Anthropic's break-even is about three consults a conversation, and
+  Vestor allows one a question).
+- Next: nothing to set up on the Claude Console. Its Usage page shows cache reads.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

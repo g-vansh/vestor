@@ -356,12 +356,20 @@ retries on Sonnet 5.5 if Haiku stumbles. Measured on this build:
 
 | Kind of question | Cost | Time |
 |---|---|---|
-| Plain question or command ("15% of 84", "start the bike finder") | 0.02 to 0.08 cents | about 2 s |
+| Plain question or command ("15% of 84", "start the bike finder") | 0.01 to 0.08 cents | about 2 s |
 | Long plan, comparison or explanation | about 0.1 cents | 8 to 15 s |
 | Needs the web, including finding a title to play | about 1.2 cents (1 cent is the search fee) | 5 to 10 s |
 | Hard question where Haiku consults Opus (it rarely needs to) | 4 to 8 cents | 10 to 20 s |
 
-So a dollar covers more than a thousand everyday questions. If you would rather pay more for the
+So a dollar covers more than a thousand everyday questions.
+
+**Prompt caching** is on in every request, with nothing to set up. About 6,000 tokens of each
+request never change: Vestor's instructions and the descriptions of its tools and of web search.
+Anthropic keeps them ready for five minutes after each use and charges a tenth of the normal price
+to read them back, so a question within five minutes of the last costs about 0.01 cents. Inside one
+question, the round after a search or an action reads the first round back the same way: for "Play
+Better Call Saul" that round fell from 0.08 cents to 0.02, and on Opus from about 3.5 cents to 0.3.
+The cache holds no text, only working data in memory that Anthropic deletes once it expires. If you would rather pay more for the
 strongest model every time, choose "Always the best model" on the phone under Settings › Claude:
 each answer then runs on Opus 5.5, about 1 to 4 cents, or 5 to 10 with a search. Vestor prices
 every answer as it arrives and stops for the month at your cap (40 dollars unless you change it on

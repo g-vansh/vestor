@@ -124,6 +124,12 @@ public final class ClaudeTest {
         boolean strict = true;
         for (int i = 2; i < tools.size(); i++) strict &= Json.bool(Json.obj(tools.get(i)), "strict", false);
         check("client tools strict", strict);
+        // Prompt caching: a marker on the system block (tools and instructions) and the top-level one
+        // that follows the conversation, both five minutes.
+        Map<String, Object> sysCache = Json.obj(Json.obj(Json.arr(req, "system").get(0)), "cache_control");
+        check("system block cached for five minutes", "ephemeral".equals(Json.str(sysCache, "type", "")) && !sysCache.containsKey("ttl"));
+        Map<String, Object> topCache = Json.obj(req, "cache_control");
+        check("conversation cached for five minutes", "ephemeral".equals(Json.str(topCache, "type", "")) && !topCache.containsKey("ttl"));
         List<Object> msgs = Json.arr(req, "messages");
         check("context then question", Json.str(Json.obj(msgs.get(0)), "content", "").startsWith("<tv>\nNow: test.")
                 && Json.str(Json.obj(msgs.get(0)), "content", "").endsWith("What's the famous brass town in India?"));
@@ -134,6 +140,9 @@ public final class ClaudeTest {
         List<Object> m2 = Json.arr(Json.obj(Json.parse(web.bodies.get(1))), "messages");
         eq("follow-up has three messages", 3, m2.size());
         eq("earlier answer replayed as text", "Moradabad in Uttar Pradesh. Called Peetal Nagri", Json.str(Json.obj(m2.get(1)), "content", ""));
+        // The cache is a prefix match: everything before the messages must not change by a byte.
+        String b0 = web.bodies.get(0), b1 = web.bodies.get(1);
+        eq("tools and instructions identical on every request", b0.substring(0, b0.indexOf("\"messages\"")), b1.substring(0, b1.indexOf("\"messages\"")));
 
         // Tool round: play, then the answer; Claude's turn goes back unchanged
         web.bodies.clear();
@@ -241,6 +250,15 @@ public final class ClaudeTest {
                 + "\"output_tokens\":10,\"model\":null},{\"input_tokens\":1000,\"output_tokens\":100,\"model\":\"claude-opus-5-5\"},"
                 + "{\"input_tokens\":1000,\"output_tokens\":0,\"model\":\"claude-opus-4-8\"}]}"));
         eq("itemised price", Math.round(100 * 0.1 + 10 * 0.5) + 1000 * 4 + 100 * 20 + 1000 * 5, Claude.price(u, Claude.EXECUTOR));
+        // Cache writes at 1.25 times input, reads at a tenth (a twentieth on Sonnet and Opus 5.5)
+        u = Json.obj(Json.parse("{\"input_tokens\":4,\"output_tokens\":10,\"cache_creation_input_tokens\":300,"
+                + "\"cache_read_input_tokens\":6000,\"cache_creation\":{\"ephemeral_5m_input_tokens\":300,\"ephemeral_1h_input_tokens\":0}}"));
+        eq("cached Haiku price", Math.round(4 * 0.1 + 10 * 0.5 + 300 * 0.125 + 6000 * 0.01), Claude.price(u, Claude.EXECUTOR));
+        u = Json.obj(Json.parse("{\"input_tokens\":0,\"output_tokens\":0,\"cache_creation_input_tokens\":1000,"
+                + "\"cache_read_input_tokens\":1000,\"cache_creation\":{\"ephemeral_5m_input_tokens\":400,\"ephemeral_1h_input_tokens\":600}}"));
+        eq("1-hour writes cost twice the input price, Sonnet reads a twentieth", 400 * 2.5 + 600 * 4 + 1000 * 0.10, (double) Claude.price(u, Claude.ESCALATE));
+        u = Json.obj(Json.parse("{\"input_tokens\":90000,\"output_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":20000}"));
+        eq("Haiku past 100,000 prompt tokens at five times", Math.round(5 * (90000 * 0.1 + 20000 * 0.01)), Claude.price(u, Claude.EXECUTOR));
 
         // Haiku declines: the same question once more on Sonnet, with Sonnet's own fallback
         FakeWeb w3 = new FakeWeb();
@@ -313,7 +331,7 @@ public final class ClaudeTest {
         FakeWeb w6 = new FakeWeb();
         Claude c6 = make(w6, h5);
         c6.setKey(KEY);
-        w6.reply(200, "{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}],\"stop_reason\":\"end_turn\"," + usage(1000000, 0, 0) + "}");
+        w6.reply(200, "{\"content\":[{\"type\":\"text\",\"text\":\"ok\"}],\"stop_reason\":\"end_turn\"," + usage(0, 200000, 0) + "}");
         c6.ask("q", "p", nov);
         eq("charged in November", 100000L, c6.spent(nov));
         eq("clock set back keeps the total", 100000L, c6.spent(oct));

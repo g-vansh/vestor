@@ -208,15 +208,18 @@ final class Claude {
 
     /**
      * Dollars per million tokens (so millionths of a dollar per token) for input, output, a
-     * 5-minute cache write and a cache read.
+     * 5-minute cache write, a cache read and a 1-hour cache write, from Anthropic's pricing page.
      */
     static double[] rates(String model) {
-        if (model != null && model.startsWith("claude-haiku-5-5")) return new double[] {0.10, 0.50, 0.125, 0.01};
-        if (model != null && model.startsWith("claude-sonnet-5-5")) return new double[] {2, 10, 2.5, 0.20};
-        if (model != null && model.startsWith("claude-opus-5-5")) return new double[] {4, 20, 5, 0.20};
+        if (model != null && model.startsWith("claude-haiku-5-5")) return new double[] {0.10, 0.50, 0.125, 0.01, 0.20};
+        if (model != null && model.startsWith("claude-sonnet-5-5")) return new double[] {2, 10, 2.5, 0.10, 4};
+        if (model != null && model.startsWith("claude-opus-5-5")) return new double[] {4, 20, 5, 0.20, 8};
         // A model Vestor does not know (a fallback such as Opus 5 or 4.8): the dearest rate it could be.
-        return new double[] {5, 25, 6.25, 0.50};
+        return new double[] {5, 25, 6.25, 0.50, 10};
     }
+
+    /** Haiku 5.5 costs five times as much for a request whose prompt passes 100,000 tokens. */
+    static final double HAIKU_LONG = 100000, HAIKU_LONG_TIMES = 5;
 
     /**
      * Millionths of a dollar for one response's usage block. When the API itemises the steps
@@ -226,25 +229,34 @@ final class Claude {
     static long price(Map<String, Object> usage, String model) {
         if (usage == null) return 0;
         double total = 0;
+        // Haiku's long-prompt price counts the whole prompt, cached parts included. Judged on the
+        // request as a whole, which can only overstate the cost.
+        boolean longPrompt = Json.num(usage, "input_tokens", 0) + Json.num(usage, "cache_creation_input_tokens", 0)
+                + Json.num(usage, "cache_read_input_tokens", 0) > HAIKU_LONG;
         List<Object> steps = Json.arr(usage, "iterations");
         if (steps != null && !steps.isEmpty()) {
             for (Object o : steps) {
                 Map<String, Object> m = Json.obj(o);
                 if (m == null) continue;
                 String own = Json.str(m, "model", "");
-                total += tokens(m, own.isEmpty() ? model : own);
+                total += tokens(m, own.isEmpty() ? model : own, longPrompt);
             }
         } else {
-            total += tokens(usage, model);
+            total += tokens(usage, model, longPrompt);
         }
         long searches = (long) Json.num(Json.obj(usage, "server_tool_use"), "web_search_requests", 0);
         return Math.round(total) + searches * SEARCH;
     }
 
-    private static double tokens(Map<String, Object> u, String model) {
+    private static double tokens(Map<String, Object> u, String model, boolean longPrompt) {
         double[] r = rates(model);
-        return Json.num(u, "input_tokens", 0) * r[0] + Json.num(u, "output_tokens", 0) * r[1]
-                + Json.num(u, "cache_creation_input_tokens", 0) * r[2] + Json.num(u, "cache_read_input_tokens", 0) * r[3];
+        double times = longPrompt && model != null && model.startsWith("claude-haiku-5-5") ? HAIKU_LONG_TIMES : 1;
+        // Cache writes split by how long they last when the API says so: a 1-hour write costs more.
+        double written = Json.num(u, "cache_creation_input_tokens", 0);
+        Map<String, Object> split = Json.obj(u, "cache_creation");
+        double hour = split == null ? 0 : Math.min(written, Json.num(split, "ephemeral_1h_input_tokens", 0));
+        return times * (Json.num(u, "input_tokens", 0) * r[0] + Json.num(u, "output_tokens", 0) * r[1]
+                + (written - hour) * r[2] + hour * r[4] + Json.num(u, "cache_read_input_tokens", 0) * r[3]);
     }
 
     /** "auto" (Haiku with Opus's advice when needed) or "best" (everything on Opus). */
@@ -600,15 +612,16 @@ final class Claude {
     }
 
     /**
-     * The most a request could cost: its input (about three bytes a token), the whole output
-     * allowance, two searches, and for Haiku one Opus consultation at its limit.
+     * The most a request could cost: its input (about three bytes a token) at the cache-write
+     * price, the dearest an input token can be, the whole output allowance, two searches, and for
+     * Haiku one Opus consultation at its limit.
      */
     static long estimate(List<String> messages, String model) {
         long bytes = SYSTEM.length() + TOOLS.length() + 4096;
         for (String m : messages) bytes += m.length();
         double[] r = rates(model);
         double inTokens = bytes / 3.0;
-        double micros = inTokens * r[0] + 4096 * r[1] + 2 * SEARCH;
+        double micros = inTokens * r[2] + 4096 * r[1] + 2 * SEARCH;
         if (EXECUTOR.equals(model)) {
             double[] adv = rates(ADVISOR);
             micros += inTokens * adv[0] + 1500 * adv[1];
@@ -624,6 +637,12 @@ final class Claude {
                 .end().endArr();
         body.key("tools").raw(haiku ? TOOLS_HAIKU : TOOLS);
         body.key("output_config").obj().put("effort", "low").end();
+        // Prompt caching, five minutes each. The marker on the system block covers the tools and
+        // these instructions, the same bytes on every request, so a question within five minutes
+        // of the last reads them at a tenth of the price. This top-level one follows the end of
+        // the conversation, so a question's second round (after a tool call or a search) reads the
+        // first round back, search results included, instead of paying for it again.
+        body.key("cache_control").obj().put("type", "ephemeral").end();
         // Sonnet and Opus can hand a declined request to another model themselves; Haiku is retried on Sonnet instead.
         if (!haiku) body.put("fallbacks", "default");
         body.key("messages").arr();
