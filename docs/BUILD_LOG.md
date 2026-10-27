@@ -1601,14 +1601,20 @@ add airline branding.
     voice. Vestor's check agrees: no camera, no microphone.
   - Restart: Vestor and its Guard came back by themselves. Tailscale did not: no tunnel after 4.5
     minutes until the app was opened. Vestor moved 8686 back onto the tailnet by itself then.
+    With the owner's yes, Tailscale is now Android's always-on VPN with lockdown off
+    (settings secure always_on_vpn_app com.tailscale.ipn, always_on_vpn_lockdown 0, both empty
+    before, so deleting them undoes it). On the next restart the tunnel was up within 40 seconds
+    with nothing opened, and phone control answered on the tailnet again.
+  - A webcam on the VIZIO soundbar's USB port reaches nothing: the Fire TV's USB stays in device
+    mode with nothing attached. HDMI eARC carries sound and CEC, not USB.
   - MIT's Wi-Fi blocks Bonjour between devices (the Mac saw no AirPlay or Cast receiver but itself)
     but routes direct traffic between its subnets (Tailscale found a direct path, 26 ms). While ADB
     is on, it also answers on the TV's MIT address.
 - Changed from brief: Tailscale's interface is tun0 or tun1, not always tun0. The Samsung webcam
   check cannot run under Tailscale Only, because it opens the tailnet address, which the Samsung
   cannot reach. No test call: the Fire TV has no microphone yet.
-- Next: decide on always-on VPN so Tailscale starts at boot. A test call once a webcam is on an OTG
-  cable, for its microphone. UI: Settings rows overlap long labels and values (Phone Control,
+- Next: pair the Samsung remote (Vestor accepts any private 10.x address, so a different MIT
+  subnet is fine). A test call once a webcam is on an OTG cable, for its microphone. UI: Settings rows overlap long labels and values (Phone Control,
   Phone Control Works On), and the info bar runs off the right edge when the 85A card is wide.
   ADB off at the end.
 
