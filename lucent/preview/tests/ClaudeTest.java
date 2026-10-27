@@ -159,13 +159,17 @@ public final class ClaudeTest {
         // After a web search, only play and open_app run
         hands.ran.clear();
         web.reply(200, "{\"content\":[{\"type\":\"server_tool_use\",\"id\":\"s1\",\"name\":\"web_search\",\"input\":{\"query\":\"x\"}},"
-                + "{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"s1\",\"content\":[]},"
+                + "{\"type\":\"web_search_tool_result\",\"tool_use_id\":\"s1\",\"content\":[{\"type\":\"web_search_result\",\"url\":"
+                + "\"https://www.weather.gov/box/\",\"title\":\"NWS Boston\"},{\"type\":\"web_search_result\",\"url\":\"https://www.weather.gov/x\","
+                + "\"title\":\"Same site\"},{\"type\":\"web_search_result\",\"url\":\"http://plain.example/\",\"title\":\"Not https\"}]},"
                 + "{\"type\":\"tool_use\",\"id\":\"tu_3\",\"name\":\"add_automation\",\"input\":{\"name\":\"x\",\"at\":\"07:00\",\"offset_minutes\":0,"
                 + "\"days\":[],\"action\":\"tv_power_off\",\"value\":\"\"}},{\"type\":\"tool_use\",\"id\":\"tu_4\",\"name\":\"open_app\",\"input\":{\"name\":\"Netflix\"}}],"
                 + "\"stop_reason\":\"tool_use\"," + usage(10, 10, 1) + "}");
         web.reply(200, "{\"content\":[{\"type\":\"text\",\"text\":\"Ok.\"}],\"stop_reason\":\"end_turn\"," + usage(10, 10, 0) + "}");
         a = c.ask("search and set", "phone", now + 600000000L);
         eq("only the app opened", "[open_app {name=Netflix}]", hands.ran.toString());
+        eq("searched pages stand in for citations, one per site", 1, a.sources.size());
+        eq("the page", "https://www.weather.gov/box/", a.sources.get(0)[1]);
         eq("no rule kept", 0, c.rules().size());
         eq("search priced", 10L * 4 + 10 * 20 + 10000 + 10 * 4 + 10 * 20, a.cost);
 

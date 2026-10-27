@@ -301,6 +301,7 @@ final class Claude {
         // Once web pages are in the conversation, only playing and opening apps stay open: anything
         // that changes the TV or keeps a rule needs the owner to ask for it directly.
         boolean searched = false;
+        List<String[]> searchedPages = new ArrayList<>();
         for (int round = 0; round < ROUNDS; round++) {
             Map<String, Object> reply;
             try {
@@ -340,6 +341,18 @@ final class Claude {
                         }
                     } else if ("tool_use".equals(type)) {
                         calls.add(new Object[] {Json.str(b, "id", ""), Json.str(b, "name", ""), Json.obj(b, "input")});
+                    } else if ("web_search_tool_result".equals(type)) {
+                        // The pages searched, for when the answer carries no citations of its own.
+                        List<Object> hits = Json.arr(b, "content");
+                        if (hits != null) {
+                            for (Object x : hits) {
+                                Map<String, Object> hm = Json.obj(x);
+                                String url = Json.str(hm, "url", "");
+                                if (url.startsWith("https://") && searchedPages.size() < 6) {
+                                    searchedPages.add(new String[] {Text.clean(Json.str(hm, "title", "")), url});
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -383,6 +396,13 @@ final class Claude {
             messages.add(results.endArr().end().toString());
         }
         a.text = plain(text);
+        if (a.sources.isEmpty()) {
+            Set<String> hosts = new HashSet<>();
+            for (String[] pg : searchedPages) {
+                String host = pg[1].substring(8).replaceFirst("[/?#].*", "");
+                if (a.sources.size() < 3 && hosts.add(host)) a.sources.add(pg);
+            }
+        }
         if (a.text.isEmpty() && a.error.isEmpty() && a.did.isEmpty()) a.error = "No answer came back. Try again.";
         if (!a.text.isEmpty()) {
             synchronized (turns) {
