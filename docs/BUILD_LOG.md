@@ -1558,6 +1558,21 @@ add airline branding.
 - Next: install 2.1 once with install.sh (2.0 has no updater). After that, updates come from
   the TV.
 
+### 2026-10-27: ready for setup night (2.1.1 and 2.1.2 published, handoff written)
+- Did: Vestor now logs each update step and each call audio decision to logcat under the tag
+  `Vestor` (states and yes/no facts only). Published 2.1.1 (code 6, with the logging) and 2.1.2
+  (code 7, the same with a new version and line) on the `ota` branch, so the session at the TV
+  installs 6 over ADB and watches the TV update itself to 7. Wrote vestoros/SETUP_HANDOFF.md for
+  a local Claude Code session at the TV, and vestoros/scripts/tv.sh for its screenshots, camera
+  photos, remote keys and system-screen buttons.
+- Verified: desk suites green. Every URL the handoff uses answers 200, and the code 6 APK's
+  SHA-256 matches. Network ADB from a computer still works on Fire OS 8 (Amazon's change only
+  stopped apps on the stick from using ADB on themselves).
+- Changed from brief: Tailscale on the stick is optional. Not needed while the laptop reaches the
+  TV over home Wi-Fi. Useful on a shared building network, on Wi-Fi that isolates devices, or for
+  control from away. It is sideloaded from Tailscale's package server and updated by hand.
+- Next: the setup session (SETUP_HANDOFF.md).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
