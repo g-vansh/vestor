@@ -1573,6 +1573,45 @@ add airline branding.
   control from away. It is sideloaded from Tailscale's package server and updated by hand.
 - Next: the setup session (SETUP_HANDOFF.md).
 
+### 2026-10-27: setup night at the TV, over Tailscale (2.1.1 installed, 2.1.2 from the TV)
+- Did: the TV is on MIT's shared Wi-Fi, so the session ran over Tailscale. The owner sideloaded
+  Tailscale 1.104.2 with Downloader, and Downloader's install permission went back to default
+  afterwards. ADB went over the tailnet. Installed 2.1.1 (code 6) with install.sh, and the TV then
+  found, checked and offered 2.1.2 by itself and installed it after Install on Fire OS's screen.
+  Set Phone Control Works On to Tailscale Only. Fixed install.sh, which refused every Claude key
+  on macOS (a regex repeat count over 255 never compiles there).
+- Verified:
+  - Fire TV Stick 4K (AFTKM), Fire OS 8.1.8.5, API 30, WebView Chromium 150. No Vestor or Lucent
+    on it before. Tailscale's installed APK matches the SHA-256 Tailscale publishes.
+  - Install: three granted lines, signer 8e4a2ae1, the Guard on, HOME shows Vestor. Claude key set.
+  - Update: checking at 18:58:06, offer code 7, ready 2.1.2 six seconds later. Installed at
+    18:59:36 and Vestor came back to the front by itself, with grants, Guard, key and settings kept.
+    Check Now then said current.
+  - Tailscale Only: port 8686 listens on the tailnet address only and the Wi-Fi listener closes.
+    Pairing shows the tailnet address. The owner paired a phone and the Mac.
+  - Ask Vestor answered "whats the weather tonight" correctly in 8 to 22 seconds (the README says
+    about 2, this was the session's first question).
+  - Video Calls: WhatsApp Web shows its normal sign-in, and the owner linked it.
+  - AirPods: Fire OS runs only the A2DP, AVRCP, HID and GATT profile services, with no hands-free
+    service, so it never offers the AirPods' microphone. They connected over A2DP with AAC and
+    dropped after about ten minutes, likely Apple's automatic switching back to the phone.
+  - Webcam: Fire OS on this stick has its camera service switched off (config.disable_cameraservice
+    is 1, and there is no cameraserver or camera HAL), so no webcam can give the Fire TV video,
+    with any cable. USB host is there, so a webcam's microphone on an OTG cable may still work for
+    voice. Vestor's check agrees: no camera, no microphone.
+  - Restart: Vestor and its Guard came back by themselves. Tailscale did not: no tunnel after 4.5
+    minutes until the app was opened. Vestor moved 8686 back onto the tailnet by itself then.
+  - MIT's Wi-Fi blocks Bonjour between devices (the Mac saw no AirPlay or Cast receiver but itself)
+    but routes direct traffic between its subnets (Tailscale found a direct path, 26 ms). While ADB
+    is on, it also answers on the TV's MIT address.
+- Changed from brief: Tailscale's interface is tun0 or tun1, not always tun0. The Samsung webcam
+  check cannot run under Tailscale Only, because it opens the tailnet address, which the Samsung
+  cannot reach. No test call: the Fire TV has no microphone yet.
+- Next: decide on always-on VPN so Tailscale starts at boot. A test call once a webcam is on an OTG
+  cable, for its microphone. UI: Settings rows overlap long labels and values (Phone Control,
+  Phone Control Works On), and the info bar runs off the right edge when the 85A card is wide.
+  ADB off at the end.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
