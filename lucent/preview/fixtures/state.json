@@ -83,8 +83,21 @@
     "capacity": 25,
     "renting": true,
     "miles": 0.0
+   },
+   {
+    "id": "f83516b8-0de8-11e7-991c-3863bb43a7d0",
+    "name": "Sidney Research Campus/Erie Street at Waverly",
+    "short": "Erie St",
+    "ebikes": 1,
+    "classic": 3,
+    "docks": 15,
+    "capacity": 19,
+    "renting": true,
+    "miles": 0.15
    }
-  ]
+  ],
+  "alt": "f83516b8-0de8-11e7-991c-3863bb43a7d0",
+  "altLabel": "Erie St"
  },
  "finder": {
   "state": "idle",
@@ -95,7 +108,8 @@
   "checks": 0,
   "station": "Westgate",
   "alarm": false,
-  "offline": false
+  "offline": false,
+  "ebikes2": 1
  },
  "transit": {
   "fetched": 1793124295000,
@@ -253,7 +267,8 @@
   "wifiSsid": "Home",
   "wifiSet": true,
   "theme": "auto",
-  "pictureFollow": "on"
+  "pictureFollow": "on",
+  "station2": "auto"
  },
  "stations": [
   {
@@ -350,7 +365,49 @@
   "nightMode": "Movie",
   "glareMode": "Dynamic",
   "error": "",
-  "setup": "none"
+  "setup": "none",
+  "power": "on",
+  "volume": 14,
+  "muted": "unmuted",
+  "input": "HDMI1",
+  "inputs": [
+   {
+    "id": "dtv",
+    "name": "TV"
+   },
+   {
+    "id": "HDMI1",
+    "name": "Fire TV"
+   },
+   {
+    "id": "HDMI2",
+    "name": "HDMI 2"
+   }
+  ],
+  "sound": "Standard",
+  "sounds": [
+   "Standard",
+   "Optimized",
+   "Amplify"
+  ],
+  "can": {
+   "power": true,
+   "volume": true,
+   "mute": true,
+   "input": true,
+   "sound": true,
+   "keys": true,
+   "apps": true
+  },
+  "remote": {
+   "state": "connected",
+   "address": "192.168.1.20",
+   "paired": true,
+   "label": "[TV] Samsung 7 Series (43)",
+   "model": "UN43TU7000FXZA",
+   "canWake": true,
+   "error": ""
+  }
  },
  "display": {
   "width": 3840,
@@ -365,5 +422,40 @@
   "uiHeight": 1080,
   "line": "4K, 60 Hz, HDR10, HDR10+ and HLG",
   "advice": ""
+ },
+ "stations2": [
+  {
+   "id": "auto",
+   "name": "Erie St"
+  },
+  {
+   "id": "none",
+   "name": "None"
+  },
+  {
+   "id": "2261583246847893606",
+   "name": "Hastings Square"
+  }
+ ],
+ "forecast": {
+  "empty": false,
+  "dayType": "class",
+  "pool": {
+   "lo": 1793126580000,
+   "med": 1793128560000,
+   "hi": 1793132220000
+  },
+  "first": {
+   "lo": 1793125620000,
+   "med": 1793127120000,
+   "hi": 1793130000000
+  },
+  "next": {
+   "lo": 0,
+   "med": 0,
+   "hi": 0
+  },
+  "morning": -1,
+  "morningAt": 0
  }
 }

@@ -98,7 +98,7 @@ final class Console {
      * How long a connection may wait for its turn; the TV's own time to act on a request (the
      * host waits up to 20 s for the main thread), added to the deadline when it starts.
      */
-    static final long QUEUED_MS = 10000, ACT_MS = 30000;
+    static final long QUEUED_MS = 10000, ACT_MS = 30000, SLOW_ACT_MS = 60000;
     static final String COOKIE = "lucent";
     static final int LAN_AND_TAILNET = 0, TAILNET_ONLY = 1, OFF = 2;
     private static final long MS = 1000000L;
@@ -648,7 +648,8 @@ final class Console {
             Http.respond(out, 200, "application/json", "{}".getBytes(StandardCharsets.UTF_8), false, "Set-Cookie", CLEAR_COOKIE);
             return;
         }
-        watchdog.extend(c, ACT_MS);
+        // Pairing with the Samsung waits up to 45 s for Allow on the TV, and SmartThings steps up to 50 s.
+        watchdog.extend(c, "remote".equals(action) || "samsung".equals(action) ? SLOW_ACT_MS : ACT_MS);
         json(out, r, 200, host.act(d, action, body));
     }
 

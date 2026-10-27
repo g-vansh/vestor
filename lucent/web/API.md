@@ -125,14 +125,27 @@ gracefully.
               "uiHeight": 1080, "advice": ""},
   "samsung": {"connected": true, "device": "Samsung 43\" TU7000", "modes": ["Dynamic", "Standard", "Natural", "Movie"],
               "mode": "Movie", "glare": false, "follow": "on", "dayMode": "Standard", "nightMode": "Movie",
-              "glareMode": "Dynamic", "error": "", "setup": "none"},
+              "glareMode": "Dynamic", "error": "", "setup": "none",
+              "power": "on", "volume": 14, "muted": "unmuted", "input": "HDMI1",
+              "inputs": [{"id": "dtv", "name": "TV"}, {"id": "HDMI1", "name": "Fire TV"}], "sound": "Standard",
+              "sounds": ["Standard", "Optimized", "Amplify"],
+              "can": {"power": true, "volume": true, "mute": true, "input": true, "sound": true, "keys": true, "apps": true},
+              "remote": {"state": "connected", "address": "192.168.1.20", "paired": true,
+                         "label": "[TV] Samsung 7 Series (43)", "model": "UN43TU7000FXZA", "canWake": true, "error": ""}},
   "push": {"on": true, "topic": "kJ3x9Qm2LwT7aZp0vB5nRc", "url": "https://ntfy.sh/kJ3x9Qm2LwT7aZp0vB5nRc"},
   "alerts": [{"event": "Wind Advisory", "headline": "...", "severity": "Moderate", "expires": 1793150000000}],
   "bikes": {"ok": true, "label": "Westgate", "fetched": 1793124290000, "published": 1793124260000,
+            "alt": "f83516b8-0de8-11e7-991c-3863bb43a7d0", "altLabel": "Erie St",
             "stations": [{"id": "f835...", "name": "MIT Vassar St", "short": "Westgate", "ebikes": 1, "classic": 6,
-                          "docks": 18, "capacity": 25, "renting": true, "miles": 0.0}]},
+                          "docks": 18, "capacity": 25, "renting": true, "miles": 0.0},
+                         {"id": "f83516b8-0de8-11e7-991c-3863bb43a7d0", "name": "Sidney Research Campus/Erie Street at Waverly",
+                          "short": "Erie St", "ebikes": 1, "classic": 3, "docks": 15, "capacity": 19, "renting": true,
+                          "miles": 0.15}]},
+  "forecast": {"empty": false, "dayType": "class", "pool": {"lo": 1793126580000, "med": 1793128560000, "hi": 1793132220000},
+               "first": {"lo": 1793125620000, "med": 1793127120000, "hi": 1793130000000},
+               "next": {"lo": 0, "med": 0, "hi": 0}, "morning": -1, "morningAt": 0},
   "finder": {"state": "idle", "started": 0, "deadline": 0, "ended": 0, "ebikes": 0, "checks": 0,
-             "station": "Westgate", "alarm": false, "offline": false},
+             "station": "Westgate", "ebikes2": 1, "alarm": false, "offline": false},
   "transit": {"fetched": 1793124295000, "live": false,
               "lines": [{"id": "85a", "chip": "85A", "label": "85A to Assembly Row", "stop": "Vassar St @ Audrey St",
                          "color": "#FFC72C", "minutes": [3, 15], "idle": ""}]},
@@ -154,9 +167,11 @@ gracefully.
   "audio": {"route": "HDMI", "device": "", "headline": "Dolby Atmos", "formats": ["Dolby Atmos", "Dolby MAT"]},
   "settings": {"units": "f", "clock": "auto", "rotate": "hour", "album": "both", "motion": "full", "ambient": "5",
                "dim": "10", "awakeFrom": "07:00", "awakeTo": "00:30", "bedtime": "off", "findFor": "30",
-               "sky": "on", "station": "auto", "alarm": "ring", "wakeForNotes": "day", "mbtaKey": "set"|"",
+               "sky": "on", "station": "auto", "station2": "auto", "alarm": "ring", "wakeForNotes": "day", "mbtaKey": "set"|"",
                "wifiSsid": "Home", "wifiSet": true, "theme": "auto", "alarmFor": "5", "quality": "motion"},
   "stations": [{"id": "auto", "name": "Westgate"}, {"id": "2261583246847893606", "name": "Hastings Square"}],
+  "stations2": [{"id": "auto", "name": "Erie St"}, {"id": "none", "name": "None"},
+                {"id": "2261583246847893606", "name": "Hastings Square"}],
   "devices": [{"id": "Ab3d", "name": "Alex's iPhone", "seen": 1793124300000, "ip": "192.168.1.40", "me": true}],
   "health": [{"host": "gbfs.lyft.com", "state": "OK", "sent": 120, "ok": 30, "unchanged": 88, "limited": 0,
               "failed": 2, "perMinute": 40}],
@@ -176,6 +191,37 @@ Notes on the newer fields (all optional, the page renders without them):
   error text, empty when fine. `setup` is "begun" between `samsung begin` and `samsung finish`. When `samsung` is
   missing the page hides the Samsung controls. Secrets never appear in state: phones only see `connected`.
 - `push` is present when phone alerts are available. `topic` is 22 characters of base64url.
+- `bikes.alt` is the id of the second dock bike finder watches ("" when only one is), and `bikes.altLabel` its name
+  on screen ("Erie St", the dock outside Flour in Cambridgeport). `bikes.stations[0]` is the first dock (Westgate, on
+  Vassar St). When `alt` is set, `stations[1]` is the second dock (its `id` equals `alt`), and the nearest other docks
+  follow. Without `alt`, everything after `stations[0]` is a nearby dock. The page shows the two watched docks side by
+  side, Westgate first, with their e-bikes as the hero numbers.
+- `forecast` is the e-bike forecast, present once the TV has worked one out. Every time is epoch ms, and 0 means
+  beyond eight hours. `dayType` is `class`, `finals`, `offweek` (no MIT classes), `sat` or `sun`. When `empty` is false
+  there are e-bikes now: `pool` is when both watched docks are likely out of them (`lo`, `med`, `hi` are the 10%, 50%
+  and 90% points) and `first` is when the first dock alone is. When `empty` is true there are none: `next` is when the
+  next e-bike likely turns up at either dock. `morning` is the chance (0 to 1) that at least one e-bike waits at either
+  dock at `morningAt`, given in the evening and at night only, and -1 otherwise. The page shows "Likely all gone by
+  8:10 AM (7:50 to 8:40)", "Westgate likely empty by 7:55 AM" (two docks, `first.med` set, Westgate has e-bikes),
+  "Next e-bike likely around 9:25 AM (8:50 to 10:20)" and "Tomorrow at 7:30 AM: 41% chance of an e-bike" ("Today"
+  when `morningAt` falls today), in the phone's own clock format.
+- `finder.ebikes2` is the e-bikes at the second dock at the last check, -1 when only one dock is watched. While
+  searching, `finder.station` names the docks being watched ("Westgate and Erie St"). Once found, it names the dock
+  where the e-bike is ("Erie St"). With both, Westgate wins a tie.
+- `stations2` lists the choices for the second dock: `auto` is Erie St, `none` watches the first dock alone, and the
+  rest are station ids. `settings.station2` is the current choice.
+- `samsung.power` ("on", "off" or ""), `volume` (0 to 100, -1 when unknown), `muted` ("muted", "unmuted" or ""),
+  `input` (an id from `inputs`), `inputs` (`[{id, name}]`), `sound`, `sounds` and `can` are there only while
+  `connected`. `can` says what this TV takes through SmartThings: `power`, `volume`, `mute`, `input`, `sound`,
+  `keys` (remote keys, slow: 12 commands a minute in all) and `apps`.
+- `samsung.remote` is always there when `samsung` is. It is the Samsung's own remote over the home network, which
+  answers at once. `state` is `none` (no address yet), `off` (closed), `connecting`, `allow` (the TV is asking
+  whether to allow Lucent), `connected`, `refused` (the TV said no, for example Deny was chosen), `changed` (the TV's
+  certificate changed: trust it again) or `unreachable`. `paired` is true once the TV let Lucent in. `label` and
+  `model` are what the TV calls itself. `canWake` means Lucent knows the TV's network card and can wake it.
+  `error` is the last error, a sentence for the user, or "". The token, pin and network card never appear in state.
+  Keys go to this remote when `state` is `connected`, or when `paired` (and not `changed` or `refused`). Otherwise
+  they go through SmartThings when `can.keys`, else the page offers the setup.
 - `alexa.commands` is present only when `alexa.on`. `off` may be "". `url` and `stopUrl` remain for older pages.
 
 ## Actions: `POST /api/<action>` with a JSON body. Reply is `{"ok": true}` plus fields noted.
@@ -204,12 +250,26 @@ Notes on the newer fields (all optional, the page renders without them):
 | `samsung` | `{"do": "disconnect"}` | Forget the SmartThings sign-in |
 | `samsung` | `{"do": "glare", "on": bool}` | Glare picture on (switches to `glareMode`) or back to the day or night picture |
 | `samsung` | `{"do": "mode", "mode": "Dynamic"}` | Set the picture mode now (one of `samsung.modes`) |
+| `samsung` | `{"do": "read"}` | Read power, volume, mute, input, sound and the lists from SmartThings now (the page asks at most every 2 minutes, when the Remote tab opens) |
+| `samsung` | `{"do": "power", "on": bool}` | Turn the TV on or off through SmartThings. On also wakes the TV through the stick over HDMI-CEC |
+| `samsung` | `{"do": "volume", "level": 0..100}`, `{"do": "volumeStep", "up": bool}`, `{"do": "mute", "on": bool}` | The TV's own speakers. Secondary: the soundbar follows the `volume` action |
+| `samsung` | `{"do": "input", "id": "HDMI1"}` | Switch to one of `samsung.inputs` |
+| `samsung` | `{"do": "sound", "mode": "Standard"}` | Set the sound mode (one of `samsung.sounds`) |
+| `samsung` | `{"do": "cloudKey", "key": "OK"}` | One remote key through SmartThings, without the `KEY_` prefix: `UP` `DOWN` `LEFT` `RIGHT` `OK` `BACK` `EXIT` `MENU` `HOME` `MUTE` `VOLUP` `VOLDOWN` `POWER` `SOURCE` `GUIDE` `MORE` `PLAY` `PAUSE` `STOP` `REWIND` `FF` `PLAY_BACK` `CHUP` `CHDOWN` `PRECH` digits `RED` `GREEN` `YELLOW` `BLUE` `MULTI_VIEW` `TV_PLUS` `CC_ONOFF` `PICTURE_OFF`. Slow, and 12 SmartThings commands a minute at most. While the TV asks to allow Lucent, the page offers Left, OK and Right this way (never a blind OK: the question may start on Deny) |
+| `remote` | `{"do": "address", "ip": "192.168.1.20"}` | Remember the TV's home address and ask it who it is. Reply `{"ok": true, "label": "[TV] Samsung 7 Series (43)", "model": "UN43TU7000FXZA", "power": "on"\|"standby"\|""}` |
+| `remote` | `{"do": "pair"}` | Open the remote's channel. The first time, the TV asks whether to allow Lucent (state `allow`) and this waits up to 45 s. The page also watches `samsung.remote.state`, in case the request is cut while it waits |
+| `remote` | `{"do": "key", "key": "KEY_UP"}` | Press one key: `KEY_UP` `KEY_DOWN` `KEY_LEFT` `KEY_RIGHT` `KEY_ENTER` `KEY_RETURN` `KEY_HOME` `KEY_MENU` `KEY_SOURCE` `KEY_VOLUP` `KEY_VOLDOWN` `KEY_MUTE` `KEY_POWER` `KEY_PLAY` `KEY_PAUSE` `KEY_EXIT` `KEY_TOOLS` `KEY_INFO` `KEY_HDMI1` `KEY_HDMI2`, the digits `KEY_0` to `KEY_9`, and the rest of `SamsungRemote.KEYS` |
+| `remote` | `{"do": "hold", "key": "KEY_POWER", "ms": 3000}` | Hold a key down (100 to 5000 ms), as a long press on the TV's remote. The page sends it for a long press on Power |
+| `remote` | `{"do": "wake"}` | Wake the TV over the network (when `canWake`). 409 `{"error": "…"}` when Lucent has not read the TV's network card yet |
+| `remote` | `{"do": "close"}`, `{"do": "trust"}`, `{"do": "forget"}` | Close the channel. Trust the TV's new certificate (state `changed`), which also forgets the old key, so pair again after. Forget the TV altogether |
+| `volume` | `{"do": "up"\|"down"\|"mute"}` | The Fire TV's own volume keys. Fire OS sends them over HDMI-CEC to whatever plays the sound (the VIZIO soundbar here), so this works with no Samsung setup at all. The page's Volume buttons send this |
 | `push` | `{"do": "test"}` | Send a test notification to subscribed phones. 409 `{"error": "…"}` when phone alerts are off |
 
 Setting keys for `set` (anything else is refused): `units` f/c/off, `clock` auto/12/24,
 `rotate` 1m/5m/10m/hour/day/off, `album` nature/ours/both, `motion` full/reduced, `ambient`
 2/5/15/off, `dim` 5/10/30/off, `awakeFrom` and `awakeTo` "HH:MM" or "always", `bedtime` "HH:MM"
-or off, `findFor` 15/30/60/120, `sky` on/off, `station` (an id from `stations`), `alarm` ring/chime,
+or off, `findFor` 15/30/60/120, `sky` on/off, `station` (an id from `stations`), `station2` (an id from `stations2`:
+auto, none or a station id), `alarm` ring/chime,
 `wakeForNotes` always/day/never, `theme` auto/day/night (same as mode), `mbtaKey` (a 32-hex key or
 empty, never echoed back, state shows "set" or ""), `calendars` (array of up to 6 objects
 `{"name": "Us", "url": "https://calendar.google.com/... or webcal://pNN-caldav.icloud.com/..."}`,
@@ -226,7 +286,9 @@ list with `set calendars`, send unchanged feeds back with that exact masked url 
 address. New feeds send the full URL (https:// or webcal://).
 
 Errors from actions: a 400 or 409 may carry `{"error": "<a sentence for the user>"}`. The page shows that sentence
-when it is a sentence, and its own wording for numeric errors.
+when it is a sentence, and its own wording for numeric errors. `remote` and the newer `samsung` actions answer
+errors with any status from 400 to 504 (`{"error": "The TV stopped answering.", "status": 503}`): the page shows the
+sentence in the same way, and its own wording for a bare code such as `"key"`.
 
 ## Photo upload
 

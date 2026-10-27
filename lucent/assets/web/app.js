@@ -25,7 +25,7 @@
   const MAX_TEXT = 280;
   const MAX_NOTE_BYTES = 384 * 1024;
   const CAL_COLOURS = ['#EC944C', '#6EC1FF', '#7FD49B', '#B79CFF', '#FF6B8B', '#F4D06F'];
-  const TABS = ['home', 'draw', 'photos', 'plans', 'settings'];
+  const TABS = ['home', 'remote', 'draw', 'photos', 'plans', 'settings'];
   const SVGNS = 'http://www.w3.org/2000/svg';
   const PHOTO_ID = /^[0-9a-f]{32}$/;
 
@@ -340,7 +340,7 @@
         continue;
       }
       if (r.ok) {
-        pollSoon();
+        if (!opts.quiet) pollSoon();
         return r.data;
       }
       const err = new Error(opts.errors && opts.errors[r.status] ? opts.errors[r.status] : errorText(r.status, r.data));
@@ -351,10 +351,12 @@
     throw new Error(errorText(429));
   }
 
-  // The TV's own words for an error when it sent some, else the general message.
+  // The TV's own words for an error when it sent a sentence, else the general message. A bare
+  // code such as "key" or 409 is not shown.
   function serverError(e) {
-    const said = e && e.data ? str(obj(e.data).error) : '';
-    return said && !/^\d+$/.test(said) ? said : (e && e.message) || 'That didn’t go through.';
+    const said = e && e.data ? str(obj(e.data).error).trim() : '';
+    if (said && /\s/.test(said) && !/^\d+$/.test(said)) return said.charAt(0).toUpperCase() + said.slice(1);
+    return (e && e.message) || 'That didn’t go through.';
   }
 
   function setSetting(key, value) {
@@ -1346,7 +1348,11 @@
   async function finderDo(kind) {
     const f = Object.assign({}, obj(S.finder));
     const forMin = parseInt(str(settings().findFor), 10) || 30;
-    if (kind === 'start') Object.assign(f, { state: 'searching', started: tvNow(), deadline: tvNow() + forMin * 60000, checks: 0, alarm: false, offline: false });
+    if (kind === 'start') {
+      const w = watched(obj(S.bikes));
+      Object.assign(f, { state: 'searching', started: tvNow(), deadline: tvNow() + forMin * 60000, checks: 0, alarm: false, offline: false,
+        station: w.alt ? w.label + ' and ' + w.altLabel : w.label, ebikes2: w.alt ? Math.max(0, num(w.alt.ebikes) || 0) : -1 });
+    }
     if (kind === 'stop') Object.assign(f, { state: 'stopped', ended: tvNow() });
     if (kind === 'silence') { f.alarm = false; if (S.tv) S.tv.ringing = false; }
     S.finder = f;
@@ -1387,7 +1393,8 @@
       this.room = buildRoom(c.room);
       this.mediaMain = h('div', { class: 'media-main' });
       this.glare = h('div', { class: 'glare-wrap', hidden: true });
-      fill(c.media.body, [this.mediaMain, this.glare, this.room.tvRow]);
+      this.volRow = homeVolumeRow();
+      fill(c.media.body, [this.mediaMain, this.volRow, this.glare, this.room.tvRow]);
     },
     render: function () {
       const c = this.c;
@@ -1405,7 +1412,7 @@
       const st = settings();
       if (changed('h.alerts', [S.alerts, hour12()])) renderAlerts(this.alerts, arr(S.alerts));
       if (changed('h.transit', [S.transit])) renderTransit(c.transit, obj(S.transit));
-      if (changed('h.bikes', [S.bikes, S.finder, st.findFor, hour12()])) renderBikes(c.bikes, obj(S.bikes), obj(S.finder));
+      if (changed('h.bikes', [S.bikes, S.finder, S.forecast, st.findFor, hour12(), dayStart(tvNow())])) renderBikes(c.bikes, obj(S.bikes), obj(S.finder), S.forecast);
       if (changed('h.weather', [S.weather, st.units])) renderWeather(c.weather, obj(S.weather), str(st.units));
       if (changed('h.daylight', [tv.sunrise, tv.sunset, tv.moon, tv.moonLit, tv.nextChange, tv.mode, tv.modeSetting, S.air, hour12()])) renderDaylight(c.daylight, tv, obj(S.air));
       if (changed('h.sky', [S.sky, st.sky])) renderSky(c.sky, obj(S.sky), str(st.sky));
@@ -1420,6 +1427,17 @@
       this.room.render(tv);
     }
   };
+
+  // One tap from Home: the Fire TV's own volume keys, which the soundbar follows, and the Remote tab.
+  function homeVolumeRow() {
+    const b = function (what, ico, text, label) {
+      return pressable(h('button', { class: 'btn vol-btn', type: 'button', 'aria-label': label, 'data-fk': 'hv-' + what }, icon(ico), h('span', { text: text })),
+        { fire: function (btn) { volumePress(btn, what); }, repeat: what === 'mute' ? null : function () { return true; } });
+    };
+    const open = h('button', { class: 'btn vol-btn', type: 'button', 'data-fk': 'hv-remote', on: { click: function () { show('remote'); } } }, icon('remote'), h('span', { text: 'Remote' }));
+    return h('div', { class: 'room-row vol-row' }, h('p', { class: 'room-label', text: 'TV volume' }),
+      h('div', { class: 'vol-btns' }, b('down', 'vol-down', 'Down', 'Volume Down'), b('mute', 'mute', 'Mute', 'Mute'), b('up', 'vol-up', 'Up', 'Volume Up'), open));
+  }
 
   function greeting() {
     const hr = new Date(tvNow()).getHours();
@@ -1470,27 +1488,38 @@
     })));
   }
 
-  function renderBikes(c, b, f) {
+  // The watched docks: Westgate first, then the second dock when one is watched (bikes.alt).
+  function watched(b) {
     const stations = arr(b.stations).map(obj);
-    const st = stations[0];
-    const label = str(b.label) || (st ? str(st.short) || str(st.name) : '') || 'Westgate';
-    const at = num(b.published) || num(b.fetched);
-    setMeta(c, [label, at ? ' · ' : '', at ? agoSpan(at) : null]);
-    if (!st) {
-      fill(c.body, [empty(b.ok === false ? 'Bluebikes isn’t answering right now. Lucent keeps trying.' : 'Looking for the dock…'), finderBlock(f, label)]);
-      return;
-    }
-    const e = Math.max(0, num(st.ebikes) || 0);
-    const cl = Math.max(0, num(st.classic) || 0);
-    const d = Math.max(0, num(st.docks) || 0);
-    const cap = Math.max(num(st.capacity) || 0, e + cl + d);
-    const renting = st.renting !== false;
+    const main = stations[0] || null;
+    const altId = str(b.alt);
+    const alt = altId && stations[1] && str(stations[1].id) === altId ? stations[1] : null;
+    const label = str(b.label) || (main ? str(main.short) || str(main.name) : '') || 'Westgate';
+    const altLabel = alt ? str(b.altLabel) || str(alt.short) || str(alt.name) || 'Erie St' : '';
+    return { stations: stations, main: main, alt: alt, label: label, altLabel: altLabel };
+  }
+
+  function bikeDots(e, cl, d, cap, cols, cls) {
     const dots = [];
     for (let i = 0; i < Math.min(cap, 60); i++) {
       const k = i < e ? 'e' : i < e + cl ? 'c' : i < e + cl + d ? 'd' : 'x';
       dots.push(h('span', { class: 'dot dot-' + k }));
     }
-    const others = stations.slice(1, 3).map(function (o) {
+    return h('div', { class: 'dots' + (cls ? ' ' + cls : ''), role: 'img', vars: { '--cols': String(cols) }, 'aria-label': e + ' e-bikes, ' + cl + ' classic bikes, ' + d + ' open docks' }, dots);
+  }
+
+  function renderBikes(c, b, f, fc) {
+    const w = watched(b);
+    const st = w.main;
+    const label = w.label;
+    const at = num(b.published) || num(b.fetched);
+    // With two docks their names head the columns, so the meta keeps only the time.
+    setMeta(c, w.alt ? (at ? agoSpan(at) : '') : [label, at ? ' · ' : '', at ? agoSpan(at) : null]);
+    if (!st) {
+      fill(c.body, [empty(b.ok === false ? 'Bluebikes isn’t answering right now. Lucent keeps trying.' : 'Looking for the dock…'), finderBlock(f, label, '')]);
+      return;
+    }
+    const others = w.stations.slice(w.alt ? 2 : 1, w.alt ? 4 : 3).map(function (o) {
       return h('li', { class: 'other' },
         h('span', { class: 'other-name', text: str(o.short) || str(o.name) }),
         h('span', { class: 'other-nums' },
@@ -1498,6 +1527,21 @@
           h('span', { text: (num(o.classic) || 0) + ' classic' }),
           num(o.miles) !== null ? h('span', { class: 'muted', text: o.miles.toFixed(1) + ' mi' }) : null));
     });
+    const othersList = others.length ? h('ul', { class: 'others', 'aria-label': 'Nearby docks' }, others) : null;
+    if (w.alt) {
+      fill(c.body, [
+        h('div', { class: 'docks' }, dockColumn(st, label, 'ebikes'), dockColumn(w.alt, w.altLabel, 'ebikes2')),
+        forecastBlock(fc, w),
+        finderBlock(f, label, w.altLabel),
+        othersList
+      ]);
+      return;
+    }
+    const e = Math.max(0, num(st.ebikes) || 0);
+    const cl = Math.max(0, num(st.classic) || 0);
+    const d = Math.max(0, num(st.docks) || 0);
+    const cap = Math.max(num(st.capacity) || 0, e + cl + d);
+    const renting = st.renting !== false;
     fill(c.body, [
       h('div', { class: 'bike-hero' + (renting ? '' : ' off') },
         h('div', { class: 'bike-main' },
@@ -1506,18 +1550,102 @@
         h('dl', { class: 'bike-side' },
           h('div', { class: 'bike-stat' }, h('dt', { text: 'Classic' }), h('dd', null, bigNum('classic', cl, 'side-num'))),
           h('div', { class: 'bike-stat' }, h('dt', { text: 'Open docks' }), h('dd', null, bigNum('docks', d, 'side-num'))))),
-      h('div', { class: 'dots', role: 'img', vars: { '--cols': String(clamp(Math.min(cap, 60), 1, 30)) }, 'aria-label': e + ' e-bikes, ' + cl + ' classic bikes, ' + d + ' open docks' }, dots),
+      bikeDots(e, cl, d, cap, clamp(Math.min(cap, 60), 1, 30)),
       renting ? null : h('p', { class: 'bike-note', text: 'This dock isn’t renting right now, so its bikes are shown dimmed and the finder won’t count them.' }),
-      finderBlock(f, label),
-      others.length ? h('ul', { class: 'others', 'aria-label': 'Nearby docks' }, others) : null
+      forecastBlock(fc, w),
+      finderBlock(f, label, ''),
+      othersList
     ]);
   }
 
-  function finderBlock(f, label) {
+  // One of the two watched docks: its name, its e-bikes as the hero number, then classic and open docks.
+  function dockColumn(st, name, key) {
+    const e = Math.max(0, num(st.ebikes) || 0);
+    const cl = Math.max(0, num(st.classic) || 0);
+    const d = Math.max(0, num(st.docks) || 0);
+    const cap = Math.max(num(st.capacity) || 0, e + cl + d);
+    const renting = st.renting !== false;
+    return h('div', { class: 'dock' + (renting ? '' : ' off') },
+      h('p', { class: 'dock-name', text: name }),
+      h('div', { class: 'dock-hero' },
+        bigNum(key, e, 'dock-num' + (e ? ' has' : '')),
+        h('span', { class: 'dock-unit', text: e === 1 ? 'e-bike' : 'e-bikes' })),
+      h('p', { class: 'dock-sub', text: renting ? cl + ' classic · ' + d + ' open' : 'Not renting right now' }),
+      bikeDots(e, cl, d, cap, clamp(Math.ceil(Math.min(cap, 60) / 2), 1, 15), 'dots-sm'));
+  }
+
+  /* the e-bike forecast under the docks */
+
+  const DAY_TYPES = { class: 'MIT class day', finals: 'MIT finals', offweek: 'No MIT classes', sat: 'Saturday', sun: 'Sunday' };
+
+  function timeParts(ms) {
+    try {
+      return new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit', hour12: hour12() }).formatToParts(new Date(ms));
+    } catch (e) {
+      return [];
+    }
+  }
+  function dayPeriod(ms) {
+    for (const p of timeParts(ms)) if (p.type === 'dayPeriod') return p.value;
+    return '';
+  }
+  // "7:50" where the full time is "7:50 AM": for the ends of a range that shares one AM or PM.
+  function clockShort(ms) {
+    const parts = timeParts(ms);
+    if (!parts.length) return fmtTime(ms);
+    return parts.filter(function (p) { return p.type !== 'dayPeriod'; }).map(function (p) { return p.value; }).join('').replace(/^[\s  ]+|[\s  ]+$/g, '');
+  }
+  // A time that never breaks across two lines ("8:10 AM").
+  function timeNb(ms) { return fmtTime(ms).replace(/ /g, '\u00a0'); }
+  // " (7:50 to 8:40)", with AM and PM only when the range crosses noon or midnight.
+  function rangeText(lo, hi, med) {
+    lo = num(lo) || 0;
+    hi = num(hi) || 0;
+    if (lo <= 0 || hi <= 0) return '';
+    const same = dayPeriod(lo) === dayPeriod(med) && dayPeriod(hi) === dayPeriod(med);
+    const f = same ? clockShort : timeNb;
+    return ' (' + f(lo) + ' to ' + f(hi) + ')';
+  }
+
+  function forecastBlock(raw, w) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const fc = obj(raw);
+    const pool = obj(fc.pool), first = obj(fc.first), next = obj(fc.next);
+    const lines = [];
+    let main = '';
+    if (fc.empty === true) {
+      const med = num(next.med) || 0;
+      main = med > 0 ? 'Next e-bike likely around ' + timeNb(med) + rangeText(next.lo, next.hi, med) : 'No e-bike expected in the next 8 hours';
+    } else if (fc.empty === false) {
+      const med = num(pool.med) || 0;
+      main = med > 0
+        ? 'Likely all gone by ' + timeNb(med) + (rangeText(pool.lo, pool.hi, med) || ((num(pool.lo) || 0) > 0 ? ', maybe later' : ''))
+        : 'E-bikes should last the next 8 hours';
+      const firstMed = num(first.med) || 0;
+      if (w.alt && w.main && firstMed > 0 && (num(w.main.ebikes) || 0) > 0) lines.push(w.label + ' likely empty by ' + timeNb(firstMed));
+    }
+    const chance = num(fc.morning);
+    const when = num(fc.morningAt) || 0;
+    if (chance !== null && chance >= 0 && when > 0) {
+      const today = dayStart(tvNow());
+      const day = dayStart(when) === today ? 'Today' : dayStart(when) === dayStart(tvNow(), 1) ? 'Tomorrow' : fmtDate(when, { weekday: 'long' });
+      lines.push(day + ' at ' + timeNb(when) + ': ' + Math.round(clamp(chance, 0, 1) * 100) + '% chance of an e-bike');
+    }
+    if (!main && !lines.length) return null;
+    const tag = DAY_TYPES[str(fc.dayType)] || '';
+    return h('div', { class: 'forecast' + (fc.empty === true ? ' is-empty' : '') },
+      h('p', { class: 'fc-eyebrow', text: 'Forecast' + (tag ? ' · ' + tag : '') }),
+      main ? h('p', { class: 'fc-main', text: main }) : null,
+      lines.map(function (t) { return h('p', { class: 'fc-line', text: t }); }),
+      h('p', { class: 'fc-credit', text: 'Forecast from every Bluebikes trip at these docks since 2024, MIT’s calendar and the weather.' }));
+  }
+
+  function finderBlock(f, label, altLabel) {
     const state = str(f.state).toLowerCase();
     const forMin = parseInt(str(settings().findFor), 10) || 30;
     const forText = forMin >= 60 ? plural(forMin / 60, 'hour') : forMin + ' minutes';
-    const station = str(f.station) || label;
+    const both = altLabel ? label + ' and ' + altLabel : label;
+    const station = str(f.station) || both;
     const findBtn = function (text) {
       return h('button', { class: 'btn btn-primary btn-lg btn-block find-btn', type: 'button', 'data-fk': 'find', on: { click: function () { finderDo('start'); } } }, icon('bike'), text);
     };
@@ -1526,16 +1654,23 @@
       const checks = num(f.checks) || 0;
       const sub = f.offline ? 'The dock’s feed isn’t answering. Still trying.'
         : (checks ? plural(checks, 'check') : 'Just started') + (num(f.deadline) ? ' · gives up at ' + fmtTime(f.deadline) : '');
+      const e2 = num(f.ebikes2);
+      const counts = altLabel && e2 !== null && e2 >= 0
+        ? h('p', { class: 'finder-counts', 'aria-label': 'E-bikes at the last check' },
+          h('span', { class: 'fcount' }, h('span', { text: label }), h('span', { class: 'fcount-n', text: String(Math.max(0, num(f.ebikes) || 0)) })),
+          h('span', { class: 'fcount' }, h('span', { text: altLabel }), h('span', { class: 'fcount-n', text: String(e2) })))
+        : null;
       return h('div', { class: 'finder watching' + (f.offline ? ' offline' : '') },
         h('div', { class: 'radar', 'aria-hidden': 'true' }, h('span', { class: 'ring' }), h('span', { class: 'ring' }), h('span', { class: 'ring' }), icon('bike', 'radar-ico')),
         h('div', { class: 'finder-text', role: 'status' },
           h('p', { class: 'finder-title' }, 'Watching ' + station + ' · ', h('span', { class: 'clock', 'data-since': String(started), text: fmtClock(tvNow() - started) })),
           h('p', { class: 'finder-sub', text: sub })),
+        counts,
         h('button', { class: 'btn btn-quiet btn-block finder-stop', type: 'button', 'data-fk': 'stop', on: { click: function () { finderDo('stop'); } } }, 'Stop looking'));
     }
     if (/found/.test(state)) {
       return h('div', { class: 'finder found' },
-        h('p', { class: 'finder-result' }, icon('check'), 'Found one' + (num(f.ended) ? ' at ' + fmtTime(f.ended) : '') + '. ' + plural(num(f.ebikes) || 1, 'e-bike') + ' ready.'),
+        h('p', { class: 'finder-result' }, icon('check'), 'Found one' + (str(f.station) ? ' at ' + str(f.station) : '') + (num(f.ended) ? ' at ' + fmtTime(f.ended) : '') + '. ' + plural(num(f.ebikes) || 1, 'e-bike') + ' ready.'),
         findBtn('Find another'));
     }
     if (/time|gave|expire/.test(state)) {
@@ -1545,7 +1680,9 @@
     }
     return h('div', { class: 'finder idle' },
       findBtn('Find me an e-bike'),
-      h('p', { class: 'finder-hint', text: 'Lucent checks ' + station + ' every 5 seconds and rings the TV the moment one docks. It gives up after ' + forText + '.' }));
+      h('p', { class: 'finder-hint', text: altLabel
+        ? 'Lucent checks ' + label + ' and ' + altLabel + ' every 5 seconds and rings the TV for the first e-bike at either. It gives up after ' + forText + '.'
+        : 'Lucent checks ' + label + ' every 5 seconds and rings the TV the moment one docks. It gives up after ' + forText + '.' }));
   }
 
   function wxKind(code, day) {
@@ -1938,6 +2075,391 @@
       toast(e.message, 'alert');
     }
   }
+
+  /* ------------------------------------------------------------------ the TV remote */
+
+  // Keys go to the Samsung's own remote on the home network once Lucent has paired with it, else
+  // through SmartThings (slow, 12 a minute), else nowhere until one of them is set up. Volume
+  // always goes through the Fire TV, whose volume keys reach the soundbar over HDMI-CEC.
+  function remoteState() { return obj(obj(S.samsung).remote); }
+  function hasSamsung() { return !!S.samsung && typeof S.samsung === 'object' && !Array.isArray(S.samsung); }
+  // The TV's Lucent can pair with the Samsung's remote (state.samsung.remote is there).
+  function canSetUpRemote() { const r = obj(S.samsung).remote; return hasSamsung() && !!r && typeof r === 'object' && !Array.isArray(r); }
+  function keyTarget() {
+    const sam = obj(S.samsung);
+    const r = obj(sam.remote);
+    const st = str(r.state);
+    if (st === 'connected' || (r.paired === true && st !== 'changed' && st !== 'refused' && st !== 'none')) return 'local';
+    if (sam.connected === true && obj(sam.can).keys === true) return 'cloud';
+    return '';
+  }
+  function tvLabel() {
+    const sam = obj(S.samsung);
+    const label = str(remoteState().label).replace(/^\s*\[[^\]]*\]\s*/, '');
+    return (sam.connected === true && str(sam.device)) || label || 'Samsung';
+  }
+  // SmartThings names the same keys without the KEY_ prefix, and calls Enter OK and Return Back.
+  const CLOUD_KEYS = {
+    KEY_UP: 'UP', KEY_DOWN: 'DOWN', KEY_LEFT: 'LEFT', KEY_RIGHT: 'RIGHT', KEY_ENTER: 'OK', KEY_RETURN: 'BACK',
+    KEY_HOME: 'HOME', KEY_MENU: 'MENU', KEY_SOURCE: 'SOURCE', KEY_EXIT: 'EXIT', KEY_TOOLS: 'MORE', KEY_POWER: 'POWER',
+    KEY_PLAY: 'PLAY', KEY_PAUSE: 'PAUSE', KEY_VOLUP: 'VOLUP', KEY_VOLDOWN: 'VOLDOWN', KEY_MUTE: 'MUTE'
+  };
+  const press = { busy: 0, cloud: [], nextPlay: 'KEY_PAUSE' };
+
+  // Restarts a short animation class on a button: pressed feedback, a dropped press, a failure.
+  function nudge(btn, cls) {
+    if (!btn) return;
+    btn.classList.remove(cls);
+    void btn.offsetWidth;
+    btn.classList.add(cls);
+    clearTimeout(btn['_' + cls]);
+    btn['_' + cls] = setTimeout(function () { btn.classList.remove(cls); }, 520);
+  }
+  function buzz() {
+    try {
+      if (navigator.vibrate && navigator.userActivation && navigator.userActivation.isActive) navigator.vibrate(8);
+    } catch (e) { /* no vibration here */ }
+  }
+
+  // One press. Nothing is debounced, but a press is dropped while three are still on their way.
+  function remotePress(btn, action, body, o) {
+    o = o || {};
+    if (press.busy >= 3) { nudge(btn, 'is-dropped'); return false; }
+    press.busy++;
+    nudge(btn, 'is-sent');
+    buzz();
+    act(action, body, { timeout: o.timeout || 15000, quiet: o.quiet !== false })
+      .then(function (d) { if (o.ok) o.ok(d); })
+      .catch(function (e) {
+        nudge(btn, 'is-failed');
+        if (o.fail) o.fail(e);
+        else toast(serverError(e), 'alert');
+      })
+      .then(function () { press.busy = Math.max(0, press.busy - 1); });
+    return true;
+  }
+  function sendKey(btn, key) {
+    const t = keyTarget();
+    if (t === 'local') return remotePress(btn, 'remote', { do: 'key', key: key });
+    if (t === 'cloud' && CLOUD_KEYS[key]) return cloudPress(btn, CLOUD_KEYS[key]);
+    nudge(btn, 'is-dropped');
+    return false;
+  }
+  // One key through SmartThings, which takes 12 a minute: past that, presses wait.
+  function cloudPress(btn, key, o) {
+    const now = Date.now();
+    press.cloud = press.cloud.filter(function (at) { return now - at < 60000; });
+    if (press.cloud.length >= 12) {
+      nudge(btn, 'is-dropped');
+      toast('SmartThings takes 12 keys a minute. Wait a moment.', 'warn');
+      return false;
+    }
+    if (!remotePress(btn, 'samsung', { do: 'cloudKey', key: key }, Object.assign({ timeout: 20000 }, o))) return false;
+    press.cloud.push(now);
+    return true;
+  }
+  function volumePress(btn, what) { return remotePress(btn, 'volume', { do: what }); }
+
+  function canPower() {
+    const sam = obj(S.samsung);
+    return (sam.connected === true && obj(sam.can).power === true) || !!keyTarget();
+  }
+  // A tap turns the TV off or on through SmartThings when it can, else wakes it over the network
+  // when it is off, else sends the remote's Power key.
+  function powerTap(btn) {
+    const sam = obj(S.samsung);
+    const r = obj(sam.remote);
+    if (sam.connected === true && obj(sam.can).power === true) {
+      const on = str(sam.power) !== 'on';
+      remotePress(btn, 'samsung', { do: 'power', on: on }, { timeout: 20000, quiet: false, ok: function () {
+        obj(S.samsung).power = on ? 'on' : 'off';
+        toast(on ? 'Turning the TV on' : 'Turning the TV off');
+        if (views.remote.built) views.remote.render();
+      } });
+      return;
+    }
+    if (keyTarget() === 'local' && r.canWake === true && (str(sam.power) === 'off' || str(r.state) === 'unreachable')) {
+      remotePress(btn, 'remote', { do: 'wake' }, { ok: function () { toast('Waking the TV'); } });
+      return;
+    }
+    sendKey(btn, 'KEY_POWER');
+  }
+  // A long press holds the remote's Power key for 3 seconds, as on the TV's own remote.
+  function powerHold(btn) {
+    if (keyTarget() !== 'local') { powerTap(btn); return; }
+    remotePress(btn, 'remote', { do: 'hold', key: 'KEY_POWER', ms: 3000 }, { timeout: 20000, ok: function () { toast('Held Power for 3 seconds'); } });
+  }
+  // Play and pause what the Fire TV plays when it says so, else alternate the TV's own keys.
+  function playTap(btn) {
+    if (obj(S.media).active === true) {
+      remotePress(btn, 'media', { do: 'toggle' }, { quiet: false });
+      return;
+    }
+    const k = press.nextPlay;
+    if (sendKey(btn, k)) press.nextPlay = k === 'KEY_PAUSE' ? 'KEY_PLAY' : 'KEY_PAUSE';
+  }
+  function inputKey(id) {
+    const m = /^HDMI\s*([1-4])$/i.exec(str(id));
+    if (m) return 'KEY_HDMI' + m[1];
+    return /^(dtv|tv|digitaltv)$/i.test(str(id)) ? 'KEY_TV' : '';
+  }
+
+  // Wires a remote button: feedback the moment it is touched, one press per tap, and when asked
+  // it repeats while held (arrows, volume) or does something else on a long press (Power).
+  function pressable(btn, o) {
+    let timer = 0, rep = 0, held = false;
+    function stop() {
+      clearTimeout(timer);
+      clearInterval(rep);
+      timer = rep = 0;
+      btn.classList.remove('is-pressed', 'is-holding');
+    }
+    btn.addEventListener('pointerdown', function (e) {
+      if (btn.disabled || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      stop();
+      held = false;
+      btn.classList.add('is-pressed');
+      if (o.long) {
+        btn.classList.add('is-holding');
+        timer = setTimeout(function () { held = true; btn.classList.remove('is-holding'); o.long(btn); }, 700);
+      } else if (o.repeat && o.repeat()) {
+        timer = setTimeout(function () {
+          held = true;
+          o.fire(btn);
+          rep = setInterval(function () { if (!btn.disabled) o.fire(btn); else stop(); }, 180);
+        }, 420);
+      }
+    });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) btn.addEventListener(ev, stop);
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    btn.addEventListener('click', function () {
+      if (held) { held = false; return; }
+      stop();
+      o.fire(btn);
+    });
+    return btn;
+  }
+
+  function openRemoteSettings() {
+    show('settings');
+    requestAnimationFrame(function () {
+      const target = $('#set-remote');
+      if (target) target.scrollIntoView({ block: 'start' });
+    });
+  }
+
+  views.remote = {
+    built: false,
+    build: function () {
+      const self = this;
+      const v = $('#v-remote');
+      this.head = pageHead('Samsung', ['TV ', h('em', { text: 'remote' })]);
+      this.pad = card(1, 'Remote', 'span-7 card-remote');
+      this.more = card(2, 'Picture & sound', 'span-5 card-picture');
+      this.keyEl = {};
+      const local = function () { return keyTarget() === 'local'; };
+      const key = function (name, k, cls, label, ico, text) {
+        const b = h('button', { class: cls, type: 'button', 'aria-label': label, 'data-fk': 'rc-' + name, disabled: true },
+          ico ? icon(ico, 'rc-ico') : null, text ? h('span', { class: 'rc-text', text: text }) : null);
+        pressable(b, { fire: function (btn) { sendKey(btn, k); }, repeat: /up|down|left|right/.test(name) ? local : null });
+        self.keyEl[name] = b;
+        return b;
+      };
+      const dpad = h('div', { class: 'dpad', role: 'group', 'aria-label': 'Arrows and OK' },
+        key('up', 'KEY_UP', 'dp dp-up', 'Up', 'chevron'),
+        key('right', 'KEY_RIGHT', 'dp dp-right', 'Right', 'chevron'),
+        key('down', 'KEY_DOWN', 'dp dp-down', 'Down', 'chevron'),
+        key('left', 'KEY_LEFT', 'dp dp-left', 'Left', 'chevron'),
+        key('ok', 'KEY_ENTER', 'dp-ok', 'OK', null, 'OK'));
+      const around = h('div', { class: 'dpad-wrap' },
+        key('source', 'KEY_SOURCE', 'rc-btn rc-corner tl', 'Source', 'source', 'Source'),
+        key('menu', 'KEY_MENU', 'rc-btn rc-corner tr', 'Menu', 'menu', 'Menu'),
+        dpad,
+        key('back', 'KEY_RETURN', 'rc-btn rc-corner bl', 'Back', 'undo', 'Back'),
+        key('home', 'KEY_HOME', 'rc-btn rc-corner br', 'Home', 'home', 'Home'));
+      this.power = pressable(h('button', { class: 'btn rc-pill rc-power', type: 'button', 'data-fk': 'rc-power', disabled: true }, icon('power'), h('span', { text: 'Power' })),
+        { fire: powerTap, long: powerHold });
+      this.play = pressable(h('button', { class: 'btn rc-pill rc-play', type: 'button', 'data-fk': 'rc-play', disabled: true }, icon('playpause'), h('span', { text: 'Play/Pause' })),
+        { fire: playTap });
+      const always = function () { return true; };
+      this.volDown = pressable(h('button', { class: 'rocker-btn', type: 'button', 'aria-label': 'Volume Down', 'data-fk': 'rc-vol-down' }, icon('vol-down')),
+        { fire: function (btn) { volumePress(btn, 'down'); }, repeat: always });
+      this.volUp = pressable(h('button', { class: 'rocker-btn', type: 'button', 'aria-label': 'Volume Up', 'data-fk': 'rc-vol-up' }, icon('vol-up')),
+        { fire: function (btn) { volumePress(btn, 'up'); }, repeat: always });
+      this.mute = pressable(h('button', { class: 'btn rc-pill rc-mute', type: 'button', 'aria-label': 'Mute', 'data-fk': 'rc-mute' }, icon('mute'), h('span', { text: 'Mute' })),
+        { fire: function (btn) { volumePress(btn, 'mute'); } });
+      this.hint = h('div', { class: 'rc-hint' });
+      this.inputs = h('div', { class: 'rc-inputs', role: 'group', 'aria-label': 'Inputs' });
+      fill(this.pad.body, h('div', { class: 'rc' },
+        this.hint,
+        h('div', { class: 'rc-top' }, this.power, this.play),
+        around,
+        h('div', { class: 'rc-vol' },
+          h('div', { class: 'rocker', role: 'group', 'aria-label': 'Volume' }, this.volDown, h('span', { class: 'rocker-label', 'aria-hidden': 'true', text: 'Volume' }), this.volUp),
+          this.mute),
+        h('p', { class: 'rc-note', text: 'Volume goes through the Fire TV, so the soundbar follows.' }),
+        this.inputs));
+      const grid = h('div', { class: 'grid' }, this.pad.el, this.more.el);
+      stagger(grid);
+      fill(v, [this.head.el, grid]);
+      // Arrow keys, Enter and Backspace work the remote from a computer's keyboard.
+      document.addEventListener('keydown', function (e) {
+        if (current !== 'remote' || sheet || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+        const a = document.activeElement;
+        if (a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || (a.closest && a.closest('[role="radiogroup"]')))) return;
+        if ((e.key === 'Enter' || e.key === ' ') && a && a.tagName === 'BUTTON') return;
+        const names = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Backspace: 'back' };
+        let btn = names[e.key] ? self.keyEl[names[e.key]] : null;
+        if (e.key === '+' || e.key === '=') btn = self.volUp;
+        else if (e.key === '-' || e.key === '_') btn = self.volDown;
+        else if (e.key === 'm' || e.key === 'M') btn = self.mute;
+        if (!btn || btn.disabled) return;
+        e.preventDefault();
+        nudge(btn, 'is-pressed');
+        btn.click();
+      });
+    },
+    render: function () {
+      const sam = obj(S.samsung);
+      const r = obj(sam.remote);
+      const target = loaded ? keyTarget() : '';
+      const eb = loaded ? tvLabel() : 'Samsung';
+      if (this.head.eyebrow.textContent !== eb) this.head.eyebrow.textContent = eb;
+      for (const k of Object.keys(this.keyEl)) this.keyEl[k].disabled = !target;
+      this.power.disabled = !loaded || !canPower();
+      this.play.disabled = !loaded || !(target || obj(S.media).active === true);
+      this.pad.el.classList.toggle('no-keys', !target);
+      setMeta(this.pad, !loaded ? '' : target === 'local' ? 'Over Wi-Fi' : target === 'cloud' ? 'SmartThings' : 'Volume only',
+        target === 'local' && str(r.state) === 'connected' ? 'live' : '');
+      if (!loaded) return;
+      if (changed('r.hint', [target, canSetUpRemote(), sam.connected, r.state, r.error, r.canWake])) this.renderHint(target, sam, r);
+      if (changed('r.inputs', [target, sam.connected, sam.inputs, sam.input, obj(sam.can).input])) this.renderInputs(target, sam);
+      if (changed('r.more', [hasSamsung(), sam.connected, sam.modes, sam.mode, sam.sounds, sam.sound, sam.can, sam.volume, sam.muted])) this.renderMore(sam);
+    },
+    shown: function () {
+      // Fresh power, volume and lists from SmartThings, at most every two minutes (it allows 12 calls a minute).
+      const sam = obj(S.samsung);
+      if (sam.connected !== true || Date.now() - (this.readAt || 0) < 120000) return;
+      this.readAt = Date.now();
+      act('samsung', { do: 'read' }, { timeout: 20000 }).catch(function () { /* the next look tries again */ });
+    },
+    renderHint: function (target, sam, r) {
+      const kids = [];
+      const setUp = function (text, quiet) {
+        return h('button', { class: quiet ? 'quiet-link' : 'btn btn-sm rc-setup', type: 'button', on: { click: openRemoteSettings } }, h('span', { text: text }), icon('chevron'));
+      };
+      const st = str(r.state);
+      const setup = canSetUpRemote();
+      if (setup && st === 'changed') {
+        kids.push(h('p', { class: 'amber-note', text: str(r.error) || 'The TV’s security certificate changed.' }), setUp('Trust the TV Again in Settings', true));
+      } else if (!target) {
+        kids.push(setup
+          ? [h('p', { class: 'rc-hint-text', text: 'The arrows need the TV’s remote set up. It takes a minute.' }), setUp('Set Up the Remote')]
+          : h('p', { class: 'rc-hint-text', text: 'Only volume works here. This version of Lucent can’t reach the Samsung.' }));
+      } else if (target === 'cloud') {
+        kids.push(h('p', { class: 'rc-hint-text', text: 'Keys go through SmartThings, so each one takes a moment.' }), setup ? setUp('Set Up the Remote for Instant Keys', true) : null);
+      } else if (st === 'unreachable') {
+        kids.push(h('p', { class: 'amber-note', text: 'The TV isn’t answering. It may be off.' + (r.canWake === true ? ' Tap Power to wake it.' : '') }));
+      } else if (st === 'refused' || (str(r.error) && st !== 'connected')) {
+        kids.push(h('p', { class: 'amber-note', text: str(r.error) || 'The TV said no to Lucent.' }));
+      }
+      fill(this.hint, kids);
+      this.hint.hidden = !kids.length;
+    },
+    renderInputs: function (target, sam) {
+      const cloud = sam.connected === true && obj(sam.can).input === true;
+      let list = arr(sam.inputs).map(obj).filter(function (x) { return str(x.id); });
+      if (!list.length && target === 'local') list = [{ id: 'HDMI1', name: 'HDMI 1' }, { id: 'HDMI2', name: 'HDMI 2' }];
+      if (!cloud) list = target === 'local' ? list.filter(function (x) { return inputKey(x.id); }) : [];
+      if (!list.length) { fill(this.inputs, null); this.inputs.hidden = true; return; }
+      this.inputs.hidden = false;
+      const now = str(sam.input);
+      fill(this.inputs, [h('p', { class: 'room-label', text: 'Inputs' }), h('div', { class: 'chips rc-chips' }, list.map(function (x) {
+        const id = str(x.id);
+        const b = h('button', { class: 'chip-opt', type: 'button', 'aria-pressed': id === now ? 'true' : 'false', 'data-fk': 'in-' + id, text: str(x.name) || id });
+        pressable(b, { fire: function (btn) {
+          if (cloud) {
+            remotePress(btn, 'samsung', { do: 'input', id: id }, { timeout: 20000, quiet: false, ok: function () {
+              obj(S.samsung).input = id;
+              toast('Switched to ' + (str(x.name) || id));
+              views.remote.render();
+            } });
+          } else {
+            sendKey(btn, inputKey(id));
+          }
+        } });
+        return b;
+      }))]);
+    },
+    renderMore: function (sam) {
+      const self = this;
+      if (!hasSamsung() || sam.connected !== true) {
+        setMeta(this.more, '');
+        fill(this.more.body, [
+          h('p', { class: 'set-help', text: 'Connect SmartThings to change the picture and sound modes and the TV’s own volume from here.' }),
+          hasSamsung() ? h('button', { class: 'quiet-link', type: 'button', on: { click: openSamsungSettings } }, h('span', { text: 'Set it up in Settings' }), icon('chevron')) : null
+        ]);
+        return;
+      }
+      setMeta(this.more, str(sam.power) === 'off' ? 'TV off' : '');
+      const can = obj(sam.can);
+      const pickSel = function (id, label, list, value, onPick) {
+        const sel = h('select', { class: 'input select', id: id, 'data-fk': id }, list.map(function (m) { return h('option', { value: m, text: m }); }));
+        if (value && list.indexOf(value) < 0) add(sel, h('option', { value: value, text: value }));
+        if (!value) add(sel, h('option', { value: '', text: 'Not known yet', disabled: true }));
+        sel.value = value || '';
+        sel.addEventListener('change', function () {
+          const v = sel.value;
+          sel.disabled = true;
+          onPick(v).then(function () { toast(label + ' set to ' + v); })
+            .catch(function (e) { toast(serverError(e), 'alert'); sel.value = value || ''; })
+            .then(function () { sel.disabled = false; });
+        });
+        return h('div', { class: 'set-row' }, h('div', { class: 'set-text' }, h('label', { class: 'set-label', for: id, text: label })), sel);
+      };
+      const modes = arr(sam.modes).map(str).filter(Boolean);
+      const sounds = arr(sam.sounds).map(str).filter(Boolean);
+      const kids = [];
+      if (modes.length) kids.push(pickSel('rc-picture', 'Picture mode', modes, str(sam.mode), function (v) {
+        return act('samsung', { do: 'mode', mode: v }, { timeout: 20000 }).then(function () { obj(S.samsung).mode = v; });
+      }));
+      if (sounds.length && can.sound !== false) kids.push(pickSel('rc-sound', 'Sound mode', sounds, str(sam.sound), function (v) {
+        return act('samsung', { do: 'sound', mode: v }, { timeout: 20000 }).then(function () { obj(S.samsung).sound = v; });
+      }));
+      if (can.volume === true) kids.push(this.tvVolume(sam, can));
+      if (!kids.length) kids.push(h('p', { class: 'set-help', text: 'The TV hasn’t listed its picture and sound modes yet. They show up while the TV is on.' }));
+      void self;
+      fill(this.more.body, kids);
+    },
+    // The TV's own speakers, through SmartThings: a secondary control, as the soundbar follows the Fire TV.
+    tvVolume: function (sam, can) {
+      const level = num(sam.volume);
+      const muted = str(sam.muted) === 'muted';
+      const value = h('span', { class: 'tvvol-value', text: muted ? 'Muted' : level !== null && level >= 0 ? String(Math.round(level)) : '–' });
+      const range = h('input', { class: 'tvvol-range', id: 'rc-tvvol', type: 'range', min: '0', max: '100', step: '1', value: String(level !== null && level >= 0 ? Math.round(level) : 0), 'aria-label': 'TV speaker volume' });
+      range.disabled = level === null || level < 0;
+      range.addEventListener('input', function () { value.textContent = range.value; });
+      range.addEventListener('change', function () {
+        const n = parseInt(range.value, 10);
+        act('samsung', { do: 'volume', level: n }, { timeout: 20000 }).then(function () { obj(S.samsung).volume = n; })
+          .catch(function (e) { toast(serverError(e), 'alert'); range.value = String(level || 0); value.textContent = level !== null && level >= 0 ? String(level) : '–'; });
+      });
+      const step = function (up) {
+        return pressable(h('button', { class: 'btn btn-icon btn-icon-sm', type: 'button', 'aria-label': up ? 'TV Volume Up' : 'TV Volume Down' }, icon(up ? 'vol-up' : 'vol-down')),
+          { fire: function (btn) { remotePress(btn, 'samsung', { do: 'volumeStep', up: up }, { timeout: 20000, quiet: false }); } });
+      };
+      const muteBtn = can.mute === true ? pressable(h('button', { class: 'btn btn-sm' + (muted ? ' btn-primary' : ''), type: 'button', 'aria-pressed': muted ? 'true' : 'false' }, muted ? 'Unmute' : 'Mute TV'),
+        { fire: function (btn) {
+          remotePress(btn, 'samsung', { do: 'mute', on: !muted }, { timeout: 20000, quiet: false, ok: function () { obj(S.samsung).muted = muted ? 'unmuted' : 'muted'; views.remote.render(); } });
+        } }) : null;
+      return h('div', { class: 'set-row tvvol' },
+        h('div', { class: 'set-text' },
+          h('div', { class: 'tvvol-head' }, h('label', { class: 'set-label', for: 'rc-tvvol', text: 'TV speakers' }), value),
+          h('p', { class: 'set-help', text: 'The TV’s own volume, through SmartThings. The soundbar follows the Volume buttons, so use those first.' })),
+        h('div', { class: 'tvvol-row' }, step(false), range, step(true)),
+        muteBtn);
+    }
+  };
 
   /* ------------------------------------------------------------------ drawing */
 
@@ -3045,7 +3567,7 @@
         row('motion', 'Motion', 'Reduced keeps animations to a minimum on the TV.')
       ]);
 
-      const quiet = card(3, 'Quiet hours', 'card-set');
+      const quiet = card(4, 'Quiet hours', 'card-set');
       this.awakeAlways = toggle({ id: 'awake-always', label: 'Always awake', onChange: function (on) {
         if (on) return setSetting('awakeFrom', 'always').then(function () { return setSetting('awakeTo', 'always'); }).then(function () { self.syncAwake(); });
         return setSetting('awakeFrom', self.awakeFrom.value || '07:00').then(function () { return setSetting('awakeTo', self.awakeTo.value || '00:30'); }).then(function () { self.syncAwake(); });
@@ -3080,12 +3602,21 @@
           this.bedTime)
       ]);
 
-      const bikes = card(4, 'Bikes & buses', 'card-set');
+      const bikes = card(5, 'Bikes & buses', 'card-set');
       this.station = h('select', { class: 'input select', id: 'station' });
       this.station.addEventListener('change', function () {
         const val = self.station.value;
         setSetting('station', val).then(function () { toast('Bike station saved'); }).catch(function (e) { toast(e.message, 'alert'); self.renderStations(true); });
       });
+      this.station2 = h('select', { class: 'input select', id: 'station2' });
+      this.station2.addEventListener('change', function () {
+        const val = self.station2.value;
+        setSetting('station2', val).then(function () { toast(val === 'none' ? 'Bike finder watches one dock' : 'Bike finder watches both docks'); })
+          .catch(function (e) { toast(e.message, 'alert'); self.renderStations(true); });
+      });
+      this.station2Row = h('div', { class: 'set-row', hidden: true },
+        h('div', { class: 'set-text' }, h('label', { class: 'set-label', for: 'station2', text: 'Also watch' }), h('p', { class: 'set-help', text: 'Bike finder rings for the first e-bike at either dock. Westgate wins a tie.' })),
+        this.station2);
       this.mbtaStatus = h('p', { class: 'set-help' });
       this.mbtaInput = h('input', { class: 'input mono-input', id: 'mbta', type: 'text', maxLength: 32, placeholder: '32 letters and digits', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
       this.mbtaSave = h('button', { class: 'btn', type: 'submit' }, 'Save');
@@ -3102,6 +3633,7 @@
       });
       fill(bikes.body, [
         h('div', { class: 'set-row' }, h('div', { class: 'set-text' }, h('label', { class: 'set-label', for: 'station', text: 'Bike station' }), h('p', { class: 'set-help', text: 'Auto finds Westgate in the live feed, even if it is renamed.' })), this.station),
+        this.station2Row,
         row('findFor', 'Bike finder gives up after'),
         row('alarm', 'When an e-bike docks'),
         row('alarmFor', 'Alarm rings for', 'Then it goes quiet by itself.'),
@@ -3110,16 +3642,16 @@
           mbtaForm, this.mbtaRemove)
       ]);
 
-      const notes = card(6, 'Notes & sky', 'card-set');
+      const notes = card(7, 'Notes & sky', 'card-set');
       fill(notes.body, [
         row('wakeForNotes', 'Wake the TV for a note', 'Daytime means between the awake hours.'),
         row('sky', 'Planes overhead')
       ]);
 
-      const photos = card(7, 'Photos', 'card-set');
+      const photos = card(8, 'Photos', 'card-set');
       fill(photos.body, [row('album', 'Which photos'), row('rotate', 'Change the photo')]);
 
-      const cals = card(8, 'Calendars', 'card-set');
+      const cals = card(9, 'Calendars', 'card-set');
       this.feedList = h('ul', { class: 'feeds' });
       const calName = h('input', { class: 'input', id: 'cal-name', type: 'text', maxLength: 30, placeholder: 'Family', autocomplete: 'off' });
       const calUrl = h('input', { class: 'input mono-input', id: 'cal-url', type: 'url', inputmode: 'url', placeholder: 'https://calendar.google.com/…/basic.ics', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
@@ -3154,7 +3686,7 @@
             h('p', { class: 'muted', text: 'The TV keeps the address to itself and only ever shows the start of it here.' })))
       ]);
 
-      const wifi = card(9, 'Guest Wi-Fi', 'card-set');
+      const wifi = card(10, 'Guest Wi-Fi', 'card-set');
       this.ssid = h('input', { class: 'input', id: 'wifi-ssid', type: 'text', maxLength: 32, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
       this.wpass = h('input', { class: 'input', id: 'wifi-pass', type: 'password', maxLength: 63, autocomplete: 'new-password', autocapitalize: 'off', spellcheck: 'false' });
       const eye = h('button', { class: 'btn btn-icon btn-icon-sm eye', type: 'button', 'aria-label': 'Show password', 'aria-pressed': 'false' }, icon('eye'));
@@ -3186,7 +3718,7 @@
       hideWifi.addEventListener('click', function () { act('wifi', { do: 'hide' }).catch(function (e) { toast(e.message, 'alert'); }); });
       fill(wifi.body, [h('p', { class: 'set-help', text: 'Guests scan a code on the TV to join. The password never comes back to this page.' }), wifiForm, h('div', { class: 'btn-row' }, showWifi, hideWifi)]);
 
-      const alexa = card(10, 'Alexa', 'card-set');
+      const alexa = card(11, 'Alexa', 'card-set');
       this.alexaOn = toggle({ id: 'alexa-on', label: 'Alexa routines', onChange: function (on) {
         return setSetting('alexa', on ? 'on' : 'off').then(function () { const a = obj(S.alexa); a.on = on; S.alexa = a; self.renderAlexa(true); });
       } });
@@ -3196,7 +3728,7 @@
         this.alexaBody
       ]);
 
-      const devices = card(11, 'Paired devices', 'card-set');
+      const devices = card(12, 'Paired devices', 'card-set');
       this.deviceList = h('ul', { class: 'devices' });
       const forget = h('button', { class: 'btn btn-danger btn-block', type: 'button' }, 'Forget this device');
       confirmTap(forget, 'Tap again to unpair this device', async function () {
@@ -3206,19 +3738,20 @@
       });
       fill(devices.body, [this.deviceList, forget]);
 
-      const health = card(12, 'Health', 'card-set');
+      const health = card(13, 'Health', 'card-set');
       this.healthList = h('ul', { class: 'health' });
       fill(health.body, [h('p', { class: 'set-help', text: 'Every live source the TV reads, and how it is pacing itself. Limited means the source asked Lucent to slow down.' }), this.healthList]);
 
-      const about = card(13, 'About', 'card-set');
+      const about = card(14, 'About', 'card-set');
       this.aboutBody = h('div', { class: 'about' });
       const refresh = h('button', { class: 'btn btn-block', type: 'button' }, icon('refresh'), 'Fetch fresh data now');
       refresh.addEventListener('click', function () { act('refresh', {}).then(function () { toast('The TV is fetching fresh data'); }).catch(function (e) { toast(e.message, 'alert'); }); });
       fill(about.body, [this.aboutBody, refresh]);
 
       const samsung = this.buildSamsung();
+      const remote = this.buildRemote();
       const push = this.buildPush();
-      const left = h('div', { class: 'set-col' }, look.el, samsung.el, quiet.el, bikes.el, push.el, notes.el, photos.el);
+      const left = h('div', { class: 'set-col' }, look.el, samsung.el, remote.el, quiet.el, bikes.el, push.el, notes.el, photos.el);
       const right = h('div', { class: 'set-col' }, cals.el, wifi.el, alexa.el, devices.el, health.el, about.el);
       const cols = h('div', { class: 'set-cols' }, left, right);
       stagger(cols);
@@ -3234,6 +3767,7 @@
       this.syncWifi();
       this.renderFeeds();
       this.renderSamsung();
+      this.renderRemote();
       this.renderPush();
       this.renderAlexa();
       this.renderDevices();
@@ -3411,9 +3945,240 @@
         h('div', { class: 'set-row' }, disconnect)
       ]);
     },
+    // The Samsung's own remote over the home network: the address, then Allow on the TV once.
+    buildRemote: function () {
+      const self = this;
+      const c = card(3, 'Samsung remote', 'card-set card-rm');
+      c.el.id = 'set-remote';
+      c.el.hidden = true;
+      this.rm = { card: c, busy: false, waiting: false, watchUntil: 0, gen: 0, said: '' };
+      this.rmError = h('p', { class: 'amber-note', role: 'status', hidden: true });
+      this.rmDenied = h('p', { class: 'set-help rm-denied', hidden: true, text: 'If you chose Deny, allow Lucent again on the TV: Settings, General, External Device Manager, Device Connection Manager, Device List.' });
+      this.rmIp = h('input', { class: 'input mono-input', id: 'rm-ip', type: 'text', inputmode: 'decimal', maxLength: 15, placeholder: '192.168.1.20', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': 'The TV’s address' });
+      this.rmFind = h('button', { class: 'btn btn-primary', type: 'submit' }, 'Find TV');
+      const form = h('form', { class: 'inline-form rm-form', novalidate: true }, this.rmIp, this.rmFind);
+      form.addEventListener('submit', function (e) { e.preventDefault(); self.rmFindDo(); });
+      this.rmFound = h('div', { class: 'rm-found', hidden: true });
+      this.rmPair = h('button', { class: 'btn btn-primary rm-pair', type: 'button' }, 'Pair');
+      this.rmPair.addEventListener('click', function () { self.rmPairDo(); });
+      // Which of Allow, Deny and Close the TV's question starts on is not known, so the page never
+      // presses OK blindly: the owner looks at the TV and moves to Allow first.
+      const padKey = function (key, label, kids) {
+        const b = h('button', { class: 'btn rm-key', type: 'button', 'aria-label': label + ' through SmartThings', data: { key: key } }, kids);
+        b.addEventListener('click', function () {
+          cloudPress(b, key, { quiet: true, fail: function (e) { self.setRmError(serverError(e)); } });
+        });
+        return b;
+      };
+      this.rmAllowWrap = h('div', { class: 'rm-allow', hidden: true },
+        h('div', { class: 'rm-pad', role: 'group', 'aria-label': 'TV keys through SmartThings' },
+          padKey('LEFT', 'Left', [icon('chevron', 'rm-left'), h('span', { text: 'Left' })]),
+          padKey('OK', 'OK', h('span', { text: 'OK' })),
+          padKey('RIGHT', 'Right', [h('span', { text: 'Right' }), icon('chevron')])),
+        h('p', { class: 'set-help', text: 'Look at the TV. Move to Allow, then press OK. These go through SmartThings and can take a few seconds.' }));
+      this.rmWait = h('div', { class: 'rm-wait', hidden: true },
+        h('div', { class: 'wait-rings rm-rings', 'aria-hidden': 'true' }, h('span', { class: 'ring' }), h('span', { class: 'ring' }), h('span', { class: 'ring' }), h('span', { class: 'wait-ok' }, icon('tv'))),
+        h('p', { class: 'rm-wait-title', role: 'status', text: 'Choose Allow on the TV' }),
+        h('p', { class: 'set-help rm-wait-help', text: 'The TV asks whether to allow Lucent. Pick Allow with the TV’s own remote.' }),
+        this.rmAllowWrap);
+      const step = function (n, kids) {
+        return h('li', { class: 'step', data: { n: n } }, h('span', { class: 'step-n', 'aria-hidden': 'true', text: String(n) }), h('div', { class: 'step-body' }, kids));
+      };
+      this.rmStep2 = step(2, [h('p', { text: 'Pair. The TV asks once whether to allow Lucent.' }), h('div', { class: 'btn-row' }, this.rmPair), this.rmWait]);
+      this.rmSteps = h('ol', { class: 'steps' },
+        step(1, [h('p', { text: 'On the TV: Settings, General, Network, Network Status, IP Settings. Type the address here.' }), form, this.rmFound]),
+        this.rmStep2);
+      this.rmIntro = h('p', { class: 'set-help', text: 'Lucent can press the TV’s own remote keys over Wi-Fi. The arrows and OK on the Remote tab then answer at once.' });
+      this.rmDevice = h('div', { class: 'rm-device', hidden: true });
+      this.rmTrust = h('button', { class: 'btn btn-primary rm-trust', type: 'button', hidden: true }, 'Trust the TV Again');
+      this.rmTrust.addEventListener('click', async function () {
+        self.rmTrust.disabled = true;
+        try {
+          await act('remote', { do: 'trust' }, { timeout: 15000 });
+          const r = self.rmLocal();
+          r.state = 'off';
+          r.paired = false;
+          r.error = '';
+          self.setRmError('');
+          self.renderRemote(true);
+          toast('Trusted. Now pair again.');
+        } catch (err) {
+          self.setRmError(serverError(err));
+        }
+        self.rmTrust.disabled = false;
+      });
+      this.rmForget = h('button', { class: 'btn btn-quiet btn-danger btn-sm rm-forget', type: 'button', hidden: true }, 'Forget');
+      confirmTap(this.rmForget, 'Tap again to forget the TV', async function () {
+        try {
+          await act('remote', { do: 'forget' }, { timeout: 15000 });
+          const sam = obj(S.samsung);
+          sam.remote = { state: 'none', address: '', paired: false, label: '', model: '', canWake: false, error: '' };
+          S.samsung = sam;
+          self.rmIp.value = '';
+          self.setRmError('');
+          self.renderRemote(true);
+          if (views.remote.built) views.remote.render();
+          toast('Lucent forgot the TV');
+        } catch (err) {
+          self.setRmError(serverError(err));
+        }
+      });
+      fill(c.body, [
+        this.rmError,
+        this.rmDenied,
+        this.rmDevice,
+        this.rmIntro,
+        this.rmSteps,
+        h('div', { class: 'btn-row rm-actions' }, this.rmTrust, this.rmForget),
+        h('p', { class: 'set-help sam-note', text: 'Lucent talks to the TV only on your home network and keeps its key on the TV.' })
+      ]);
+      return c;
+    },
+    rmLocal: function () {
+      const sam = obj(S.samsung);
+      const r = obj(sam.remote);
+      sam.remote = r;
+      S.samsung = sam;
+      return r;
+    },
+    setRmError: function (text) {
+      this.rmError.textContent = text || '';
+      this.rmError.hidden = !text;
+    },
+    rmFindDo: async function () {
+      if (this.rm.busy) return;
+      const ip = this.rmIp.value.trim();
+      if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) { this.setRmError('Type the address the TV shows, like 192.168.1.20.'); this.rmIp.focus(); return; }
+      this.rm.busy = true;
+      this.rmFind.disabled = true;
+      this.rmFind.classList.add('busy');
+      try {
+        const d = await act('remote', { do: 'address', ip: ip }, { timeout: 15000 });
+        const r = this.rmLocal();
+        r.address = ip;
+        if (str(d.label)) r.label = str(d.label);
+        if (str(d.model)) r.model = str(d.model);
+        if (!str(r.state) || str(r.state) === 'none') r.state = 'off';
+        r.error = '';
+        this.rm.found = { label: str(d.label), model: str(d.model), power: str(d.power) };
+        this.setRmError('');
+        this.renderRemote(true);
+        toast(str(d.label) ? 'Found ' + str(d.label).replace(/^\s*\[[^\]]*\]\s*/, '') : 'Found the TV');
+      } catch (err) {
+        this.setRmError(serverError(err));
+      }
+      this.rm.busy = false;
+      this.rmFind.disabled = false;
+      this.rmFind.classList.remove('busy');
+    },
+    // Waits while the TV asks to allow Lucent. The TV may cut a long request, so the state that
+    // the page polls decides too: connected means paired, anything but waiting means it ended.
+    rmPairDo: async function () {
+      if (this.rm.waiting) return;
+      const gen = ++this.rm.gen;
+      this.rm.waiting = true;
+      this.rm.watchUntil = 0;
+      this.setRmError('');
+      const r = this.rmLocal();
+      r.state = 'allow';
+      r.error = '';
+      this.renderRemote(true);
+      try {
+        await act('remote', { do: 'pair' }, { timeout: 50000 });
+        if (gen !== this.rm.gen) return;
+        this.rmPaired();
+      } catch (err) {
+        if (gen !== this.rm.gen) return;
+        if (!err.status) {
+          this.rm.watchUntil = Date.now() + 40000;
+          pollSoon();
+          return;
+        }
+        this.rm.waiting = false;
+        const x = this.rmLocal();
+        if (str(x.state) === 'allow' || str(x.state) === 'connecting') x.state = err.status === 403 ? 'refused' : 'off';
+        this.setRmError(serverError(err));
+        this.renderRemote(true);
+      }
+    },
+    rmPaired: function () {
+      this.rm.waiting = false;
+      this.rm.watchUntil = 0;
+      const r = this.rmLocal();
+      r.state = 'connected';
+      r.paired = true;
+      r.error = '';
+      this.setRmError('');
+      this.renderRemote(true);
+      if (views.remote.built) views.remote.render();
+      toast('Paired. The remote is ready.');
+    },
+    renderRemote: function (force) {
+      const raw = S.samsung;
+      const has = canSetUpRemote();
+      this.rm.card.el.hidden = !has;
+      if (!has) return;
+      const sam = obj(raw);
+      const r = obj(sam.remote);
+      const state = str(r.state) || 'none';
+      // A pair request the TV cut short: the polled state says how it ended.
+      if (this.rm.waiting && this.rm.watchUntil) {
+        if (state === 'connected') { this.rmPaired(); return; }
+        if ((state !== 'allow' && state !== 'connecting') || Date.now() > this.rm.watchUntil) {
+          this.rm.waiting = false;
+          this.rm.watchUntil = 0;
+          if (!str(r.error)) this.setRmError('The TV didn’t answer in time. Try again.');
+        }
+      }
+      if (!changed('s.remote', [r, sam.connected, obj(sam.can).keys, this.rm.waiting, this.rm.found]) && !force) return;
+      const said = str(r.error);
+      if (said) this.setRmError(said);
+      else if (this.rm.said && this.rmError.textContent === this.rm.said) this.setRmError('');
+      this.rm.said = said;
+      const paired = r.paired === true;
+      const changedCert = state === 'changed';
+      const waiting = this.rm.waiting || state === 'allow' || state === 'connecting';
+      // A refusal: the TV said no, which is what choosing Deny on its question does.
+      const shown = this.rmError.hidden ? '' : this.rmError.textContent;
+      this.rmDenied.hidden = waiting || !(state === 'refused' || /said no|\bden(y|ied)\b/i.test(shown));
+      const ready = (paired || state === 'connected') && !changedCert && !waiting;
+      setMeta(this.rm.card, state === 'connected' ? 'Connected' : changedCert ? 'Check the TV' : paired ? 'Paired' : waiting ? 'Waiting' : '', state === 'connected' ? 'live' : '');
+      const address = str(r.address);
+      if (address && document.activeElement !== this.rmIp && !this.rmIp.value) this.rmIp.value = address;
+      // What Lucent knows about the TV: its name, model and address.
+      const label = str(r.label).replace(/^\s*\[[^\]]*\]\s*/, '');
+      const known = !!(label || str(r.model));
+      const deviceKids = known || address ? [
+        icon('tv', 'sam-ico'),
+        h('div', null,
+          h('p', { class: 'sam-name', text: label || 'Samsung TV' }),
+          h('p', { class: 'set-help', text: [str(r.model), address].filter(Boolean).join(' · ') + (ready ? '. Keys go straight to it.' : '') }))
+      ] : null;
+      fill(this.rmDevice, deviceKids);
+      this.rmDevice.hidden = !(ready || changedCert) || !deviceKids;
+      fill(this.rmFound, !ready && known ? h('p', { class: 'rm-found-text' }, icon('check'), h('span', { text: 'Found ' + (label || 'the TV') + (str(r.model) ? ', ' + str(r.model) : '') + '.' })) : null);
+      this.rmFound.hidden = ready || !known;
+      this.rmIntro.hidden = ready || changedCert;
+      this.rmSteps.hidden = ready || changedCert;
+      const canPair = !!address && !waiting;
+      this.rmStep2.classList.toggle('later', !address);
+      this.rmPair.disabled = !canPair;
+      this.rmPair.textContent = state === 'refused' || state === 'unreachable' || said ? 'Pair Again' : 'Pair';
+      this.rmWait.hidden = !waiting;
+      this.rmAllowWrap.hidden = !(sam.connected === true && obj(sam.can).keys === true);
+      this.rmTrust.hidden = !changedCert;
+      this.rmForget.hidden = !(address || paired);
+      if (ready && !this.rmOpen) {
+        this.rmOpen = h('button', { class: 'btn btn-sm rm-open', type: 'button', on: { click: function () { show('remote'); } } }, icon('remote'), 'Open Remote');
+      }
+      if (this.rmOpen) {
+        if (ready && this.rmOpen.parentNode !== this.rmTrust.parentNode) this.rmTrust.parentNode.insertBefore(this.rmOpen, this.rmForget);
+        this.rmOpen.hidden = !ready;
+      }
+    },
     buildPush: function () {
       const self = this;
-      const c = card(5, 'Phone alerts', 'card-set card-push');
+      const c = card(6, 'Phone alerts', 'card-set card-push');
       c.el.hidden = true;
       this.pushCard = c;
       this.pushOn = toggle({ id: 'push-on', label: 'Phone alerts', onChange: function (on) {
@@ -3473,6 +4238,19 @@
         fill(this.station, opts.map(function (s) { return h('option', { value: str(s.id), text: (s.id === 'auto' ? 'Auto · ' : '') + (str(s.name) || str(s.id)) }); }));
       }
       if (document.activeElement !== this.station) this.station.value = val;
+      // The second dock bike finder watches: "auto" is Erie St, "none" watches Westgate alone.
+      const list2 = arr(S.stations2).map(obj).filter(function (s) { return str(s.id); });
+      this.station2Row.hidden = !list2.length;
+      if (!list2.length) return;
+      const val2 = str(settings().station2) || 'auto';
+      if (changed('s.stations2', list2) || force) {
+        fill(this.station2, list2.map(function (s) {
+          const id = str(s.id);
+          const name = str(s.name) || (id === 'none' ? 'None' : id);
+          return h('option', { value: id, text: id === 'auto' ? 'Auto · ' + name : name });
+        }));
+      }
+      if (document.activeElement !== this.station2) this.station2.value = val2;
     },
     syncMbta: function () {
       const set = str(settings().mbtaKey) === 'set';
