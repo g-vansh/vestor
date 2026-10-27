@@ -143,7 +143,7 @@ gracefully.
                           "miles": 0.15}]},
   "forecast": {"empty": false, "dayType": "class", "pool": {"lo": 1793126580000, "med": 1793128560000, "hi": 1793132220000},
                "first": {"lo": 1793125620000, "med": 1793127120000, "hi": 1793130000000},
-               "next": {"lo": 0, "med": 0, "hi": 0}, "morning": -1, "morningAt": 0},
+               "next": {"lo": 0, "med": 0, "hi": 0}, "morning": -1, "morningAt": 0, "morning1h": -1, "morning2h": -1},
   "finder": {"state": "idle", "started": 0, "deadline": 0, "ended": 0, "ebikes": 0, "checks": 0,
              "station": "Westgate", "ebikes2": 1, "alarm": false, "offline": false},
   "transit": {"fetched": 1793124295000, "live": false,
@@ -176,7 +176,17 @@ gracefully.
   "health": [{"host": "gbfs.lyft.com", "state": "OK", "sent": 120, "ok": 30, "unchanged": 88, "limited": 0,
               "failed": 2, "perMinute": 40}],
   "alexa": {"on": true, "url": "<find e-bike link>", "stopUrl": "<stop and silence link>",
-            "commands": [{"name": "Bike finder", "say": "Alexa, turn on bike finder", "on": "<url>", "off": "<url>"}]}
+            "commands": [{"name": "Bike finder", "say": "Alexa, turn on bike finder", "on": "<url>", "off": "<url>"}]},
+  "assistant": {"on": true, "hint": "…AwAA", "mode": "auto", "cap": 40, "spent": 1230000, "perDay": 150,
+                "asking": {"id": "q7", "question": "Is the 85 late?", "from": "Alex's iPhone", "text": "", "error": "",
+                           "at": 1793124290000, "cost": 0, "busy": true, "model": "", "advised": false, "sources": [], "did": []},
+                "history": [{"id": "a6", "question": "What's the famous brass town in India?", "from": "the TV",
+                             "text": "Moradabad, in Uttar Pradesh…", "error": "", "at": 1793120000000, "cost": 12000, "busy": false,
+                             "model": "Haiku 5.5", "advised": false,
+                             "sources": [{"title": "Moradabad - Wikipedia", "url": "https://en.wikipedia.org/wiki/Moradabad"}],
+                             "did": []}],
+                "rules": [{"id": "a1", "name": "Bike finder on school mornings", "at": "07:15", "offset": 0, "days": 31,
+                           "action": "find_ebike", "value": "", "last": "", "on": true, "when": "Weekdays at 7:15 AM"}]}
 }
 ```
 
@@ -203,11 +213,27 @@ Notes on the newer fields (all optional, the page renders without them):
   next e-bike likely turns up at either dock. `morning` is the chance (0 to 1) that at least one e-bike waits at either
   dock at `morningAt`, given in the evening and at night only, and -1 otherwise. The page shows "Likely all gone by
   8:10 AM (7:50 to 8:40)", "Westgate likely empty by 7:55 AM" (two docks, `first.med` set, Westgate has e-bikes),
-  "Next e-bike likely around 9:25 AM (8:50 to 10:20)" and "Tomorrow at 7:30 AM: 41% chance of an e-bike" ("Today"
-  when `morningAt` falls today), in the phone's own clock format.
+  "Next e-bike likely around 9:25 AM (8:50 to 10:20)" and, as the TV does, "Tomorrow, chance of an e-bike: 77% at 7:30,
+  69% at 8:30, 60% at 9:30" ("Chance of an e-bike: …" when `morningAt` falls today), in the phone's own clock format.
+  `morning1h` and `morning2h` are the chances an hour and two hours after `morningAt`, -1 when unknown, and a value
+  below 0 is left out. A TV without the two fields gives "Tomorrow at 7:30 AM: 41% chance of an e-bike".
 - `finder.ebikes2` is the e-bikes at the second dock at the last check, -1 when only one dock is watched. While
   searching, `finder.station` names the docks being watched ("Westgate and Erie St"). Once found, it names the dock
   where the e-bike is ("Erie St"). With both, Westgate wins a tie.
+- `assistant` is there when the TV can ask Claude (Anthropic's API). `on` says a key is set, and `hint` is its last
+  four characters ("…AwAA"): the key itself is never sent. `mode` is `auto` (the cheapest that gets it right: Haiku 5.5
+  answers, asks Opus 5.5 for advice only when a question needs reasoning, and retries on Sonnet 5.5 if Haiku stumbles)
+  or `best` (Opus 5.5 every time, about ten to forty times the cost). `cap` is the month's budget in whole dollars
+  (default 40), `spent` this month's spending in millionths of a dollar, `perDay` the questions allowed a day.
+  `asking` is the Answer being worked on (`busy` true), absent otherwise. `history` is the last 12 Answers, newest
+  first, each with `text` or `error`. Questions from every phone and the TV share it. An Answer is `{id, question,
+  from ("Alex's iPhone" or "the TV"), text, error, at, cost (millionths of a dollar), busy, model ("Haiku 5.5",
+  "Sonnet 5.5", "Opus 5.5" or ""), advised (true when Opus was consulted), sources: [{title, url}] (at most three),
+  did: ["Opened it in Netflix"]}`. The page shows the model and cost small under each answer: "Haiku 5.5 · 0.05¢",
+  "Haiku 5.5 with Opus advice · 6.8¢" (hundredths of a cent under one cent). It links sources by their domain, and
+  only http and https addresses. `rules` are the automations the assistant made: `{id, name, at ("07:15", "sunrise"
+  or "sunset"), offset (minutes), days (bitmask, Monday = 1 … Sunday = 64), action, value, last, on, when ("Weekdays
+  at 7:15 AM")}`.
 - `stations2` lists the choices for the second dock: `auto` is Erie St, `none` watches the first dock alone, and the
   rest are station ids. `settings.station2` is the current choice.
 - `samsung.power` ("on", "off" or ""), `volume` (0 to 100, -1 when unknown), `muted` ("muted", "unmuted" or ""),
@@ -262,6 +288,12 @@ Notes on the newer fields (all optional, the page renders without them):
 | `remote` | `{"do": "hold", "key": "KEY_POWER", "ms": 3000}` | Hold a key down (100 to 5000 ms), as a long press on the TV's remote. The page sends it for a long press on Power |
 | `remote` | `{"do": "wake"}` | Wake the TV over the network (when `canWake`). 409 `{"error": "…"}` when Lucent has not read the TV's network card yet |
 | `remote` | `{"do": "close"}`, `{"do": "trust"}`, `{"do": "forget"}` | Close the channel. Trust the TV's new certificate (state `changed`), which also forgets the old key, so pair again after. Forget the TV altogether |
+| `ask` | `{"text": "≤500 chars"}` | Ask Lucent. Answers at once with the queued Answer (`busy` true, its own `id`). The finished Answer appears in `assistant.history` a few seconds later under a new `id`, so the page finds it by its `question` and an `at` at or after the queued one, or stops waiting when `asking` is gone. It polls every 1.5 s meanwhile. 409 `{"error": "<a sentence>"}` when it cannot ask now: no key yet, the month's budget is used up, 150 questions a day, 6 a minute, or two still being answered |
+| `assistant` | `{"do": "key", "key": "sk-ant-…"}`, `{"do": "forget"}` | Save the Claude API key on the TV (never echoed back), or forget it |
+| `assistant` | `{"do": "mode", "mode": "auto"\|"best"}` | The cheapest model that gets it right, or Opus 5.5 every time |
+| `assistant` | `{"do": "cap", "dollars": 1..100}` | The monthly budget. The page offers 10, 20, 40, 60, 80 and 100 |
+| `assistant` | `{"do": "clear"}` | Clear the question history |
+| `assistant` | `{"do": "ruledel", "id"}`, `{"do": "ruleon", "id", "on": bool}` | Delete an automation, or turn it off and on |
 | `volume` | `{"do": "up"\|"down"\|"mute"}` | The Fire TV's own volume keys. Fire OS sends them over HDMI-CEC to whatever plays the sound (the VIZIO soundbar here), so this works with no Samsung setup at all. The page's Volume buttons send this |
 | `push` | `{"do": "test"}` | Send a test notification to subscribed phones. 409 `{"error": "…"}` when phone alerts are off |
 
@@ -288,7 +320,8 @@ address. New feeds send the full URL (https:// or webcal://).
 Errors from actions: a 400 or 409 may carry `{"error": "<a sentence for the user>"}`. The page shows that sentence
 when it is a sentence, and its own wording for numeric errors. `remote` and the newer `samsung` actions answer
 errors with any status from 400 to 504 (`{"error": "The TV stopped answering.", "status": 503}`): the page shows the
-sentence in the same way, and its own wording for a bare code such as `"key"`.
+sentence in the same way, and its own wording for a bare code such as `"key"`. `assistant` answers bad input with
+400 and a sentence ("That doesn't look like a Claude API key. It starts with sk-ant-."), which the page shows in amber.
 
 ## Photo upload
 

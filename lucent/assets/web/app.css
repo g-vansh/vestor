@@ -2207,6 +2207,30 @@ a.btn { text-decoration: none; }
 }
 
 /* Claude in Settings */
+.cl-modes { display: grid; gap: 8px; }
+.cl-mode {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .25s, box-shadow .25s;
+  touch-action: manipulation;
+}
+.cl-mode[aria-checked="true"] { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cl-mode-dot { width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--text-3); transition: box-shadow .3s var(--spring); }
+.cl-mode[aria-checked="true"] .cl-mode-dot { box-shadow: inset 0 0 0 6px var(--accent); }
+.cl-mode-text { display: grid; gap: 3px; }
+.cl-mode-name { font-weight: 600; font-size: 15px; }
+.cl-mode-help { color: var(--text-2); font-size: 13px; line-height: 1.4; text-wrap: pretty; }
 .card-claude .card-body > * + * { margin-top: 14px; }
 .card-claude .card-body > [hidden] + * { margin-top: 0; }
 .cl-status { display: grid; gap: 14px; }

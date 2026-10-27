@@ -1521,14 +1521,22 @@
     });
   }
 
-  // "about 4¢" from millionths of a dollar.
+  // "0.05¢", "6.8¢", "12¢" or "$1.20" from millionths of a dollar.
   function costText(cost) {
     cost = num(cost);
     if (cost === null || cost <= 0) return '';
     const cents = cost / 10000;
-    if (cents < 1) return 'under 1¢';
-    if (cents < 100) return 'about ' + Math.round(cents) + '¢';
-    return 'about $' + (cost / 1000000).toFixed(2);
+    if (cents < 0.005) return 'under 0.01¢';
+    if (cents < 1) return cents.toFixed(2) + '¢';
+    if (cents < 10) return String(Math.round(cents * 10) / 10) + '¢';
+    if (cents < 100) return Math.round(cents) + '¢';
+    return '$' + (cost / 1000000).toFixed(2);
+  }
+  // "Haiku 5.5", or "Haiku 5.5 with Opus advice" when Opus was consulted.
+  function modelText(a) {
+    const m = str(a.model).trim();
+    if (a.advised === true) return m ? m + ' with Opus advice' : 'With Opus advice';
+    return m;
   }
   function safeUrl(u) {
     try {
@@ -1548,7 +1556,7 @@
   }
   function answerMeta(a, cls) {
     const at = num(a.at);
-    const bits = [askedBy(a.from), costText(a.cost)].filter(Boolean);
+    const bits = [askedBy(a.from), modelText(a), costText(a.cost)].filter(Boolean);
     return h('p', { class: cls }, at ? agoSpan(at) : null, bits.length ? (at ? ' · ' : '') + bits.join(' · ') : '');
   }
 
@@ -1858,7 +1866,7 @@
       const pct = function (x) { return Math.round(clamp(x, 0, 1) * 100) + '%'; };
       // The evening outlook: the chance at morningAt and an hour and two hours after it.
       const later = [[num(fc.morning1h), when + 3600000], [num(fc.morning2h), when + 7200000]].filter(function (x) { return x[0] !== null && x[0] >= 0; });
-      if (later.length) {
+      if (later.length || num(fc.morning1h) !== null || num(fc.morning2h) !== null) {
         const pts = [[chance, when]].concat(later);
         const same = pts.every(function (x) { return dayPeriod(x[1]) === dayPeriod(when); });
         const at = same ? clockShort : timeNb;
@@ -4468,6 +4476,30 @@
       this.clCapRow = h('div', { class: 'set-row', hidden: true },
         h('div', { class: 'set-text' }, h('label', { class: 'set-label', for: 'claude-cap', text: 'Monthly cap' }), h('p', { class: 'set-help', text: 'Lucent stops asking when the month reaches it.' })),
         this.clCap);
+      // Which model answers: the cheapest that gets it right (auto), or Opus every time (best).
+      this.clModes = {};
+      const modeOpt = function (v, name, help) {
+        const b = h('button', { class: 'cl-mode', type: 'button', role: 'radio', 'aria-checked': 'false', data: { v: v } },
+          h('span', { class: 'cl-mode-dot', 'aria-hidden': 'true' }),
+          h('span', { class: 'cl-mode-text' }, h('span', { class: 'cl-mode-name', text: name }), h('span', { class: 'cl-mode-help', text: help })));
+        b.addEventListener('click', function () { self.setClMode(v); });
+        self.clModes[v] = b;
+        return b;
+      };
+      const modeGroup = h('div', { class: 'cl-modes', role: 'radiogroup', 'aria-labelledby': 'cl-mode-label' },
+        modeOpt('auto', 'Cheapest that gets it right', 'Haiku 5.5 answers. It asks Opus 5.5 for advice only when a question needs reasoning, and tries again on Sonnet 5.5 if Haiku stumbles.'),
+        modeOpt('best', 'Always the best model', 'Opus 5.5 answers every time. It costs about ten to forty times more.'));
+      modeGroup.addEventListener('keydown', function (e) {
+        if (!/^Arrow(Up|Down|Left|Right)$/.test(e.key)) return;
+        e.preventDefault();
+        const next = self.clModes.auto.getAttribute('aria-checked') === 'true' ? 'best' : 'auto';
+        self.clModes[next].focus();
+        self.setClMode(next);
+      });
+      this.clModeRow = h('div', { class: 'set-row', hidden: true },
+        h('div', { class: 'set-text' }, h('p', { class: 'set-label', id: 'cl-mode-label', text: 'Which model answers' }),
+          h('p', { class: 'set-help', text: 'Most questions cost well under a tenth of a cent. Questions that need a web search cost about one cent. Hard questions that need Opus’s advice cost about five to eight cents.' })),
+        modeGroup);
       this.clForget = h('button', { class: 'btn btn-quiet btn-danger btn-sm cl-forget', type: 'button', 'data-fk': 'cl-forget' }, 'Forget Key');
       confirmTap(this.clForget, 'Tap again to forget the key', async function () {
         try {
@@ -4489,15 +4521,41 @@
         this.clError,
         this.clStatus,
         this.clForm,
+        this.clModeRow,
         this.clCapRow,
         this.clForgetRow,
-        h('p', { class: 'set-help cl-help', text: 'Your key stays on the TV and is never shown again. Questions, and what the TV shows (bikes, weather, shuttles, your next plans, what’s playing), go to Anthropic to answer them. Lucent stops asking when the month reaches the cap.' }),
+        h('p', { class: 'set-help cl-help', text: 'When you ask, the TV sends Anthropic your question, the last few questions and answers, and what the TV knows right now: the time, both docks’ bike counts and forecast, the finder’s state, weather, shuttle times, your next plans, what is playing, your installed app names, the Samsung’s inputs and picture and sound modes, your automations and the wallpaper look. Questions asked from any phone or the TV share the same memory. Web searches use your rough location (Cambridge, MA). Anthropic does not train on API data and deletes it after 30 days. Your key stays on the TV and phones only ever see its last four characters.' }),
         h('div', { class: 'cl-rules' },
           h('p', { class: 'set-label', text: 'Automations' }),
           this.clRules,
           h('p', { class: 'set-help', text: 'Ask Lucent to add one, like: every weekday at 7:15 start the bike finder.' }))
       ]);
       return c;
+    },
+    setClMode: async function (v) {
+      const a = assistantState();
+      if (!a || this.clModeBusy) return;
+      const was = str(a.mode) === 'best' ? 'best' : 'auto';
+      if (v === was) return;
+      this.clModeBusy = true;
+      a.mode = v;
+      this.paintClMode(v);
+      try {
+        await act('assistant', { do: 'mode', mode: v });
+        toast(v === 'best' ? 'Opus 5.5 answers every question now' : 'The cheapest model that gets it right answers now');
+      } catch (e) {
+        a.mode = was;
+        this.paintClMode(was);
+        toast(serverError(e), 'alert');
+      }
+      this.clModeBusy = false;
+    },
+    paintClMode: function (v) {
+      for (const k of Object.keys(this.clModes)) {
+        const on = k === v;
+        this.clModes[k].setAttribute('aria-checked', on ? 'true' : 'false');
+        this.clModes[k].tabIndex = on ? 0 : -1;
+      }
     },
     setClError: function (text) {
       this.clError.textContent = text || '';
@@ -4507,14 +4565,15 @@
       const a = assistantState();
       this.cl.card.el.hidden = !a;
       if (!a) return;
-      if (!changed('s.claude', [a.on, a.hint, a.model, a.cap, a.spent, a.rules]) && !force) return;
+      if (!this.clModeBusy) this.paintClMode(str(a.mode) === 'best' ? 'best' : 'auto');
+      if (!changed('s.claude', [a.on, a.hint, a.model, a.mode, a.cap, a.spent, a.rules]) && !force) return;
       const on = a.on === true;
       setMeta(this.cl.card, on ? 'Connected' : '', on ? 'live' : '');
       const cap = num(a.cap) || 40;
       const spent = Math.max(0, num(a.spent) || 0) / 1000000;
       const hint = str(a.hint);
       fill(this.clStatus, on ? [
-        h('p', { class: 'cl-line' }, h('span', { class: 'strong', text: 'Connected' }), ' · key ' + (hint ? (/^…/.test(hint) ? hint : '…' + hint) : 'saved') + ' · ' + modelName(a.model)),
+        h('p', { class: 'cl-line' }, h('span', { class: 'strong', text: 'Connected' }), ' · key ' + (hint ? (/^…/.test(hint) ? hint : '…' + hint) : 'saved') + (str(a.model) ? ' · ' + modelName(a.model) : '')),
         h('div', { class: 'cl-spend' },
           h('div', { class: 'cl-spend-top' }, h('span', { class: 'set-label', text: 'This month' }), h('span', { class: 'cl-spend-num', text: '$' + spent.toFixed(2) + ' of $' + cap })),
           h('div', { class: 'cl-bar', role: 'img', 'aria-label': Math.round(Math.min(1, spent / cap) * 100) + '% of the cap used' },
@@ -4523,6 +4582,7 @@
       this.clStatus.hidden = !on;
       this.clForm.hidden = on;
       this.clCapRow.hidden = !on;
+      this.clModeRow.hidden = !on;
       this.clForgetRow.hidden = !on;
       const caps = [10, 20, 40, 60, 80, 100];
       if (caps.indexOf(cap) < 0) caps.push(cap);
