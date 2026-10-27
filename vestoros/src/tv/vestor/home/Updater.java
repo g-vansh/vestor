@@ -12,6 +12,7 @@ import android.content.pm.SigningInfo;
 import android.content.res.Resources;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,6 +35,9 @@ import java.util.concurrent.Executors;
  * (and its undo takes back); without it the TV says where to allow it.
  */
 final class Updater {
+    /** Logcat tag: `adb logcat -s Vestor` follows every check, download and install. */
+    private static final String LOG = "Vestor";
+
     private final Hub hub;
     private final Context app;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -92,6 +96,7 @@ final class Updater {
 
     private void set(int s) {
         state = s;
+        Log.i(LOG, "update: " + Update.STATES[s] + (version.isEmpty() ? "" : " " + version) + (problem.isEmpty() ? "" : ", " + problem));
         hub.post(Hub.UPDATE, null);
     }
 
@@ -132,6 +137,7 @@ final class Updater {
     private void fetch(boolean manual, int before) {
         checkedAt = System.currentTimeMillis();
         String json = Net.text(Update.MANIFEST, 20000, false, Net.LIMIT_TINY);
+        if (json == null) Log.w(LOG, "update: no update.json (offline, GitHub down, or paced)");
         if (json == null) {
             // A timed check that could not connect says nothing: the next one tries again.
             problem = manual ? "No Connection to GitHub" : problem;
@@ -140,6 +146,7 @@ final class Updater {
         }
         int installed = installed();
         Update.Offer offer = Update.parse(json, installed);
+        Log.i(LOG, "update: installed code " + installed + ", offer " + (offer == null ? "none" : "code " + offer.code));
         if (offer == null) {
             dropReady();
             problem = "";
@@ -165,6 +172,7 @@ final class Updater {
             }
         }
         if (!Net.download(offer.url(), part, offer.size, offer.sha256, 30000, 15 * 60000L)) {
+            Log.w(LOG, "update: download failed or its size or SHA-256 did not match");
             problem = "Download Failed";
             set(Update.FAILED);
             return;
@@ -215,12 +223,22 @@ final class Updater {
         try {
             PackageInfo info = pm.getPackageArchiveInfo(apk.getPath(), flags);
             PackageInfo self = pm.getPackageInfo(app.getPackageName(), flags);
-            if (info == null || self == null || !app.getPackageName().equals(info.packageName)) return null;
-            if (info.getLongVersionCode() != code || code <= self.getLongVersionCode()) return null;
+            if (info == null || self == null || !app.getPackageName().equals(info.packageName)) {
+                Log.w(LOG, "update: refused, not a readable " + app.getPackageName() + " APK");
+                return null;
+            }
+            if (info.getLongVersionCode() != code || code <= self.getLongVersionCode()) {
+                Log.w(LOG, "update: refused, version " + info.getLongVersionCode() + " where " + code + " was offered");
+                return null;
+            }
             String[] theirs = signers(info), ours = signers(self);
-            if (theirs == null || ours == null || !Arrays.equals(theirs, ours)) return null;
+            if (theirs == null || ours == null || !Arrays.equals(theirs, ours)) {
+                Log.w(LOG, "update: refused, not signed by this app's key");
+                return null;
+            }
             return info;
         } catch (PackageManager.NameNotFoundException | RuntimeException e) {
+            Log.w(LOG, "update: refused, " + e);
             return null;
         }
     }
@@ -312,6 +330,7 @@ final class Updater {
             s.commit(pending.getIntentSender());
             return null;
         } catch (IOException | RuntimeException e) {
+            Log.w(LOG, "update: installer session failed, " + e);
             if (s != null) s.abandon();
             return "Fire OS Refused the Update";
         } finally {
@@ -339,10 +358,12 @@ final class Updater {
     /** What the installer said: show its confirmation screen, or why it stopped. */
     void result(Context c, Intent i) {
         int status = i.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
+        Log.i(LOG, "update: installer status " + status + " " + i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE));
         if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
             Intent confirm = i.getParcelableExtra(Intent.EXTRA_INTENT);
             // Only the system installer's confirmation screen is opened from here.
             if (!systemScreen(c, confirm)) {
+                Log.w(LOG, "update: the confirmation is not a system screen, not opened: " + confirm);
                 problem = "Fire OS Refused the Update";
                 set(Update.READY);
                 return;

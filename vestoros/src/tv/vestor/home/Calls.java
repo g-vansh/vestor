@@ -22,6 +22,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -249,6 +250,7 @@ public final class Calls extends Activity implements Hub.Listener {
 
     /** WhatsApp Web asks for the camera or microphone: granted for WhatsApp only, after Android's own prompt. */
     private void answer(PermissionRequest request) {
+        Log.i("Vestor", "calls: page asks for " + java.util.Arrays.toString(request.getResources()) + " from " + request.getOrigin());
         if (!Calling.mayCapture(request.getOrigin().toString())) {
             request.deny();
             return;

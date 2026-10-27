@@ -5,5 +5,5 @@
     <string name="guard_description">Sends the HOME button to the Vestor home screen instead of Amazon\'s, and shows notes and the bike alarm over other apps. It reads no screen content.</string>
     <string name="listener_label">Vestor Now Playing</string>
     <!-- What changed in this version: the TV shows it when this version arrives as an update. Plain text, under 300 characters. -->
-    <string name="update_notes">Video Calls play in your AirPods, and use their microphone when Fire OS offers it. VestorOS now updates itself from the TV.</string>
+    <string name="update_notes">Video Calls play in your AirPods, and use their microphone when Fire OS offers it. Updates come from the TV, and each step is noted in the system log for troubleshooting.</string>
 </resources>

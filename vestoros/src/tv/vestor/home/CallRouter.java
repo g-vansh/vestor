@@ -11,6 +11,7 @@ import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.media.AudioRecordingConfiguration;
 import android.os.Handler;
+import android.util.Log;
 
 import java.util.List;
 
@@ -35,6 +36,10 @@ final class CallRouter {
     interface Out {
         void say(String text);
     }
+
+    /** Logcat tag: `adb logcat -s Vestor` shows each decision (states and yes/no facts, never names). */
+    private static final String LOG = "Vestor";
+    private static final String[] ROUTES = {"tv", "ears", "both"};
 
     /** How long the AirPods' call link may take to come up before the call goes on without it. */
     private static final long LINK_MS = 4000;
@@ -147,6 +152,8 @@ final class CallRouter {
         facts = probe(activity);
         if (failed) facts.headset = false;
         route = CallAudio.route(facts, voice());
+        Log.i(LOG, "call audio: mic asked, " + describe(facts) + ", voice=" + voice() + ", route=" + ROUTES[route]
+                + ", mode=" + am.getMode());
         if (route != CallAudio.BOTH) {
             grant.run();
             return;
@@ -179,6 +186,7 @@ final class CallRouter {
         if (!linkAsked || linkUp) return;
         linkUp = true;
         main.removeCallbacks(linkLate);
+        Log.i(LOG, "call audio: headset call link up, call mode on");
         // Call mode, so the call's sound (on the voice stream or as media) takes the link too.
         if (am.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
             am.setMode(AudioManager.MODE_IN_COMMUNICATION);
@@ -193,6 +201,7 @@ final class CallRouter {
         if (!linkAsked) return;
         boolean wasUp = linkUp;
         main.removeCallbacks(linkLate);
+        Log.i(LOG, "call audio: headset call link " + (wasUp ? "dropped" : "did not come up") + ", live=" + live);
         stopLink();
         failed = true;
         boolean airpods = facts.airpods;
@@ -240,6 +249,8 @@ final class CallRouter {
         }
         if (!armed) return;
         live = true;
+        Log.i(LOG, "call audio: call microphone open, route=" + ROUTES[route] + ", mode=" + am.getMode()
+                + ", sco=" + am.isBluetoothScoOn());
         main.removeCallbacks(neverStarted);
         if (!linkAsked) {
             // The route chosen at the grant stands. A call link opened under a running microphone
@@ -259,6 +270,7 @@ final class CallRouter {
         if (am.getMode() == AudioManager.MODE_IN_COMMUNICATION) {
             engineCall = true;
             am.setMode(AudioManager.MODE_NORMAL);
+            Log.i(LOG, "call audio: call mode off, so the call plays in stereo headphones");
         }
         if (am.isSpeakerphoneOn()) am.setSpeakerphoneOn(false);
         activity.setVolumeControlStream(engineCall ? AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC);
@@ -266,6 +278,7 @@ final class CallRouter {
 
     /** The call is over: everything as it was. */
     private void end() {
+        if (live || linkAsked) Log.i(LOG, "call audio: call over, audio put back");
         live = false;
         armed = false;
         failedEarly = false;
@@ -300,7 +313,15 @@ final class CallRouter {
 
     /** The menu's check of the AirPods and microphones. */
     String check() {
-        return CallAudio.describe(probe(activity), voice());
+        CallAudio.Facts f = probe(activity);
+        Log.i(LOG, "call audio: check, " + describe(f) + ", voice=" + voice());
+        return CallAudio.describe(f, voice());
+    }
+
+    /** The facts for the log: yes and no only. */
+    static String describe(CallAudio.Facts f) {
+        return "headsetMic=" + f.headset + " offCall=" + f.offCall + " stereo=" + f.headphones + " usbMic=" + f.mic
+                + " airpods=" + f.airpods;
     }
 
     /** What is connected: Bluetooth headphones and their profiles, and wired or USB microphones. */
