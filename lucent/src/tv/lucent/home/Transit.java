@@ -16,10 +16,11 @@ import java.util.TimeZone;
  * - MIT Tech Shuttle (route 63220) and Tech Shuttle 2 (56642, 71674) at Grad Junction West
  *   (stop 180113), and SafeRide (any route named "Saferide...") at W98 @ Vassar St (stop 3813),
  *   all from Passio's GTFS-realtime feed for agency "mit".
- * - MBTA route 85 (Assembly Row - Ruggles) at the Westgate dock, from the MBTA's V3 API: towards
- *   Assembly Row it boards at Vassar St @ Audrey St (stop 21772, beside the Bluebikes dock),
- *   towards Ruggles at Amesbury St @ Vassar St (stop 22173). Live predictions only; when none is
- *   up, today's timetable says when the next one is due.
+ * - MBTA route 85 (Assembly Row - Ruggles) at the Westgate dock, from the MBTA's V3 API, shown as
+ *   two lines: 85A towards Assembly Row, boarding at Vassar St @ Audrey St (stop 21772, beside the
+ *   Bluebikes dock), and 85B towards BU, boarding at Amesbury St @ Vassar St (stop 22173). After
+ *   that stop the bus crosses the BU Bridge to Mountfort St, Kenmore and on to Ruggles. Live
+ *   predictions only. When none is up, today's timetable says when the next one is due.
  *
  * BU's Hyatt shuttle, which Vestor shows, stopped with BU's Hyatt housing in fall 2026 (its
  * route is gone from BU's TransLoc feed), so it is not here. MIT routes are also recognised by
@@ -38,7 +39,7 @@ final class Transit {
     static final String MBTA_ROUTE = "85";
     static final String STOP_TO_ASSEMBLY = "21772", STOP_TO_RUGGLES = "22173";
     private static final String MBTA = "https://api-v3.mbta.com/";
-    /** Keyless, so at most 20 requests a minute: Lucent makes 3, and unchanged answers are 304s. */
+    /** Polled keyless (the MBTA allows 20 a minute, Pace keeps Lucent at 10), or streamed with a key. */
     static final String MBTA_PREDICTIONS = MBTA + "predictions?filter%5Bstop%5D=" + STOP_TO_ASSEMBLY + "," + STOP_TO_RUGGLES
             + "&filter%5Broute%5D=" + MBTA_ROUTE + "&sort=departure_time";
 
@@ -73,15 +74,17 @@ final class Transit {
         return new Model.Line("saferide", "SafeRide", "SAFE", "W98 @ Vassar St", VIOLET);
     }
 
+    /** 85A: the 85 heading to Assembly Row, from beside the Westgate dock. */
     static Model.Line toAssembly() {
-        Model.Line l = new Model.Line("85a", "85 to Assembly Row", MBTA_ROUTE, "Vassar St @ Audrey St", MBTA_YELLOW);
+        Model.Line l = new Model.Line("85a", "85A to Assembly Row", "85A", "Vassar St @ Audrey St", MBTA_YELLOW);
         l.toward = "Assembly";
         return l;
     }
 
+    /** 85B: the 85 heading over the BU Bridge to BU, Kenmore and Ruggles. */
     static Model.Line toRuggles() {
-        Model.Line l = new Model.Line("85r", "85 to Ruggles", MBTA_ROUTE, "Amesbury St @ Vassar St", MBTA_YELLOW);
-        l.toward = "Ruggles";
+        Model.Line l = new Model.Line("85b", "85B to BU and Ruggles", "85B", "Amesbury St @ Vassar St", MBTA_YELLOW);
+        l.toward = "BU";
         return l;
     }
 
@@ -120,7 +123,11 @@ final class Transit {
      * heading in (direction 1); skipped and cancelled trips are left out.
      */
     static void mbta(String json, long nowMs, Model.Line assembly, Model.Line ruggles) {
-        List<Object> data = Json.arr(Json.obj(Json.parse(json)), "data");
+        mbta(Json.arr(Json.obj(Json.parse(json)), "data"), nowMs, assembly, ruggles);
+    }
+
+    /** The same from a list of prediction resources, as the live stream keeps them. */
+    static void mbta(java.util.Collection<Object> data, long nowMs, Model.Line assembly, Model.Line ruggles) {
         if (data == null) return;
         for (Object o : data) {
             Map<String, Object> p = Json.obj(o);

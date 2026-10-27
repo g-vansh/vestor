@@ -114,9 +114,12 @@ final class Finder {
             if (gen != generation || state.state != Model.Finder.SEARCHING) return;
             id = station.id;
         }
-        String json = Net.text(Gbfs.STATUS, TIMEOUT_MS, true, Net.LIMIT_FEED);
+        // Shares one request with the bikes card when both ask within 2 s.
+        String json = Net.text(Gbfs.STATUS, TIMEOUT_MS, true, Net.LIMIT_FEED, null, 2000);
+        // A CDN edge handing out the previous minute's file is not news, and not a failure.
+        boolean older = json != null && !Gbfs.fresh(json);
         Map<String, Object> m = null;
-        if (json != null) {
+        if (json != null && !older) {
             try {
                 m = Json.objectWith(json, "station_id", id);
             } catch (RuntimeException | OutOfMemoryError | StackOverflowError e) {
@@ -132,7 +135,9 @@ final class Finder {
             state.checks++;
             state.lastCheck = now;
             if (m != null && !apply(m)) m = null;
-            if (m != null) {
+            if (older) {
+                state.failures = 0;
+            } else if (m != null) {
                 state.failures = 0;
                 state.offline = false;
                 state.ebikes = station.rentableEbikes();
@@ -163,7 +168,7 @@ final class Finder {
                 }, wait);
             }
         }
-        if (found) Chime.play();
+        // The sound (a chime, or the alarm that rings until stopped) is the hub's to play.
     }
 
     private boolean apply(Map<String, Object> m) {

@@ -106,6 +106,8 @@ final class Model {
     static final class Bikes {
         boolean ok;
         long fetched;
+        /** When Bluebikes published these counts (the feed's last_updated), 0 if unknown. */
+        long published;
         /** What the followed station is called on screen: "Westgate" unless another was chosen. */
         String label = "Westgate";
         final List<Station> stations = new ArrayList<>();
@@ -170,6 +172,8 @@ final class Model {
     static final class Transit {
         boolean ok;
         long fetched;
+        /** The 85 is on the MBTA's live stream (a key is set) rather than polled. */
+        boolean live;
         final List<Line> lines = new ArrayList<>();
 
         boolean anyRunning() {
@@ -184,6 +188,9 @@ final class Model {
         String from = "", to = "", fromCity = "", toCity = "";
         int altFt, knots, fpm;
         float track, miles;
+        /** Position, and how many seconds old it was when fetched, for carrying it forward between polls. */
+        double lat, lon;
+        float seen;
         boolean ground;
     }
 
@@ -191,6 +198,8 @@ final class Model {
         boolean ok;
         long fetched;
         int inRange;
+        /** Which service answered, for the credit line. */
+        String source = "";
         final List<Flight> flights = new ArrayList<>();
 
         Flight hero() {
@@ -198,8 +207,47 @@ final class Model {
         }
     }
 
+    /** A National Weather Service alert for home: a warning, watch or advisory. */
+    static final class Alert {
+        String event = "", headline = "", severity = "", area = "";
+        long onset, expires;
+
+        /** Extreme and Severe alerts are shown in amber on the home screen. Others wait in the panel. */
+        boolean serious() {
+            return "Extreme".equals(severity) || "Severe".equals(severity);
+        }
+    }
+
+    /** Air quality and UV from Open-Meteo (CAMS data). -1 when unknown. */
+    static final class Air {
+        boolean ok;
+        int aqi = -1;
+        double pm25 = -1, uv = -1;
+        long fetched;
+    }
+
+    /** What is playing on the TV, from the playing app's media session. */
+    static final class Media {
+        boolean active, playing, canNext, canPrev;
+        String pkg = "", app = "", title = "", artist = "", album = "";
+        long duration, position, positionAt;
+        float speed = 1;
+        /** Album art, a bitmap at most 640 across, or null. */
+        volatile Object art;
+        volatile long artSource;
+
+        /** Where playback is now, carried forward from the last report. */
+        long positionNow(long elapsedRealtime) {
+            if (!playing || positionAt <= 0) return position;
+            long p = position + (long) ((elapsedRealtime - positionAt) * speed);
+            return duration > 0 ? Math.min(duration, Math.max(0, p)) : Math.max(0, p);
+        }
+    }
+
     /** What the HDMI chain says it accepts. */
     static final class Audio {
+        /** "HDMI" or "Bluetooth", and the Bluetooth device's name. */
+        String route = "HDMI", device = "";
         boolean known;
         boolean atmos;
         String headline = "HDMI audio";

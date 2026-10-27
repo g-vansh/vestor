@@ -24,8 +24,11 @@ import java.util.concurrent.TimeUnit;
  * seconds costs a few hundred bytes whenever nothing moved. Thread-safe.
  *
  * Defensive by default:
- * - Only HTTPS, and only to the six public hosts Lucent reads. Anything else is refused before a
- *   socket opens, so no feed, file or setting can point Lucent somewhere new.
+ * - Only HTTPS, and only to the public hosts Lucent reads (plus the calendar servers of Google,
+ *   iCloud and Outlook, for feeds you add). Anything else is refused before a socket opens, so no
+ *   feed, file or setting can point Lucent somewhere new.
+ * - Every request first asks {@link Pace}, which keeps each service far inside its published
+ *   limit, obeys Retry-After and backs off from trouble. A request over budget is never sent.
  * - Redirects are never followed blindly: Android's own handling would already have sent the
  *   request to the new host before Lucent could object. A redirect is followed by hand, at most
  *   three times, and only to HTTPS on the same host.
@@ -33,23 +36,47 @@ import java.util.concurrent.TimeUnit;
  *   whole request has a deadline, so a server that drips bytes cannot hold a loop.
  * - Nothing identifying is sent: no cookies, no account, no device id, a generic user agent in
  *   place of Android's default one, which names the device model and build.
+ * - Connections that ended cleanly stay open for the next poll, so a 5 second loop does not pay
+ *   for a new TLS handshake every time.
  */
 final class Net {
     private Net() {}
 
-    /** Size caps: a route lookup, an API answer, a whole feed, the MIT timetable archive. */
+    /** Size caps: a route lookup, an API answer, a whole feed, the MIT timetable archive, a calendar. */
     static final int LIMIT_TINY = 64 * 1024, LIMIT_SMALL = 1024 * 1024, LIMIT_FEED = 6 * 1024 * 1024,
-            LIMIT_ZIP = 4 * 1024 * 1024;
-    private static final String AGENT = "Lucent/1.2";
+            LIMIT_ZIP = 4 * 1024 * 1024, LIMIT_ICS = 4 * 1024 * 1024;
+    static final String AGENT = "Lucent/2.0";
     private static final int MAX_HOPS = 3;
 
-    /** The only hosts Lucent talks to. README lists what each is for. */
+    /** The public hosts Lucent talks to. README lists what each is for. */
     static final Set<String> HOSTS = new HashSet<>(Arrays.asList(
-            "api.open-meteo.com", "gbfs.lyft.com", "passio3.com", "api-v3.mbta.com", "api.adsb.lol", "hexdb.io"));
+            "api.open-meteo.com", "air-quality-api.open-meteo.com", "api.weather.gov",
+            "gbfs.lyft.com", "passio3.com", "api-v3.mbta.com",
+            "api.adsb.lol", "api.airplanes.live", "opendata.adsb.fi", "hexdb.io", "api.adsbdb.com",
+            "calendar.google.com", "outlook.office365.com", "outlook.live.com", "ntfy.sh"));
+
+    /** Whether {@code host} is one Lucent may contact. iCloud serves published calendars from pNN-caldav or pNN-calendars. */
+    static boolean allowedHost(String host) {
+        if (host == null) return false;
+        String h = host.toLowerCase(Locale.US);
+        if (HOSTS.contains(h)) return true;
+        return icloud(h);
+    }
+
+    static boolean icloud(String h) {
+        String tail = h.endsWith("-caldav.icloud.com") ? "-caldav.icloud.com" : h.endsWith("-calendars.icloud.com")
+                ? "-calendars.icloud.com" : null;
+        if (tail == null || h.charAt(0) != 'p') return false;
+        String n = h.substring(1, h.length() - tail.length());
+        if (n.isEmpty() || n.length() > 3) return false;
+        for (int i = 0; i < n.length(); i++) if (!Character.isDigit(n.charAt(i))) return false;
+        return true;
+    }
 
     private static final class Cached {
         String etag, modified;
         byte[] body;
+        long at;
     }
 
     private static final Map<String, Cached> CACHE = new HashMap<>();
@@ -74,15 +101,17 @@ final class Net {
 
     private static final class Cut implements Runnable {
         volatile HttpURLConnection conn;
+        volatile boolean fired;
 
         @Override
         public void run() {
+            fired = true;
             HttpURLConnection c = conn;
             if (c != null) c.disconnect();
         }
     }
 
-    /** Whether {@code url} is HTTPS to one of {@link #HOSTS}, on the default port. */
+    /** Whether {@code url} is HTTPS to an allowed host, on the default port, with no user info. */
     static boolean allowed(String url) {
         if (url == null || !url.startsWith("https://")) return false;
         try {
@@ -92,27 +121,39 @@ final class Net {
         }
     }
 
-    private static boolean allowed(URL u) {
+    static boolean allowed(URL u) {
         return "https".equals(u.getProtocol()) && (u.getPort() == -1 || u.getPort() == 443) && u.getUserInfo() == null
-                && HOSTS.contains(u.getHost().toLowerCase(Locale.US));
+                && allowedHost(u.getHost());
     }
 
     static byte[] get(String url, int timeoutMs, boolean conditional) {
         return get(url, timeoutMs, conditional, LIMIT_FEED);
     }
 
-    /**
-     * The body, or null on any failure or when it would exceed {@code maxBytes}.
-     * {@code conditional} reuses the cached body on 304.
-     */
     static byte[] get(String url, int timeoutMs, boolean conditional, int maxBytes) {
+        return get(url, timeoutMs, conditional, maxBytes, null, 0);
+    }
+
+    /**
+     * The body, or null on any failure, when it would exceed {@code maxBytes}, or when the
+     * service's budget says not now. {@code conditional} reuses the cached body on 304.
+     * {@code headers} are name, value pairs (an API key). With {@code reuseMs} above 0, a body
+     * fetched that recently is returned without asking again, so two loops reading one feed
+     * (the bikes card and bike finder) cost one request.
+     */
+    static byte[] get(String url, int timeoutMs, boolean conditional, int maxBytes, String[] headers, long reuseMs) {
         if (!allowed(url)) return null;
         Cached prior;
         synchronized (CACHE) {
-            prior = conditional ? CACHE.get(url) : null;
+            prior = conditional || reuseMs > 0 ? CACHE.get(url) : null;
+        }
+        long wall = System.currentTimeMillis();
+        if (reuseMs > 0 && prior != null && prior.body != null && wall - prior.at >= 0 && wall - prior.at < reuseMs) {
+            return prior.body;
         }
         long deadline = System.nanoTime() + 3L * timeoutMs * 1000000L;
         HttpURLConnection conn = null;
+        boolean keep = false;
         Cut cut = new Cut();
         ScheduledFuture<?> alarm;
         try {
@@ -120,10 +161,14 @@ final class Net {
         } catch (RuntimeException e) {
             return null;
         }
+        String host = "";
         try {
             URL target = new URL(url);
             URL at = target;
+            host = target.getHost();
+            int code;
             for (int hop = 0; ; hop++) {
+                if (!Pace.take(host, System.currentTimeMillis())) return null;
                 conn = (HttpURLConnection) at.openConnection();
                 cut.conn = conn;
                 conn.setInstanceFollowRedirects(false);
@@ -131,12 +176,18 @@ final class Net {
                 conn.setReadTimeout(timeoutMs);
                 conn.setUseCaches(false);
                 conn.setRequestProperty("User-Agent", AGENT);
-                conn.setRequestProperty("Accept", "application/json, application/x-protobuf, */*");
-                if (prior != null && prior.body != null) {
+                conn.setRequestProperty("Accept", "application/json, application/vnd.api+json, application/x-protobuf, text/calendar, */*");
+                if (headers != null) {
+                    for (int i = 0; i + 1 < headers.length; i += 2) conn.setRequestProperty(headers[i], headers[i + 1]);
+                }
+                if (prior != null && prior.body != null && conditional) {
                     if (prior.etag != null) conn.setRequestProperty("If-None-Match", prior.etag);
                     if (prior.modified != null) conn.setRequestProperty("If-Modified-Since", prior.modified);
                 }
-                int code = conn.getResponseCode();
+                code = conn.getResponseCode();
+                long t = System.currentTimeMillis();
+                Pace.answered(host, code, conn.getHeaderField("Retry-After"), t);
+                Pace.quota(host, conn.getHeaderField("X-RateLimit-Remaining"), conn.getHeaderField("X-RateLimit-Reset"), t);
                 if (code < 300 || code > 399 || code == HttpURLConnection.HTTP_NOT_MODIFIED) break;
                 // A redirect: only onwards to HTTPS on the same host, a few times at most.
                 String location = conn.getHeaderField("Location");
@@ -147,29 +198,42 @@ final class Net {
                 if (!allowed(next) || !next.getHost().equalsIgnoreCase(target.getHost())) return null;
                 at = next;
             }
-            int code = conn.getResponseCode();
-            if (code == HttpURLConnection.HTTP_NOT_MODIFIED && prior != null && prior.body != null) return prior.body;
+            if (code == HttpURLConnection.HTTP_NOT_MODIFIED && prior != null && prior.body != null) {
+                drain(conn);
+                keep = true;
+                synchronized (CACHE) {
+                    prior.at = System.currentTimeMillis();
+                }
+                return prior.body;
+            }
             if (code != HttpURLConnection.HTTP_OK) return null;
             long declared = conn.getContentLength();
             if (declared > maxBytes) return null;
             byte[] body = read(conn.getInputStream(), maxBytes, deadline);
-            if (conditional && body != null) {
+            keep = body != null && !cut.fired;
+            if (body != null && (conditional || reuseMs > 0)) {
                 Cached c = new Cached();
-                c.etag = conn.getHeaderField("ETag");
-                c.modified = conn.getHeaderField("Last-Modified");
+                c.etag = conditional ? conn.getHeaderField("ETag") : null;
+                c.modified = conditional ? conn.getHeaderField("Last-Modified") : null;
                 c.body = body;
+                c.at = System.currentTimeMillis();
                 synchronized (CACHE) {
-                    if (c.etag != null || c.modified != null) CACHE.put(url, c);
+                    if (c.etag != null || c.modified != null || reuseMs > 0) CACHE.put(url, c);
                     else CACHE.remove(url);
+                    // Calendar URLs are secrets the user typed: only their latest answer is kept.
+                    if (CACHE.size() > 64) CACHE.clear();
                 }
             }
             return body;
         } catch (IOException | RuntimeException e) {
+            if (!host.isEmpty()) Pace.unreachable(host, System.currentTimeMillis());
             return null;
         } finally {
             alarm.cancel(false);
             cut.conn = null;
-            if (conn != null) conn.disconnect();
+            // A connection read to its end goes back to the pool for the next poll. Anything
+            // else is closed.
+            if (conn != null && !keep) conn.disconnect();
         }
     }
 
@@ -180,6 +244,33 @@ final class Net {
     static String text(String url, int timeoutMs, boolean conditional, int maxBytes) {
         byte[] b = get(url, timeoutMs, conditional, maxBytes);
         return b == null ? null : new String(b, StandardCharsets.UTF_8);
+    }
+
+    static String text(String url, int timeoutMs, boolean conditional, int maxBytes, String[] headers, long reuseMs) {
+        byte[] b = get(url, timeoutMs, conditional, maxBytes, headers, reuseMs);
+        return b == null ? null : new String(b, StandardCharsets.UTF_8);
+    }
+
+    /** Forgets cached bodies whose URL starts with {@code prefix} (a calendar that was removed). */
+    static void forget(String prefix) {
+        synchronized (CACHE) {
+            for (java.util.Iterator<String> it = CACHE.keySet().iterator(); it.hasNext(); ) {
+                if (it.next().startsWith(prefix)) it.remove();
+            }
+        }
+    }
+
+    /** A 304 has no body, but reading to the end lets the connection be reused. */
+    private static void drain(HttpURLConnection conn) {
+        try {
+            InputStream in = conn.getInputStream();
+            byte[] buf = new byte[512];
+            int total = 0, n;
+            while ((n = in.read(buf)) > 0 && total < 4096) total += n;
+            in.close();
+        } catch (IOException | RuntimeException ignored) {
+            // the connection is simply not reused
+        }
     }
 
     /**

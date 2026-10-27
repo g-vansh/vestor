@@ -94,6 +94,40 @@ final class Gbfs {
         return out;
     }
 
+    /**
+     * The feed's own "last_updated" (epoch seconds), or 0. Bluebikes writes the file once a minute
+     * and its CDN edges can briefly hand out the previous one, so a reader keeps the newest it has
+     * seen and ignores anything older.
+     */
+    static long lastUpdated(String json) {
+        if (json == null) return 0;
+        int at = json.indexOf("\"last_updated\"");
+        if (at < 0) return 0;
+        int i = json.indexOf(':', at);
+        if (i < 0 || i - at > 20) return 0;
+        i++;
+        while (i < json.length() && json.charAt(i) == ' ') i++;
+        long v = 0;
+        int digits = 0;
+        while (i < json.length() && Character.isDigit(json.charAt(i)) && digits < 12) {
+            v = v * 10 + (json.charAt(i) - '0');
+            i++;
+            digits++;
+        }
+        return digits >= 9 ? v : 0;
+    }
+
+    private static long newest;
+
+    /** Whether a station_status answer is at least as new as any seen before. Thread-safe. */
+    static synchronized boolean fresh(String json) {
+        long t = lastUpdated(json);
+        if (t == 0) return true;
+        if (t < newest) return false;
+        newest = t;
+        return true;
+    }
+
     static Model.Station find(List<Model.Station> list, String id) {
         if (id == null) return null;
         for (Model.Station s : list) if (s.id.equals(id)) return s;
