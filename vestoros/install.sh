@@ -74,7 +74,8 @@ claude_key() {
   local f=$1 k out
   [[ -f $f ]] || { echo "error: no key file at $f" >&2; return 1; }
   k=$(LC_ALL=C tr -d ' \r\n\t' < "$f")
-  [[ $k =~ ^sk-ant-[A-Za-z0-9_-]{20,300}$ ]] || { echo "error: $f does not hold a Claude API key (it starts with sk-ant-)" >&2; return 1; }
+  # macOS reads a repeat count over 255 as a broken pattern and matches nothing, so 255 is the cap.
+  [[ $k =~ ^sk-ant-[A-Za-z0-9_-]{20,255}$ ]] || { echo "error: $f does not hold a Claude API key (it starts with sk-ant-)" >&2; return 1; }
   local sig
   sig=$(installed_sig)
   [[ $sig == "$SIG" ]] || { echo "error: the Vestor on this TV is not signed with Vestor's key, so it does not get the Claude key." >&2; return 1; }
