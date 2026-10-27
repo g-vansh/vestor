@@ -23,8 +23,9 @@ Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
   Any Echo can start it: "Alexa, turn on bike finder".
 - **Two docks and a forecast.** Westgate's dock on Vassar Street and the Erie Street dock outside
   Flour, as one pool: bike finder rings for the first e-bike at either. The card says when the
-  e-bikes will likely be gone, when the next one should turn up, and tonight's chance of one at
-  7:30 AM, from 31 months of Bluebikes trips, MIT's calendar and the weather.
+  e-bikes will likely be gone, when the next one should turn up, and in the evening the chance
+  of one at 7:30, 8:30 and 9:30 the next morning, from 31 months of Bluebikes trips, MIT's
+  calendar and the weather.
 - **The Samsung's remote on your phone.** A Remote tab with the TV's own keys, menus and
   settings, over your Wi-Fi, so the Samsung remote can stay in the drawer.
 - **A Glare button.** One press switches the Samsung to its brightest picture for a sunny
@@ -272,7 +273,8 @@ Also Watch (on the TV or the phone) picks the second, or none.
 
 With e-bikes at either dock, the card says when they will likely all be gone ("Likely all gone by
 8:46 AM (8:14 to 9:53)") and when Westgate alone will be. With none, when the next one should
-turn up at either. In the evening it gives the chance of one at 7:30 the next morning. The
+turn up at either. In the evening it gives the chance of one at 7:30, 8:30 and 9:30 the next
+morning. The
 middle time is the likeliest, the range covers four times in five.
 
 It comes from every Bluebikes trip at these docks since March 2024, the MIT Registrar's calendar

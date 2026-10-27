@@ -19,7 +19,10 @@ def forward(nV, nE, dV, dE, aV, aE, rV, rE, theta=0.0, capV=53, capE=19, target=
     P = np.zeros((nv, ne)); P[min(nV, capV), min(nE, capE)] = 1
     kV = kernel(restock_size[0], capV); kE = kernel(restock_size[1], capE)
     hasV = (np.arange(nv) > 0)[:, None] * np.ones((1, ne)); hasE = np.ones((nv, 1)) * (np.arange(ne) > 0)[None, :]
-    cdf = np.zeros(H); done = 0.0; some = None
+    cdf = np.zeros(H); done = 0.0
+    # mode_at: a minute, for the chance that either dock has an e-bike then, or (start, length)
+    # for that chance at every minute of a span
+    some = None if mode_at is None or np.ndim(mode_at) == 0 else np.zeros(mode_at[1])
     for m in range(H):
         dv = dV[m] + theta * dE[m] * (1 - hasE); de = dE[m] + theta * dV[m] * (1 - hasV)
         rv_dep = dv * hasV; re_dep = de * hasE
@@ -47,8 +50,11 @@ def forward(nV, nE, dV, dE, aV, aE, rV, rE, theta=0.0, capV=53, capE=19, target=
             done += N[0, 0]; N[0, 0] = 0
         elif target == 'vassar':
             done += N[0, :].sum(); N[0, :] = 0
-        if mode_at is not None and m == mode_at:
-            some = 1 - N[0, 0]
+        if mode_at is not None:
+            if np.ndim(mode_at) == 0:
+                if m == mode_at: some = 1 - N[0, 0]
+            elif mode_at[0] <= m < mode_at[0] + len(some):
+                some[m - mode_at[0]] = 1 - N[0, 0]
         cdf[m] = done
         P = N
     return (cdf, some) if mode_at is not None else cdf

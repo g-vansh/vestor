@@ -40,11 +40,11 @@ public final class ForecastTest {
             minutes(name + " first", Json.arr(v, "first"), now, r.firstLo, r.firstMed, r.firstHi);
             minutes(name + " next", Json.arr(v, "next"), now, r.nextLo, r.nextMed, r.nextHi);
             if (v.get("morningP") instanceof Double) {
-                checks++;
-                double want = (Double) v.get("morningP");
-                if (Math.abs(want - r.morning) > 0.005) {
-                    failures++;
-                    System.out.println("FAIL " + name + " morning: want " + want + ", got " + r.morning);
+                chance(name + " morning", (Double) v.get("morningP"), r.morning);
+                List<Object> later = Json.arr(v, "morningLater");
+                if (later != null && later.size() == 2) {
+                    chance(name + " an hour later", (Double) later.get(0), r.morning1h);
+                    chance(name + " two hours later", (Double) later.get(1), r.morning2h);
                 }
             }
         }
@@ -61,6 +61,14 @@ public final class ForecastTest {
         refuses("a short day profile", model.replaceFirst("\"class\":\\[(-?[0-9.]+),", "\"class\":["));
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
+    }
+
+    private static void chance(String what, double want, double got) {
+        checks++;
+        if (Math.abs(want - got) > 0.005) {
+            failures++;
+            System.out.println("FAIL " + what + ": want " + want + ", got " + got);
+        }
     }
 
     private static double[] doubles(List<Object> a) {

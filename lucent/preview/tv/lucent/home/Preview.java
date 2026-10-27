@@ -42,6 +42,7 @@ public final class Preview {
         shot(out, "09-sky-panel", wallFile, new int[] {R, R, R, OK}, 0);
         shot(out, "32-bikes-panel", wallFile, new int[] {R, OK, OK}, 0);
         shot(out, "33-shuttles-grocery-friday", wallFile, new int[] {R, R, OK}, 15);
+        shot(out, "34-bikes-panel-evening", "nature-04.jpg", new int[] {R, OK, OK}, 16);
         shot(out, "10-finding-home", wallFile, new int[] {OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
         shot(out, "12-apps", wallFile, new int[] {D}, 0);
@@ -187,7 +188,10 @@ public final class Preview {
         scene.setWeather(weather);
         scene.setAudio(audio());
         scene.setPicture(picture());
-        scene.setBikes(bikes(extra == 4));
+        Model.Bikes bk = bikes(extra == 4);
+        // The evening shots forecast an empty pool: Erie St is empty in them too.
+        if ((extra == 6 || extra == 7 || extra == 11 || extra == 13 || extra == 16) && bk.alt() != null) bk.alt().ebikes = 0;
+        scene.setBikes(bk);
         scene.setForecast(forecast(extra), NOW);
         scene.setTransit(transit(extra == 15));
         scene.setSky(sky());
@@ -199,7 +203,7 @@ public final class Preview {
         scene.setSun(NOW - 7 * 3600000L, NOW + 3 * 3600000L + 1200000L, 0.42);
         scene.setUptime(1000000);
         // Day by default; night where asked for.
-        scene.setNight(extra == 6 || extra == 7 || extra == 11 || extra == 13 || wallFile.equals("nature-04.jpg"), true);
+        scene.setNight(extra == 6 || extra == 7 || extra == 11 || extra == 13 || extra == 16 || wallFile.equals("nature-04.jpg"), true);
         if (extra == 5 || extra == 9 || extra == 12) scene.setPlans(events(), java.util.Arrays.asList("Us", "Work"), countdowns(), items());
         if (extra == 9 || extra == 12) scene.setMedia(music());
         if (extra != 1) scene.setPinned(note(false));
@@ -557,12 +561,14 @@ public final class Preview {
     private static Forecast.Result forecast(int extra) {
         Forecast.Result r = new Forecast.Result();
         r.dayType = "class";
-        if (extra == 6 || extra == 7 || extra == 11 || extra == 13) {
+        if (extra == 6 || extra == 7 || extra == 11 || extra == 13 || extra == 16) {
             r.empty = true;
             r.nextLo = NOW + 9 * 60000L;
             r.nextMed = NOW + 34 * 60000L;
             r.nextHi = NOW + 88 * 60000L;
             r.morning = 0.41;
+            r.morning1h = 0.36;
+            r.morning2h = 0.30;
             r.morningAt = NOW + 17 * 3600000L + 25 * 60000L;
         } else {
             r.poolLo = NOW + 38 * 60000L;

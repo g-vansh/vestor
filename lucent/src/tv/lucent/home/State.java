@@ -173,7 +173,7 @@ final class State {
                 .key("pool").obj().put("lo", r.poolLo).put("med", r.poolMed).put("hi", r.poolHi).end()
                 .key("first").obj().put("lo", r.firstLo).put("med", r.firstMed).put("hi", r.firstHi).end()
                 .key("next").obj().put("lo", r.nextLo).put("med", r.nextMed).put("hi", r.nextHi).end()
-                .put("morning", r.morning).put("morningAt", r.morningAt).end();
+                .put("morning", r.morning).put("morningAt", r.morningAt).put("morning1h", r.morning1h).put("morning2h", r.morning2h).end();
     }
 
     private static void finder(Jw w) {

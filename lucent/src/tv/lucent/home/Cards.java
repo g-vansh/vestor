@@ -159,8 +159,12 @@ final class Cards {
             int today = c.get(java.util.Calendar.DAY_OF_YEAR);
             c.setTimeInMillis(r.morningAt);
             boolean tomorrow = c.get(java.util.Calendar.DAY_OF_YEAR) != today;
-            String chance = Math.round(r.morning * 100) + "% chance of an e-bike";
-            fcLine2 = (tomorrow ? "Tomorrow at " : "At ") + clock(r.morningAt) + ", " + chance;
+            // "Tomorrow, chance of an e-bike: 87% at 7:30, 77% at 8:30, 65% at 9:30"
+            StringBuilder line = new StringBuilder(tomorrow ? "Tomorrow, chance of an e-bike: " : "Chance of an e-bike: ");
+            line.append(Math.round(r.morning * 100)).append("% at ").append(hm(r.morningAt));
+            if (r.morning1h >= 0) line.append(", ").append(Math.round(r.morning1h * 100)).append("% at ").append(hm(r.morningAt + 3600000L));
+            if (r.morning2h >= 0) line.append(", ").append(Math.round(r.morning2h * 100)).append("% at ").append(hm(r.morningAt + 7200000L));
+            fcLine2 = line.toString();
         }
         String[] tags = {"MIT class day", "MIT finals", "No MIT classes", "Saturday", "Sunday"};
         int k = java.util.Arrays.asList(Forecast.DAY_TYPES).indexOf(r.dayType);

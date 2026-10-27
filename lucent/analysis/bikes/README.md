@@ -11,7 +11,7 @@ It answers three questions on the bikes card and panel:
 | Either dock has an e-bike | "Likely all gone by 8:46 AM (8:14 to 9:53)" | When the last e-bike at both docks will be taken. The middle time is the median, the range holds 80% of outcomes |
 | Vassar St has one | "Westgate likely empty by 8:31 AM" | When Vassar St alone runs out, so you know whether to walk the extra few minutes |
 | Both are empty | "Next e-bike likely around 8:59 AM (8:34 to 10:32)" | The first e-bike to appear at either dock, from a return or Lyft's van |
-| Evening and night | "Tomorrow at 7:30 AM, 75% chance of an e-bike" | The chance at least one is waiting at either dock at 7:30 |
+| Evening and night | "Tomorrow, chance of an e-bike: 77% at 7:30, 69% at 8:30, 60% at 9:30" | The chance at least one is waiting at either dock at those times |
 
 All of it runs on the TV from an 18 KB model file (`assets/bikes_model.json`), at background
 priority, every two minutes or whenever a count changes. It takes about 0.1 s on a laptop.
@@ -153,6 +153,14 @@ means it runs out sooner than predicted).
 **Tomorrow at 7:30 AM**, predicted at 10 PM the evening before, over 31 mornings (25 had an
 e-bike): Brier score 0.141 against 0.167 for always saying the base rate, log loss 0.42 against
 0.53. From 6 PM, 0.143 against 0.162.
+
+**Through the morning.** The evening outlook shows the chance at 7:30, 8:30 and 9:30. Checked
+from 10 PM on 29 mornings at every half hour from 7:30 to 10:00, it beat the base rate at each
+time (Brier 0.135 to 0.227 against 0.153 to 0.268), and its average chance stayed within about
+nine points of how often an e-bike was really there (68% forecast against 59% seen at 8:30, the
+widest gap). The chance hovers near one half by mid-morning, so a single "gone by" time would
+jump around from night to night, and the card gives the three chances instead
+(`validate_morning.py`, `results/validate_morning.json`).
 
 **Calibration.** Before it, the next e-bike forecast was too hopeful: it caught 74% on weekdays
 (64% at weekends) with PIT 0.65, because a dock empty in the rush gets fewer returns than an

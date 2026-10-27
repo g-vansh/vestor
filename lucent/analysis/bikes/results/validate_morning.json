@@ -1,0 +1,102 @@
+{
+ "from_18h": [
+  {
+   "time": "7:30",
+   "mornings": 30,
+   "forecast_mean": 0.769,
+   "observed": 0.833,
+   "brier": 0.133,
+   "brier_base_rate": 0.1486
+  },
+  {
+   "time": "8:00",
+   "mornings": 30,
+   "forecast_mean": 0.737,
+   "observed": 0.733,
+   "brier": 0.1637,
+   "brier_base_rate": 0.2093
+  },
+  {
+   "time": "8:30",
+   "mornings": 30,
+   "forecast_mean": 0.686,
+   "observed": 0.567,
+   "brier": 0.2014,
+   "brier_base_rate": 0.2628
+  },
+  {
+   "time": "9:00",
+   "mornings": 30,
+   "forecast_mean": 0.638,
+   "observed": 0.667,
+   "brier": 0.1823,
+   "brier_base_rate": 0.2378
+  },
+  {
+   "time": "9:30",
+   "mornings": 30,
+   "forecast_mean": 0.606,
+   "observed": 0.533,
+   "brier": 0.2214,
+   "brier_base_rate": 0.2663
+  },
+  {
+   "time": "10:00",
+   "mornings": 30,
+   "forecast_mean": 0.589,
+   "observed": 0.467,
+   "brier": 0.2214,
+   "brier_base_rate": 0.2663
+  }
+ ],
+ "from_22h": [
+  {
+   "time": "7:30",
+   "mornings": 29,
+   "forecast_mean": 0.751,
+   "observed": 0.828,
+   "brier": 0.1347,
+   "brier_base_rate": 0.1531
+  },
+  {
+   "time": "8:00",
+   "mornings": 29,
+   "forecast_mean": 0.723,
+   "observed": 0.724,
+   "brier": 0.1548,
+   "brier_base_rate": 0.2143
+  },
+  {
+   "time": "8:30",
+   "mornings": 29,
+   "forecast_mean": 0.678,
+   "observed": 0.586,
+   "brier": 0.1652,
+   "brier_base_rate": 0.2602
+  },
+  {
+   "time": "9:00",
+   "mornings": 29,
+   "forecast_mean": 0.633,
+   "observed": 0.69,
+   "brier": 0.162,
+   "brier_base_rate": 0.2296
+  },
+  {
+   "time": "9:30",
+   "mornings": 29,
+   "forecast_mean": 0.601,
+   "observed": 0.517,
+   "brier": 0.224,
+   "brier_base_rate": 0.2679
+  },
+  {
+   "time": "10:00",
+   "mornings": 29,
+   "forecast_mean": 0.583,
+   "observed": 0.483,
+   "brier": 0.2266,
+   "brier_base_rate": 0.2679
+  }
+ ]
+}

@@ -25,6 +25,8 @@ final class Forecast {
     static final int CAP_V = 53, CAP_E = 19;
     /** Minutes looked ahead for a run-out or the next e-bike. */
     static final int HORIZON = 480;
+    /** The morning outlook follows the chance of an e-bike for two hours from its time, minute by minute. */
+    static final int MORNING_SPAN = 121;
 
     /** One dock's model for departures or returns: log-rates per minute. */
     static final class Rate {
@@ -41,6 +43,8 @@ final class Forecast {
         /** The chance that at least one e-bike waits at either dock at {@link #morningAt}, or -1. */
         double morning = -1;
         long morningAt;
+        /** The same chance an hour and two hours later (8:30 and 9:30 for a 7:30 outlook), or -1. */
+        double morning1h = -1, morning2h = -1;
         String dayType = "";
         /** True when both docks were empty: then the next-e-bike times hold, else the run-out ones. */
         boolean empty;
@@ -213,7 +217,7 @@ final class Forecast {
      */
     Result predict(long now, int nV, int nE, TimeZone zone, double[] rainChance, double[] tempC, long morningAt) {
         int minutes = HORIZON;
-        if (morningAt > now) minutes = (int) Math.max(minutes, Math.min(24 * 60, (morningAt - now) / 60000L + 1));
+        if (morningAt > now) minutes = (int) Math.max(minutes, Math.min(24 * 60 + MORNING_SPAN, (morningAt - now) / 60000L + MORNING_SPAN));
         double[][] r = new double[6][minutes];
         boolean two = nE >= 0;
         boolean none = Math.max(0, nV) + (two ? Math.max(0, nE) : 0) == 0;
@@ -259,10 +263,12 @@ final class Forecast {
         }
         if (morningAt > now) {
             int at = (int) ((morningAt - now) / 60000L);
-            if (at < minutes) {
-                double[] some = new double[1];
-                chain(v, e, r, at + 1, 2, null, at, some);
+            if (at + MORNING_SPAN <= minutes) {
+                double[] some = new double[MORNING_SPAN];
+                chain(v, e, r, at + MORNING_SPAN, 2, null, at, some);
                 out.morning = some[0];
+                out.morning1h = some[60];
+                out.morning2h = some[120];
                 out.morningAt = morningAt;
             }
         }
@@ -271,8 +277,8 @@ final class Forecast {
 
     /**
      * Steps the joint stock minute by minute. mode 0: absorb when both docks are empty, mode 1:
-     * absorb when the first is, both writing the first-passage CDF; mode 2: no absorption, and at
-     * minute {@code at} the chance that either dock has an e-bike goes to {@code some[0]}.
+     * absorb when the first is, both writing the first-passage CDF; mode 2: no absorption, and from
+     * minute {@code at} on, the chance that either dock has an e-bike fills {@code some}.
      *
      * At most one event a minute (rates are a few an hour). A restock adds a geometric batch, which
      * is spread with a running sum instead of a convolution, and only the occupied block of stock
@@ -357,7 +363,7 @@ final class Forecast {
                 }
             }
             if (cdf != null && m < cdf.length) cdf[m] = done;
-            if (mode == 2 && m == at) some[0] = 1 - q[0];
+            if (mode == 2 && m >= at && m - at < some.length) some[m - at] = 1 - q[0];
             // The occupied block: anything below 1e-13 is dropped.
             iLo = nv;
             iHi = -1;
