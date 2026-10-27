@@ -222,9 +222,18 @@ final class Transit {
         return out;
     }
 
-    /** "Next 7:25 AM" from a timetable, or "No more today". */
+    /**
+     * "Next 7:25 AM" from a timetable, or "No more today". A day with no trips at all says
+     * "Weekdays" on a weekend (the 85 runs Monday to Friday only) and "None today" otherwise.
+     */
     static String nextNote(List<Long> times, long nowMs, boolean h24) {
         if (times == null) return "";
+        if (times.isEmpty()) {
+            Calendar c = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"), Locale.US);
+            c.setTimeInMillis(nowMs - 3 * 3600000L);
+            int dow = c.get(Calendar.DAY_OF_WEEK);
+            return dow == Calendar.SATURDAY || dow == Calendar.SUNDAY ? "Weekdays" : "None today";
+        }
         for (Long t : times) {
             if (t > nowMs + 30000) {
                 java.text.SimpleDateFormat f = new java.text.SimpleDateFormat(h24 ? "HH:mm" : "h:mm a", Locale.US);

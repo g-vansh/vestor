@@ -100,6 +100,9 @@ public final class Feeds {
         eq("next to Assembly", "Next 2:20 PM", Transit.nextNote(tt.get(0), NOW, false));
         eq("next to Ruggles 24h", "Next 14:25", Transit.nextNote(tt.get(1), NOW, true));
         eq("none left", "No more today", Transit.nextNote(tt.get(0), NOW + 6 * 3600000L, false));
+        // Saturday 31 October 2026 at noon in Boston, and Saturday at 1 AM (still Friday's service day).
+        eq("no trips on a Saturday", "Weekdays", Transit.nextNote(java.util.Collections.<Long>emptyList(), 1793462400000L, false));
+        eq("Friday's late service day", "None today", Transit.nextNote(java.util.Collections.<Long>emptyList(), 1793422800000L, false));
         eq("iso", 1793124300000L + 130000L, Transit.iso("2026-10-27T14:07:10-04:00"));
         eq("iso junk", 0L, Transit.iso("2026-13-45T99:99:99Z!"));
         eq("service day past midnight", "2026-10-27", Transit.serviceDate(1793124300000L + 11 * 3600000L + 25 * 60000L));
