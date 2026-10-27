@@ -372,7 +372,12 @@
 
   /* ------------------------------------------------------------------ polling */
 
-  const poller = { timer: 0, fails: 0, hiddenAt: 0, stopped: true, inflight: false, again: false };
+  const poller = { timer: 0, fails: 0, hiddenAt: 0, stopped: true, inflight: false, again: false, fastUntil: 0 };
+  // Polls every 1.5 s for a while, as while Lucent answers a question.
+  function pollFast(ms) {
+    poller.fastUntil = ms > 0 ? Date.now() + ms : 0;
+    if (ms > 0) pollSoon();
+  }
 
   function pollStart() { poller.stopped = false; poller.fails = 0; pollNow(); }
   function pollStop() { poller.stopped = true; clearTimeout(poller.timer); }
@@ -404,7 +409,7 @@
         poller.fails = 0;
         setConn('live');
         applyState(r.data);
-        next = document.hidden ? 30000 : 4000;
+        next = document.hidden ? 30000 : Date.now() < poller.fastUntil ? 1500 : 4000;
       } else {
         throw new Error('status ' + r.status);
       }
@@ -461,6 +466,7 @@
     receivedAt = Date.now();
     const tv = obj(S.tv);
     if (num(tv.now) !== null) skew = tv.now - Date.now();
+    askSync();
     applyTheme(str(tv.mode));
     renderUrgent();
     renderNavFoot();
@@ -1387,7 +1393,8 @@
         room: card(8, 'Living room', 'span-6 card-room')
       };
       const c = this.c;
-      const grid = h('div', { class: 'grid' }, this.alerts, Object.keys(c).map(function (k) { return c[k].el; }));
+      this.ask = buildAsk();
+      const grid = h('div', { class: 'grid' }, this.ask.el, this.alerts, Object.keys(c).map(function (k) { return c[k].el; }));
       stagger(grid);
       fill(v, [this.head.el, grid]);
       this.room = buildRoom(c.room);
@@ -1410,6 +1417,7 @@
         return;
       }
       const st = settings();
+      this.ask.render();
       if (changed('h.alerts', [S.alerts, hour12()])) renderAlerts(this.alerts, arr(S.alerts));
       if (changed('h.transit', [S.transit])) renderTransit(c.transit, obj(S.transit));
       if (changed('h.bikes', [S.bikes, S.finder, S.forecast, st.findFor, hour12(), dayStart(tvNow())])) renderBikes(c.bikes, obj(S.bikes), obj(S.finder), S.forecast);
@@ -1437,6 +1445,224 @@
     const open = h('button', { class: 'btn vol-btn', type: 'button', 'data-fk': 'hv-remote', on: { click: function () { show('remote'); } } }, icon('remote'), h('span', { text: 'Remote' }));
     return h('div', { class: 'room-row vol-row' }, h('p', { class: 'room-label', text: 'TV volume' }),
       h('div', { class: 'vol-btns' }, b('down', 'vol-down', 'Down', 'Volume Down'), b('mute', 'mute', 'Mute', 'Mute'), b('up', 'vol-up', 'Up', 'Volume Up'), open));
+  }
+
+  /* ask Lucent: questions go to Claude on the TV, answers come back in the state */
+
+  const ASK_EXAMPLES = ['Play Better Call Saul', 'When will the e-bikes run out?', 'Every weekday at 7:15 start the bike finder', 'What’s the famous brass town in India?'];
+  // The question this page sent and is waiting on. The answer replaces the queued one under a new
+  // id, so it is found in the history by its question and a time at or after the asking.
+  const asking = { pending: null, error: '', busy: false, fresh: '' };
+
+  function assistantState() {
+    const a = S.assistant;
+    return a && typeof a === 'object' && !Array.isArray(a) ? a : null;
+  }
+  function sameQuestion(a, b) { return str(a).replace(/\s+/g, ' ').trim().toLowerCase() === str(b).replace(/\s+/g, ' ').trim().toLowerCase(); }
+
+  // Each new state: has the question been answered, or did the TV stop answering it?
+  function askSync() {
+    const p = asking.pending;
+    if (!p || !p.replied) return;
+    const a = obj(assistantState());
+    const hit = arr(a.history).map(obj).find(function (x) { return sameQuestion(x.question, p.question) && (num(x.at) || 0) >= p.at && x.busy !== true; });
+    const age = Date.now() - p.since;
+    if (hit) {
+      asking.pending = null;
+      asking.fresh = str(hit.id) || String(hit.at);
+      pollFast(0);
+      return;
+    }
+    const busy = !!a.asking && typeof a.asking === 'object';
+    // A queued question shows up in the history. Without a queued answer, or after 90 s, stop waiting.
+    if (!busy && (!p.queued || age > 90000)) {
+      asking.pending = null;
+      pollFast(0);
+      if (p.queued) asking.error = 'No answer came back. Try again.';
+    }
+  }
+
+  async function askSend(raw) {
+    const ask = views.home.ask;
+    const text = str(raw).trim().slice(0, 500);
+    if (!text) { ask.input.focus(); return; }
+    if (asking.busy || asking.pending) return;
+    asking.busy = true;
+    asking.error = '';
+    asking.fresh = '';
+    asking.pending = { question: text, at: tvNow() - 2000, since: Date.now(), queued: false, replied: false };
+    ask.render(true);
+    try {
+      const d = await act('ask', { text: text }, { timeout: 15000 });
+      const p = asking.pending;
+      if (p) {
+        if (str(d.question)) p.question = str(d.question);
+        if (num(d.at)) p.at = d.at;
+        p.queued = d.busy === true;
+        p.replied = true;
+      }
+      ask.input.value = '';
+      pollFast(90000);
+    } catch (e) {
+      asking.pending = null;
+      asking.error = serverError(e);
+    }
+    asking.busy = false;
+    ask.render(true);
+  }
+
+  function openClaudeSettings() {
+    show('settings');
+    requestAnimationFrame(function () {
+      const target = $('#set-claude');
+      if (target) target.scrollIntoView({ block: 'start' });
+      const key = $('#claude-key');
+      if (key && !key.closest('[hidden]')) key.focus({ preventScroll: true });
+    });
+  }
+
+  // "about 4¢" from millionths of a dollar.
+  function costText(cost) {
+    cost = num(cost);
+    if (cost === null || cost <= 0) return '';
+    const cents = cost / 10000;
+    if (cents < 1) return 'under 1¢';
+    if (cents < 100) return 'about ' + Math.round(cents) + '¢';
+    return 'about $' + (cost / 1000000).toFixed(2);
+  }
+  function safeUrl(u) {
+    try {
+      const x = new URL(str(u));
+      return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : '';
+    } catch (e) {
+      return '';
+    }
+  }
+  function domainOf(u) {
+    try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
+  }
+  function askedBy(from) {
+    const f = str(from);
+    if (!f || f === str(obj(S.me).name)) return '';
+    return f === 'the TV' ? 'asked on the TV' : 'from ' + f;
+  }
+  function answerMeta(a, cls) {
+    const at = num(a.at);
+    const bits = [askedBy(a.from), costText(a.cost)].filter(Boolean);
+    return h('p', { class: cls }, at ? agoSpan(at) : null, bits.length ? (at ? ' · ' : '') + bits.join(' · ') : '');
+  }
+
+  function answerCard(a, fresh) {
+    const err = str(a.error);
+    const did = arr(a.did).map(str).filter(Boolean);
+    const sources = arr(a.sources).map(obj).map(function (x) { return { title: str(x.title), url: safeUrl(x.url) }; })
+      .filter(function (x) { return x.url && domainOf(x.url); }).slice(0, 3);
+    return h('article', { class: 'answer' + (fresh ? ' fresh' : '') },
+      h('p', { class: 'answer-q', text: str(a.question) }),
+      err ? h('p', { class: 'amber-note answer-error', text: err }) : h('p', { class: 'answer-text', text: str(a.text) || 'Done.' }),
+      did.length ? h('ul', { class: 'did', 'aria-label': 'What Lucent did' }, did.map(function (x) { return h('li', { class: 'did-chip' }, icon('check'), h('span', { text: x })); })) : null,
+      sources.length ? h('p', { class: 'sources' }, h('span', { class: 'sources-label', text: 'Sources' }), sources.map(function (x) {
+        return h('a', { class: 'source', href: x.url, target: '_blank', rel: 'noopener noreferrer', title: x.title || x.url }, h('span', { text: domainOf(x.url) }), icon('external'));
+      })) : null,
+      answerMeta(a, 'answer-meta'));
+  }
+
+  function thinkingCard(question, from) {
+    const by = askedBy(from);
+    return h('article', { class: 'answer thinking' },
+      h('p', { class: 'answer-q', text: question }),
+      h('p', { class: 'think-line', role: 'status' },
+        h('span', { class: 'think-dots', 'aria-hidden': 'true' }, h('span'), h('span'), h('span')),
+        h('span', { text: 'Thinking' + (by ? ', ' + by : '') })));
+  }
+
+  function buildAsk() {
+    const c = card(0, 'Ask Lucent', 'span-12 card-ask');
+    c.el.hidden = true;
+    const input = h('input', { class: 'input ask-input', id: 'ask', 'data-fk': 'ask', type: 'text', maxLength: 500, placeholder: 'Ask Lucent anything', autocomplete: 'off', enterkeyhint: 'send', 'aria-label': 'Ask Lucent anything' });
+    const send = h('button', { class: 'btn btn-primary btn-icon ask-send', type: 'submit', 'aria-label': 'Ask' }, icon('send'));
+    const form = h('form', { class: 'ask-form', novalidate: true }, input, send);
+    form.addEventListener('submit', function (e) { e.preventDefault(); askSend(input.value); });
+    const ask = h('div', { class: 'ask-box' }, form, h('p', { class: 'ask-hint', text: 'Tap the microphone on the keyboard to speak.' }));
+    const nokey = h('div', { class: 'ask-nokey', hidden: true },
+      h('p', { class: 'ask-nokey-text', text: 'Add a Claude API key in Settings to ask questions' }),
+      h('button', { class: 'btn btn-primary', type: 'button', on: { click: openClaudeSettings } }, 'Add a Key in Settings'));
+    const err = h('p', { class: 'amber-note ask-error', role: 'alert', hidden: true });
+    const now = h('div', { class: 'ask-now', 'aria-live': 'polite' });
+    const recent = h('div', { class: 'ask-recent' });
+    fill(c.body, [ask, nokey, err, now, recent]);
+    const self = {
+      el: c.el, card: c, input: input, send: send,
+      render: function (force) {
+        const a = assistantState();
+        c.el.hidden = !a;
+        if (!a) return;
+        const on = a.on === true;
+        const hist = arr(a.history).map(obj).filter(function (x) { return x.busy !== true && (str(x.question) || str(x.text) || str(x.error)); });
+        const p = asking.pending;
+        if (!changed('h.ask', [on, hist, a.asking, p, asking.error, asking.busy, asking.fresh, str(obj(S.me).name)]) && !force) return;
+        setMeta(c, on ? 'Claude' : '');
+        ask.hidden = !on;
+        nokey.hidden = on;
+        input.disabled = !!p;
+        send.disabled = !!p;
+        send.classList.toggle('busy', !!p);
+        err.textContent = asking.error;
+        err.hidden = !asking.error;
+        // Now: the question being answered, else the newest answer.
+        const other = a.asking && typeof a.asking === 'object' ? obj(a.asking) : null;
+        let top = null;
+        if (p) top = thinkingCard(p.question, '');
+        else if (other) top = thinkingCard(str(other.question), str(other.from));
+        else if (hist[0]) top = answerCard(hist[0], asking.fresh && (asking.fresh === str(hist[0].id) || asking.fresh === String(hist[0].at)));
+        fill(now, top);
+        now.hidden = !top;
+        // Then the earlier answers, or examples to start with.
+        const rest = p || other ? hist : hist.slice(1);
+        if (!hist.length) {
+          fill(recent, on ? [h('p', { class: 'room-label', text: 'Try' }), h('div', { class: 'chips ask-examples' }, ASK_EXAMPLES.map(function (q) {
+            return h('button', { class: 'chip-opt ask-example', type: 'button', text: q, on: { click: function () { input.value = q; askSend(q); } } });
+          }))] : null);
+          return;
+        }
+        const clear = h('button', { class: 'btn btn-quiet btn-sm ask-clear', type: 'button', 'data-fk': 'ask-clear' }, 'Clear');
+        confirmTap(clear, 'Tap again to clear', async function () {
+          const st = assistantState();
+          const was = st ? st.history : null;
+          if (st) st.history = [];
+          asking.fresh = '';
+          self.render(true);
+          try {
+            await act('assistant', { do: 'clear' });
+            toast('History cleared');
+          } catch (e) {
+            if (st) st.history = was;
+            self.render(true);
+            toast(serverError(e), 'alert');
+          }
+        });
+        fill(recent, [
+          rest.length ? h('div', { class: 'ask-recent-head' }, h('p', { class: 'room-label', text: 'Earlier' })) : null,
+          rest.length ? h('ol', { class: 'hist' }, rest.slice(0, 11).map(function (x) {
+            const e = str(x.error);
+            const body = h('p', { class: 'hist-a' + (e ? ' err' : ''), text: e || str(x.text) || 'Done.' });
+            const item = h('li', { class: 'hist-item' }, h('p', { class: 'hist-q', text: str(x.question) }), body, answerMeta(x, 'hist-meta'));
+            if ((e || str(x.text)).length > 140) {
+              const more = h('button', { class: 'quiet-link hist-more', type: 'button', 'aria-expanded': 'false' }, 'Show all');
+              more.addEventListener('click', function () {
+                const open = item.classList.toggle('open');
+                more.setAttribute('aria-expanded', open ? 'true' : 'false');
+                more.textContent = open ? 'Show less' : 'Show all';
+              });
+              add(item, more);
+            }
+            return item;
+          })) : null,
+          h('div', { class: 'ask-foot' }, clear)
+        ]);
+      }
+    };
+    return self;
   }
 
   function greeting() {
@@ -1627,9 +1853,20 @@
     const chance = num(fc.morning);
     const when = num(fc.morningAt) || 0;
     if (chance !== null && chance >= 0 && when > 0) {
-      const today = dayStart(tvNow());
-      const day = dayStart(when) === today ? 'Today' : dayStart(when) === dayStart(tvNow(), 1) ? 'Tomorrow' : fmtDate(when, { weekday: 'long' });
-      lines.push(day + ' at ' + timeNb(when) + ': ' + Math.round(clamp(chance, 0, 1) * 100) + '% chance of an e-bike');
+      const isToday = dayStart(when) === dayStart(tvNow());
+      const day = isToday ? 'Today' : dayStart(when) === dayStart(tvNow(), 1) ? 'Tomorrow' : fmtDate(when, { weekday: 'long' });
+      const pct = function (x) { return Math.round(clamp(x, 0, 1) * 100) + '%'; };
+      // The evening outlook: the chance at morningAt and an hour and two hours after it.
+      const later = [[num(fc.morning1h), when + 3600000], [num(fc.morning2h), when + 7200000]].filter(function (x) { return x[0] !== null && x[0] >= 0; });
+      if (later.length) {
+        const pts = [[chance, when]].concat(later);
+        const same = pts.every(function (x) { return dayPeriod(x[1]) === dayPeriod(when); });
+        const at = same ? clockShort : timeNb;
+        const list = pts.map(function (x) { return pct(x[0]) + ' at ' + at(x[1]); }).join(', ');
+        lines.push((isToday ? 'Chance of an e-bike: ' : day + ', chance of an e-bike: ') + list);
+      } else {
+        lines.push(day + ' at ' + timeNb(when) + ': ' + pct(chance) + ' chance of an e-bike');
+      }
     }
     if (!main && !lines.length) return null;
     const tag = DAY_TYPES[str(fc.dayType)] || '';
@@ -3651,7 +3888,7 @@
       const photos = card(8, 'Photos', 'card-set');
       fill(photos.body, [row('album', 'Which photos'), row('rotate', 'Change the photo')]);
 
-      const cals = card(9, 'Calendars', 'card-set');
+      const cals = card(10, 'Calendars', 'card-set');
       this.feedList = h('ul', { class: 'feeds' });
       const calName = h('input', { class: 'input', id: 'cal-name', type: 'text', maxLength: 30, placeholder: 'Family', autocomplete: 'off' });
       const calUrl = h('input', { class: 'input mono-input', id: 'cal-url', type: 'url', inputmode: 'url', placeholder: 'https://calendar.google.com/…/basic.ics', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
@@ -3686,7 +3923,7 @@
             h('p', { class: 'muted', text: 'The TV keeps the address to itself and only ever shows the start of it here.' })))
       ]);
 
-      const wifi = card(10, 'Guest Wi-Fi', 'card-set');
+      const wifi = card(11, 'Guest Wi-Fi', 'card-set');
       this.ssid = h('input', { class: 'input', id: 'wifi-ssid', type: 'text', maxLength: 32, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
       this.wpass = h('input', { class: 'input', id: 'wifi-pass', type: 'password', maxLength: 63, autocomplete: 'new-password', autocapitalize: 'off', spellcheck: 'false' });
       const eye = h('button', { class: 'btn btn-icon btn-icon-sm eye', type: 'button', 'aria-label': 'Show password', 'aria-pressed': 'false' }, icon('eye'));
@@ -3718,7 +3955,7 @@
       hideWifi.addEventListener('click', function () { act('wifi', { do: 'hide' }).catch(function (e) { toast(e.message, 'alert'); }); });
       fill(wifi.body, [h('p', { class: 'set-help', text: 'Guests scan a code on the TV to join. The password never comes back to this page.' }), wifiForm, h('div', { class: 'btn-row' }, showWifi, hideWifi)]);
 
-      const alexa = card(11, 'Alexa', 'card-set');
+      const alexa = card(12, 'Alexa', 'card-set');
       this.alexaOn = toggle({ id: 'alexa-on', label: 'Alexa routines', onChange: function (on) {
         return setSetting('alexa', on ? 'on' : 'off').then(function () { const a = obj(S.alexa); a.on = on; S.alexa = a; self.renderAlexa(true); });
       } });
@@ -3728,7 +3965,7 @@
         this.alexaBody
       ]);
 
-      const devices = card(12, 'Paired devices', 'card-set');
+      const devices = card(13, 'Paired devices', 'card-set');
       this.deviceList = h('ul', { class: 'devices' });
       const forget = h('button', { class: 'btn btn-danger btn-block', type: 'button' }, 'Forget this device');
       confirmTap(forget, 'Tap again to unpair this device', async function () {
@@ -3738,11 +3975,11 @@
       });
       fill(devices.body, [this.deviceList, forget]);
 
-      const health = card(13, 'Health', 'card-set');
+      const health = card(14, 'Health', 'card-set');
       this.healthList = h('ul', { class: 'health' });
       fill(health.body, [h('p', { class: 'set-help', text: 'Every live source the TV reads, and how it is pacing itself. Limited means the source asked Lucent to slow down.' }), this.healthList]);
 
-      const about = card(14, 'About', 'card-set');
+      const about = card(15, 'About', 'card-set');
       this.aboutBody = h('div', { class: 'about' });
       const refresh = h('button', { class: 'btn btn-block', type: 'button' }, icon('refresh'), 'Fetch fresh data now');
       refresh.addEventListener('click', function () { act('refresh', {}).then(function () { toast('The TV is fetching fresh data'); }).catch(function (e) { toast(e.message, 'alert'); }); });
@@ -3751,8 +3988,9 @@
       const samsung = this.buildSamsung();
       const remote = this.buildRemote();
       const push = this.buildPush();
+      const claude = this.buildClaude();
       const left = h('div', { class: 'set-col' }, look.el, samsung.el, remote.el, quiet.el, bikes.el, push.el, notes.el, photos.el);
-      const right = h('div', { class: 'set-col' }, cals.el, wifi.el, alexa.el, devices.el, health.el, about.el);
+      const right = h('div', { class: 'set-col' }, claude.el, cals.el, wifi.el, alexa.el, devices.el, health.el, about.el);
       const cols = h('div', { class: 'set-cols' }, left, right);
       stagger(cols);
       fill(v, [this.head.el, cols]);
@@ -3768,6 +4006,7 @@
       this.renderFeeds();
       this.renderSamsung();
       this.renderRemote();
+      this.renderClaude();
       this.renderPush();
       this.renderAlexa();
       this.renderDevices();
@@ -4176,6 +4415,147 @@
         this.rmOpen.hidden = !ready;
       }
     },
+    // Claude: the API key (kept on the TV), the month's spending against the cap, and the automations.
+    buildClaude: function () {
+      const self = this;
+      const c = card(9, 'Claude', 'card-set card-claude');
+      c.el.id = 'set-claude';
+      c.el.hidden = true;
+      this.cl = { card: c };
+      this.clError = h('p', { class: 'amber-note', role: 'status', hidden: true });
+      this.clStatus = h('div', { class: 'cl-status', hidden: true });
+      this.clKey = h('input', { class: 'input mono-input', id: 'claude-key', type: 'password', maxLength: 200, placeholder: 'sk-ant-…', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+      this.clSave = h('button', { class: 'btn btn-primary', type: 'submit' }, 'Save');
+      this.clForm = h('form', { class: 'set-row cl-form', novalidate: true },
+        h('div', { class: 'set-text' }, h('label', { class: 'set-label', for: 'claude-key', text: 'Claude API key' }), h('p', { class: 'set-help', text: 'From console.anthropic.com, under API Keys.' })),
+        h('div', { class: 'inline-form' }, this.clKey, this.clSave));
+      this.clForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const key = self.clKey.value.trim();
+        if (!key) { self.setClError('Paste the key first.'); self.clKey.focus(); return; }
+        self.clSave.disabled = true;
+        self.clSave.classList.add('busy');
+        try {
+          await act('assistant', { do: 'key', key: key }, { timeout: 15000 });
+          self.clKey.value = '';
+          const a = obj(assistantState());
+          a.on = true;
+          a.hint = '…' + key.slice(-4);
+          S.assistant = a;
+          self.setClError('');
+          self.renderClaude(true);
+          if (views.home.built) views.home.ask.render(true);
+          toast('Key saved. Ask away.');
+        } catch (err) {
+          self.setClError(serverError(err));
+        }
+        self.clSave.disabled = false;
+        self.clSave.classList.remove('busy');
+      });
+      this.clCap = h('select', { class: 'input select', id: 'claude-cap' });
+      this.clCap.addEventListener('change', async function () {
+        const dollars = parseInt(self.clCap.value, 10);
+        try {
+          await act('assistant', { do: 'cap', dollars: dollars });
+          obj(assistantState()).cap = dollars;
+          self.renderClaude(true);
+          toast('Cap set to $' + dollars + ' a month');
+        } catch (err) {
+          toast(serverError(err), 'alert');
+          self.renderClaude(true);
+        }
+      });
+      this.clCapRow = h('div', { class: 'set-row', hidden: true },
+        h('div', { class: 'set-text' }, h('label', { class: 'set-label', for: 'claude-cap', text: 'Monthly cap' }), h('p', { class: 'set-help', text: 'Lucent stops asking when the month reaches it.' })),
+        this.clCap);
+      this.clForget = h('button', { class: 'btn btn-quiet btn-danger btn-sm cl-forget', type: 'button', 'data-fk': 'cl-forget' }, 'Forget Key');
+      confirmTap(this.clForget, 'Tap again to forget the key', async function () {
+        try {
+          await act('assistant', { do: 'forget' });
+          const a = obj(assistantState());
+          a.on = false;
+          a.hint = '';
+          S.assistant = a;
+          self.renderClaude(true);
+          if (views.home.built) views.home.ask.render(true);
+          toast('Key forgotten');
+        } catch (err) {
+          self.setClError(serverError(err));
+        }
+      });
+      this.clForgetRow = h('div', { class: 'set-row', hidden: true }, this.clForget);
+      this.clRules = h('ul', { class: 'rules' });
+      fill(c.body, [
+        this.clError,
+        this.clStatus,
+        this.clForm,
+        this.clCapRow,
+        this.clForgetRow,
+        h('p', { class: 'set-help cl-help', text: 'Your key stays on the TV and is never shown again. Questions, and what the TV shows (bikes, weather, shuttles, your next plans, what’s playing), go to Anthropic to answer them. Lucent stops asking when the month reaches the cap.' }),
+        h('div', { class: 'cl-rules' },
+          h('p', { class: 'set-label', text: 'Automations' }),
+          this.clRules,
+          h('p', { class: 'set-help', text: 'Ask Lucent to add one, like: every weekday at 7:15 start the bike finder.' }))
+      ]);
+      return c;
+    },
+    setClError: function (text) {
+      this.clError.textContent = text || '';
+      this.clError.hidden = !text;
+    },
+    renderClaude: function (force) {
+      const a = assistantState();
+      this.cl.card.el.hidden = !a;
+      if (!a) return;
+      if (!changed('s.claude', [a.on, a.hint, a.model, a.cap, a.spent, a.rules]) && !force) return;
+      const on = a.on === true;
+      setMeta(this.cl.card, on ? 'Connected' : '', on ? 'live' : '');
+      const cap = num(a.cap) || 40;
+      const spent = Math.max(0, num(a.spent) || 0) / 1000000;
+      const hint = str(a.hint);
+      fill(this.clStatus, on ? [
+        h('p', { class: 'cl-line' }, h('span', { class: 'strong', text: 'Connected' }), ' · key ' + (hint ? (/^…/.test(hint) ? hint : '…' + hint) : 'saved') + ' · ' + modelName(a.model)),
+        h('div', { class: 'cl-spend' },
+          h('div', { class: 'cl-spend-top' }, h('span', { class: 'set-label', text: 'This month' }), h('span', { class: 'cl-spend-num', text: '$' + spent.toFixed(2) + ' of $' + cap })),
+          h('div', { class: 'cl-bar', role: 'img', 'aria-label': Math.round(Math.min(1, spent / cap) * 100) + '% of the cap used' },
+            h('span', { class: 'cl-bar-fill' + (spent >= cap ? ' full' : spent >= cap * 0.8 ? ' high' : ''), vars: { '--p': Math.min(1, spent / cap).toFixed(4) } })))
+      ] : null);
+      this.clStatus.hidden = !on;
+      this.clForm.hidden = on;
+      this.clCapRow.hidden = !on;
+      this.clForgetRow.hidden = !on;
+      const caps = [10, 20, 40, 60, 80, 100];
+      if (caps.indexOf(cap) < 0) caps.push(cap);
+      caps.sort(function (x, y) { return x - y; });
+      fill(this.clCap, caps.map(function (n) { return h('option', { value: String(n), text: '$' + n + ' a month' }); }));
+      this.clCap.value = String(cap);
+      this.renderRules(arr(a.rules).map(obj).filter(function (r) { return str(r.id); }));
+    },
+    renderRules: function (rules) {
+      if (!rules.length) { fill(this.clRules, h('li', null, empty('No automations yet.'))); return; }
+      fill(this.clRules, rules.map(function (r) {
+        const id = str(r.id);
+        const sw = toggle({ id: 'rule-' + id, label: str(r.name) || 'Automation', value: r.on !== false, onChange: function (v) {
+          return act('assistant', { do: 'ruleon', id: id, on: v }).then(function () { r.on = v; item.classList.toggle('off', !v); });
+        } });
+        const del = h('button', { class: 'btn btn-icon btn-icon-sm rule-del', type: 'button', 'aria-label': 'Delete ' + (str(r.name) || 'automation'), 'data-fk': 'rule-del-' + id }, icon('trash'));
+        confirmTap(del, 'Delete?', async function () {
+          try {
+            await act('assistant', { do: 'ruledel', id: id });
+            const a = obj(assistantState());
+            a.rules = arr(a.rules).filter(function (x) { return str(obj(x).id) !== id; });
+            views.settings.renderClaude(true);
+            toast('Automation deleted');
+          } catch (e) {
+            toast(serverError(e), 'alert');
+          }
+        });
+        const item = h('li', { class: 'rule' + (r.on === false ? ' off' : '') },
+          h('label', { class: 'rule-text', for: 'rule-' + id }, h('span', { class: 'rule-name', text: str(r.name) || 'Automation' }), h('span', { class: 'rule-when', text: str(r.when) })),
+          sw.el, del);
+        return item;
+      }));
+    },
     buildPush: function () {
       const self = this;
       const c = card(6, 'Phone alerts', 'card-set card-push');
@@ -4362,6 +4742,13 @@
         str(display.advice) ? h('p', { class: 'amber-note', text: str(display.advice) }) : null]);
     }
   };
+
+  // "Claude Opus 5.5" from "claude-opus-5-5".
+  function modelName(id) {
+    const m = /^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-|$)/i.exec(str(id));
+    if (!m) return str(id) || 'Claude';
+    return 'Claude ' + m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() + ' ' + m[2] + (m[3] ? '.' + m[3] : '');
+  }
 
   function setRow(label, help, control) {
     return h('div', { class: 'set-row' },

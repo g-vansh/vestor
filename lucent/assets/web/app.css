@@ -2120,6 +2120,115 @@ a.btn { text-decoration: none; }
 .rm-actions:empty { display: none; }
 .card-rm .steps { margin-top: 12px; }
 
+/* ---------------------------------------------------------------- ask Lucent */
+
+.card-ask .card-body { display: grid; gap: 16px; }
+.ask-box { display: grid; gap: 8px; }
+.ask-form { position: relative; display: flex; align-items: center; }
+.ask-input {
+  min-height: 62px;
+  padding: 0 70px 0 20px;
+  border-radius: 20px;
+  font: 400 21px/1.2 var(--font-serif);
+  letter-spacing: -.005em;
+}
+.ask-input::placeholder { font-style: italic; }
+.ask-send { position: absolute; right: 7px; top: 50%; width: 48px; min-height: 48px; margin-top: -24px; }
+.ask-send .ico { width: 20px; height: 20px; }
+.ask-send.busy .ico { display: none; }
+.ask-hint { color: var(--text-3); font-size: 12.5px; padding-left: 6px; }
+.ask-nokey { display: grid; gap: 12px; justify-items: start; }
+.ask-nokey-text { font: 400 22px/1.25 var(--font-serif); letter-spacing: -.01em; color: var(--text-2); }
+.card-ask .amber-note { margin: 0; }
+.ask-now:empty { display: none; }
+
+.answer { display: grid; gap: 10px; padding: 18px; border-radius: calc(var(--r-card) - 8px); background: var(--well); box-shadow: inset 0 0 0 1px var(--edge); }
+.answer.fresh { animation: rise .6s var(--ease) both; }
+.answer-q { font: 500 10.5px/1.35 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); overflow-wrap: anywhere; }
+.answer-text { font: 400 19px/1.42 var(--font-serif); letter-spacing: -.004em; white-space: pre-line; overflow-wrap: anywhere; text-wrap: pretty; }
+.answer .amber-note { margin: 0; }
+.answer-meta, .hist-meta { color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.did { display: flex; flex-wrap: wrap; gap: 6px; }
+.did-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 11px 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.did-chip .ico { width: 14px; height: 14px; stroke-width: 2.2; }
+.sources { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.sources-label { font: 500 10.5px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-right: 2px; }
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--glass-2);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.source:hover { background: var(--glass-3); }
+.source .ico { width: 13px; height: 13px; color: var(--text-3); }
+
+.thinking { background: var(--accent-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent); }
+.thinking .answer-q { font: 400 21px/1.3 var(--font-serif); letter-spacing: -.005em; text-transform: none; color: var(--text); }
+.think-line { display: flex; align-items: center; gap: 10px; color: var(--text-2); font-size: 14px; }
+.think-dots { display: inline-flex; gap: 5px; }
+.think-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .25; animation: think 1.8s ease-in-out infinite; }
+.think-dots span:nth-child(2) { animation-delay: .3s; }
+.think-dots span:nth-child(3) { animation-delay: .6s; }
+@keyframes think { 0%, 100% { opacity: .25; transform: none; } 40% { opacity: 1; transform: translateY(-2px); } }
+
+.ask-recent { display: grid; gap: 10px; }
+.ask-recent:empty { display: none; }
+.ask-examples .chip-opt { min-height: 42px; text-align: left; line-height: 1.25; padding: 8px 15px; }
+.hist { display: grid; }
+.hist-item { display: grid; gap: 4px; padding: 12px 0; border-top: 1px solid var(--hair); }
+.hist-item:first-child { border-top: 0; padding-top: 2px; }
+.hist-q { font-weight: 600; font-size: 14.5px; line-height: 1.3; overflow-wrap: anywhere; }
+.hist-a { color: var(--text-2); font-size: 14px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.hist-item.open .hist-a { display: block; -webkit-line-clamp: unset; }
+.hist-a.err { color: var(--warn); }
+.hist-more { min-height: 32px; font-size: 13px; }
+.ask-foot { display: flex; justify-content: flex-end; }
+@media (min-width: 900px) {
+  .ask-input { min-height: 68px; font-size: 24px; }
+  .answer-text { font-size: 22px; }
+}
+
+/* Claude in Settings */
+.card-claude .card-body > * + * { margin-top: 14px; }
+.card-claude .card-body > [hidden] + * { margin-top: 0; }
+.cl-status { display: grid; gap: 14px; }
+.cl-line { font-size: 14px; color: var(--text-2); overflow-wrap: anywhere; }
+.cl-line .strong { color: var(--good); }
+.cl-spend { display: grid; gap: 8px; }
+.cl-spend-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.cl-spend-num { font: 400 22px/1 var(--font-serif); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; }
+.cl-bar { height: 4px; border-radius: 4px; background: var(--well-2); overflow: hidden; }
+.cl-bar-fill { display: block; height: 100%; border-radius: 4px; background: var(--accent); transform: scaleX(var(--p, 0)); transform-origin: left center; transition: transform .6s var(--ease); }
+.cl-bar-fill.high { background: var(--warn); }
+.cl-bar-fill.full { background: var(--alert); }
+.card-claude .set-row > .btn-sm { justify-self: start; }
+.cl-help { padding-top: 14px; border-top: 1px solid var(--hair); }
+.cl-rules { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--hair); }
+.rules { display: grid; }
+.rule { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--edge); }
+.rule.off .rule-text { opacity: .55; }
+.rule-text { display: grid; gap: 2px; min-width: 0; cursor: pointer; }
+.rule-name { font-weight: 600; font-size: 14.5px; overflow-wrap: anywhere; }
+.rule-when { color: var(--text-2); font-size: 13px; }
+
 /* ---------------------------------------------------------------- reduced motion */
 
 @media (prefers-reduced-motion: reduce) {
