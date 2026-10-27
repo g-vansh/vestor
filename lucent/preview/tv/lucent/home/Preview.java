@@ -41,6 +41,7 @@ public final class Preview {
         shot(out, "08-shuttles-panel", wallFile, new int[] {R, R, OK}, 0);
         shot(out, "09-sky-panel", wallFile, new int[] {R, R, R, OK}, 0);
         shot(out, "32-bikes-panel", wallFile, new int[] {R, OK, OK}, 0);
+        shot(out, "33-shuttles-grocery-friday", wallFile, new int[] {R, R, OK}, 15);
         shot(out, "10-finding-home", wallFile, new int[] {OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
         shot(out, "12-apps", wallFile, new int[] {D}, 0);
@@ -88,7 +89,7 @@ public final class Preview {
         return b;
     }
 
-    private static Model.Transit transit() throws Exception {
+    private static Model.Transit transit(boolean grocery) throws Exception {
         Gtfs.Static st = Gtfs.readStatic(java.nio.file.Files.readAllBytes(new File(FIX, "mit_gtfs.zip").toPath()));
         Model.Line tech = Transit.tech(), tech2 = Transit.tech2(), safe = Transit.saferide();
         Model.Line asm = Transit.toAssembly(), rug = Transit.toRuggles();
@@ -100,6 +101,13 @@ public final class Preview {
         t.lines.add(safe);
         t.lines.add(asm);
         t.lines.add(rug);
+        if (grocery) {
+            // A grocery Friday: the Trader Joe's run due at Tang/Westgate.
+            Model.Line g = Transit.grocery();
+            g.minutes.add(12);
+            g.minutes.add(71);
+            t.lines.add(g);
+        }
         // Daytime in the fixtures, so SafeRide has no bus: show it the way the TV would.
         safe.minutes.clear();
         Transit.idleNotes(t, NOW);
@@ -181,7 +189,7 @@ public final class Preview {
         scene.setPicture(picture());
         scene.setBikes(bikes(extra == 4));
         scene.setForecast(forecast(extra), NOW);
-        scene.setTransit(transit());
+        scene.setTransit(transit(extra == 15));
         scene.setSky(sky());
         scene.setClock("2:05", "PM", "Tuesday, October 27");
         scene.setOptions(options());

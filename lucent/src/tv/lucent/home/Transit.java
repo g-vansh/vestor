@@ -33,6 +33,16 @@ final class Transit {
     static final String MIT_STATIC = "https://passio3.com/mit/passioTransit/gtfs/google_transit.zip";
     static final String STOP_GRAD_JUNCTION_W = "180113";
     static final String STOP_W98_VASSAR = "3813";
+    /** Tang/Westgate (W84/W85), where the grocery shuttles stop for Westgate. */
+    static final String STOP_TANG_WESTGATE = "1013";
+    /** Trader Joe-Whole Foods in MIT's Passio feed. */
+    static final Set<String> GROCERY = set("64288");
+    /**
+     * MIT's published Trader Joe's and Whole Foods run (TJ-WF.pdf): it leaves Kendall Square at
+     * these minutes past midnight, passes Tang/Westgate on the way, and is at Trader Joe's about
+     * 45 minutes later. Service 11 AM to 5 PM on Fridays and the 1st, 3rd and 5th Sundays.
+     */
+    static final int[] GROCERY_FROM_KENDALL = {660, 720, 783, 846, 909};
     static final Set<String> TECH = set("63220");
     static final Set<String> TECH2 = set("56642", "71674");
 
@@ -54,7 +64,7 @@ final class Transit {
      * 4.5:1 on dimmed glass; MBTA buses wear the MBTA's own bus yellow. The chip's text carries
      * the meaning, not the colour.
      */
-    static final int GREEN = 0xFF4CD97B, AZURE = 0xFF5AB0FF, VIOLET = 0xFFC08CFF, MBTA_YELLOW = 0xFFFFC72C;
+    static final int GREEN = 0xFF4CD97B, AZURE = 0xFF5AB0FF, VIOLET = 0xFFC08CFF, MBTA_YELLOW = 0xFFFFC72C, CORAL = 0xFFFF8A65;
 
     private static Set<String> set(String... ids) {
         Set<String> s = new HashSet<>();
@@ -74,6 +84,34 @@ final class Transit {
         return new Model.Line("saferide", "SafeRide", "SAFE", "W98 @ Vassar St", VIOLET);
     }
 
+    static Model.Line grocery() {
+        return new Model.Line("grocery", "Trader Joe's and Whole Foods", "TJ", "Tang/Westgate", CORAL);
+    }
+
+    /**
+     * Whether the grocery shuttle runs on this day: Fridays (not Christmas Day) and the first,
+     * third and fifth Sundays of the month.
+     */
+    static boolean groceryDay(long nowMs) {
+        Calendar c = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"), Locale.US);
+        c.setTimeInMillis(nowMs);
+        int dow = c.get(Calendar.DAY_OF_WEEK), dom = c.get(Calendar.DAY_OF_MONTH);
+        if (dow == Calendar.FRIDAY) return !(c.get(Calendar.MONTH) == Calendar.DECEMBER && dom == 25);
+        if (dow != Calendar.SUNDAY) return false;
+        int week = (dom - 1) / 7 + 1;
+        return week == 1 || week == 3 || week == 5;
+    }
+
+    /** Whether to list the grocery shuttle now: on its days from 10 AM until 5 PM, or whenever a bus is tracked. */
+    static boolean groceryShown(Model.Line grocery, long nowMs) {
+        if (!grocery.minutes.isEmpty()) return true;
+        if (!groceryDay(nowMs)) return false;
+        Calendar c = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"), Locale.US);
+        c.setTimeInMillis(nowMs);
+        int h = c.get(Calendar.HOUR_OF_DAY);
+        return h >= 10 && h < 17;
+    }
+
     /** 85A: the 85 heading to Assembly Row, from beside the Westgate dock. */
     static Model.Line toAssembly() {
         Model.Line l = new Model.Line("85a", "85A to Assembly Row", "85A", "Vassar St @ Audrey St", MBTA_YELLOW);
@@ -88,12 +126,14 @@ final class Transit {
         return l;
     }
 
-    /** Which MIT line a route is: 1 Tech, 2 Tech 2, 3 SafeRide, 0 none of ours. */
+    /** Which MIT line a route is: 1 Tech, 2 Tech 2, 3 SafeRide, 4 Trader Joe's and Whole Foods, 0 none of ours. */
     static int kind(String routeId, String routeName) {
         if (TECH.contains(routeId)) return 1;
         if (TECH2.contains(routeId)) return 2;
+        if (GROCERY.contains(routeId)) return 4;
         String n = routeName == null ? "" : routeName.toLowerCase(Locale.US).replace(" ", "");
         if (n.startsWith("saferide")) return 3;
+        if (n.startsWith("traderjoe")) return 4;
         if (n.startsWith("techshuttle2")) return 2;
         if (n.startsWith("techshuttle")) return 1;
         return 0;
@@ -102,19 +142,26 @@ final class Transit {
     /** Fills Tech, Tech 2 and SafeRide minutes from realtime updates. */
     static void mit(List<Gtfs.Update> updates, Gtfs.Static st, long nowMs, Model.Line tech, Model.Line tech2,
             Model.Line safe) {
+        mit(updates, st, nowMs, tech, tech2, safe, grocery());
+    }
+
+    /** The same, and the grocery shuttle's minutes at Tang/Westgate. */
+    static void mit(List<Gtfs.Update> updates, Gtfs.Static st, long nowMs, Model.Line tech, Model.Line tech2,
+            Model.Line safe, Model.Line grocery) {
         for (Gtfs.Update u : updates) {
             String route = st == null ? u.routeId : st.routeOf(u);
             int k = kind(route, st == null ? "" : st.name(route));
             if (k == 0) continue;
-            String want = k == 3 ? STOP_W98_VASSAR : STOP_GRAD_JUNCTION_W;
+            String want = k == 3 ? STOP_W98_VASSAR : k == 4 ? STOP_TANG_WESTGATE : STOP_GRAD_JUNCTION_W;
             if (!want.equals(u.stopId)) continue;
             int mins = minutes(u.time * 1000L - nowMs);
             if (mins < 0) continue;
-            (k == 1 ? tech : k == 2 ? tech2 : safe).minutes.add(mins);
+            (k == 1 ? tech : k == 2 ? tech2 : k == 4 ? grocery : safe).minutes.add(mins);
         }
         tidy(tech);
         tidy(tech2);
         tidy(safe);
+        tidy(grocery);
     }
 
     /**
@@ -252,8 +299,20 @@ final class Transit {
             if (weekend) return "Weekdays";
             return mins >= 420 && mins < 960 ? "No bus tracked" : "Weekdays 7 to 4";
         }
+        if ("grocery".equals(id)) {
+            for (int k : GROCERY_FROM_KENDALL) {
+                if (k >= mins) return "Leaves Kendall " + clock(k);
+            }
+            return "Last run left 3:09";
+        }
         if (mins >= 1080 && mins < 1380) return "No bus tracked";
         return mins >= 1380 || mins < 240 ? "On demand" : "From 6 PM";
+    }
+
+    /** "11:00 AM" or "1:03 PM" for minutes past midnight. */
+    static String clock(int mins) {
+        int h = mins / 60 % 24, m = mins % 60;
+        return (h % 12 == 0 ? 12 : h % 12) + ":" + (m < 10 ? "0" : "") + m + (h < 12 ? " AM" : " PM");
     }
 
     /** MBTA's display rules: "Now" at 30 s or less, minutes below an hour, "1 h 12 m" above. */

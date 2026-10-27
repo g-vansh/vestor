@@ -65,7 +65,7 @@ final class Live {
     private static final long INFO_RETRY = 30 * 60000L, GTFS_RETRY = 6 * 3600000L;
     /** The stops {@link Transit#mit} reads, so the realtime feed keeps no other stop's predictions. */
     private static final Set<String> MIT_STOPS =
-            new HashSet<>(java.util.Arrays.asList(Transit.STOP_GRAD_JUNCTION_W, Transit.STOP_W98_VASSAR));
+            new HashSet<>(java.util.Arrays.asList(Transit.STOP_GRAD_JUNCTION_W, Transit.STOP_W98_VASSAR, Transit.STOP_TANG_WESTGATE));
     private static final long ROUTE_HIT_MS = 12 * 3600000L, ROUTE_MISS_MS = 2 * 3600000L;
     private static final int TIMEOUT = 8000;
 
@@ -498,10 +498,10 @@ final class Live {
     /** The five lines as of {@code now}, from the latest MIT update and MBTA set. */
     private Model.Transit transitNow(long now, boolean mitOk, boolean mbtaOk) {
         Model.Transit t = new Model.Transit();
-        Model.Line tech = Transit.tech(), tech2 = Transit.tech2(), safe = Transit.saferide();
+        Model.Line tech = Transit.tech(), tech2 = Transit.tech2(), safe = Transit.saferide(), grocery = Transit.grocery();
         Model.Line assembly = Transit.toAssembly(), ruggles = Transit.toRuggles();
         // Updates older than two minutes are not shown as live minutes: the bus has moved on.
-        if (mitUpdates != null && now - mitAt < 120000L) Transit.mit(mitUpdates, mitStatic, now, tech, tech2, safe);
+        if (mitUpdates != null && now - mitAt < 120000L) Transit.mit(mitUpdates, mitStatic, now, tech, tech2, safe, grocery);
         long mbtaAge = now - Math.max(mbtaPolled, mbta.changed());
         if (mbtaStreaming || mbtaAge < 120000L) mbta.fill(now, assembly, ruggles);
         t.lines.add(tech);
@@ -509,6 +509,8 @@ final class Live {
         t.lines.add(safe);
         t.lines.add(assembly);
         t.lines.add(ruggles);
+        // The grocery shuttle only on its days (or whenever one is tracked), so it never clutters a weekday.
+        if (Transit.groceryShown(grocery, now)) t.lines.add(grocery);
         Transit.idleNotes(t, now);
         boolean h24 = clock24;
         List<List<Long>> tt = timetable;
@@ -519,6 +521,7 @@ final class Live {
             tech.idle = "MIT feed not answering";
             tech2.idle = tech.idle;
             safe.idle = tech.idle;
+            grocery.idle = tech.idle;
         }
         if (!mbtaOk && mbtaAge > 120000L) {
             assembly.idle = "MBTA not answering";

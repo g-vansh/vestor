@@ -115,6 +115,40 @@ public final class Feeds {
         Model.Line a = Transit.tech(), b = Transit.tech2(), c = Transit.saferide();
         Transit.mit(ups, null, NOW, a, b, c);
         eq("tech without static", Arrays.asList(4), a.minutes);
+        grocery();
+    }
+
+    /** The Trader Joe's and Whole Foods shuttle: its days, its line at Tang/Westgate, its idle words. */
+    private static void grocery() {
+        java.util.TimeZone ny = java.util.TimeZone.getTimeZone("America/New_York");
+        java.util.Calendar c = java.util.Calendar.getInstance(ny);
+        String[] days = {"2026-10-30", "2026-11-01", "2026-11-08", "2026-11-15", "2026-11-22", "2026-11-29", "2026-12-25",
+            "2026-10-31", "2026-10-27"};
+        String want = "yes yes no yes no yes no no no", got = "";
+        for (String d : days) {
+            c.clear();
+            c.set(Integer.parseInt(d.substring(0, 4)), Integer.parseInt(d.substring(5, 7)) - 1, Integer.parseInt(d.substring(8)), 12, 0);
+            got += (got.isEmpty() ? "" : " ") + (Transit.groceryDay(c.getTimeInMillis()) ? "yes" : "no");
+        }
+        eq("grocery days (Fri, Sun 1st 2nd 3rd 4th 5th, Christmas, Sat, Tue)", want, got);
+        eq("grocery by id", 4, Transit.kind("64288", ""));
+        eq("grocery by name", 4, Transit.kind("1", "Trader Joe-Whole Foods"));
+        eq("costco is not ours", 0, Transit.kind("64291", "Costco - Aldi's"));
+        Gtfs.Update u = new Gtfs.Update(), elsewhere = new Gtfs.Update();
+        u.routeId = "64288";
+        u.stopId = Transit.STOP_TANG_WESTGATE;
+        u.time = NOW / 1000 + 6 * 60;
+        elsewhere.routeId = "64288";
+        elsewhere.stopId = "27098";
+        elsewhere.time = NOW / 1000 + 3 * 60;
+        Model.Line g = Transit.grocery();
+        Transit.mit(Arrays.asList(u, elsewhere), null, NOW, Transit.tech(), Transit.tech2(), Transit.saferide(), g);
+        eq("grocery at Westgate only", Arrays.asList(6), g.minutes);
+        eq("grocery shown when tracked", true, Transit.groceryShown(g, NOW));
+        eq("grocery hidden on a Tuesday", false, Transit.groceryShown(Transit.grocery(), NOW));
+        eq("grocery before the first run", "Leaves Kendall 11:00 AM", Transit.note("grocery", 10 * 60 + 30, false));
+        eq("grocery midday", "Leaves Kendall 1:03 PM", Transit.note("grocery", 12 * 60 + 40, false));
+        eq("grocery after the last run", "Last run left 3:09", Transit.note("grocery", 15 * 60 + 30, false));
     }
 
     private static void sky(Path dir) throws Exception {

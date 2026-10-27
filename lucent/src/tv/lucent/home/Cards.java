@@ -955,9 +955,10 @@ final class Cards {
         freshness(g, transit.fetched, 90000L, right, t + dp(46), a);
         float chipW = 0;
         for (Model.Line ln : transit.lines) chipW = Math.max(chipW, chipWidth(g, ln.chip, dp(26)));
-        float y = t + dp(100), rowH = dp(54);
         List<Model.Line> order = new ArrayList<>(running());
         for (Model.Line l2 : transit.lines) if (l2.minutes.isEmpty()) order.add(l2);
+        // Five rows fit at full height; on grocery shuttle days the six share the same space.
+        float y = t + dp(100), rowH = Math.min(dp(54), (b - dp(44) - y) / Math.max(1, order.size()));
         for (Model.Line ln : order) {
             float cy = y + rowH / 2;
             boolean live = !ln.minutes.isEmpty();
