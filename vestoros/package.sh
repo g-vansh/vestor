@@ -9,7 +9,7 @@ cp build/vestoros.apk install.sh README.md NOTICE dist/vestoros/
 if [[ -d ${SHOTS:-} ]]; then cp "$SHOTS"/*.png "$SHOTS"/*.jpg dist/vestoros/screenshots/ 2>/dev/null || true; fi
 # The source, from a fixed list of what belongs in it, so a key or a copy of one lying in this
 # folder can never ride along.
-src=(AndroidManifest.xml NOTICE README.md build.sh install.sh package.sh .gitignore)
+src=(AndroidManifest.xml NOTICE README.md build.sh install.sh package.sh publish.sh .gitignore)
 while IFS= read -r f; do src+=("$f"); done < <(find src res assets preview scripts web analysis -type f 2>/dev/null | sort)
 zip -q -X dist/vestoros/vestoros-source.zip "${src[@]}"
 if unzip -Z1 dist/vestoros/vestoros-source.zip | grep -iE 'keystore|\.jks$|\.p12$|\.pass$|signing-key' >&2; then
