@@ -1,0 +1,10 @@
+# Signing keys and their passwords. Anyone holding one can sign an update your Fire TV will
+# accept over Lucent, so they never go in a repository or a shared folder.
+release.keystore*
+*.keystore
+*.jks
+*.p12
+*.pass
+signing-key*
+build/
+dist/
