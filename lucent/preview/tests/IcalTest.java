@@ -31,6 +31,7 @@ public final class IcalTest {
         dst();
         edges();
         overrides();
+        invitations();
         dates();
         text();
         key();
@@ -724,6 +725,80 @@ public final class IcalTest {
                 event("ad", "Bins out late", "RECURRENCE-ID;VALUE=DATE:20261026", "DTSTART;VALUE=DATE:20261027"));
         eq("all-day override", "Bins out late@2026-10-27 00:00|Bins out@2026-11-02 00:00",
                 tagged(read(allDay, day("20261026"), day("20261103"))));
+    }
+
+    /**
+     * Invitations the owner of a Google primary calendar has not accepted: its X-WR-CALNAME is the
+     * owner's address, and such an invitation has an ATTENDEE line for it with PARTSTAT
+     * NEEDS-ACTION (or DECLINED). Left out by default, kept on request.
+     */
+    private static void invitations() {
+        String owner = "X-WR-CALNAME:alex.doe@gmail.com", when = "DTSTART:20261028T150000Z";
+        String[] events = {
+            event("a1", "Accepted", when, "ATTENDEE;CN=alex.doe@gmail.com;PARTSTAT=ACCEPTED:mailto:alex.doe@gmail.com",
+                    "ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:sam@example.com"),
+            event("a2", "Invited", when, "ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;"
+                    + "CN=alex.doe@gmail.com;X-NUM-GUESTS=0:mailto:alex.doe@gmail.com"),
+            event("a3", "Declined", when, "ATTENDEE;PARTSTAT=DECLINED;CN=Alex:mailto:Alex.Doe@Gmail.COM"),
+            event("a4", "Mine", when),
+            event("a5", "Maybe", when, "ATTENDEE;PARTSTAT=TENTATIVE:mailto:alex.doe@gmail.com"),
+            // Google folds at 75 bytes, here inside the parameter and inside the address.
+            event("a6", "Folded", when, "ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTI\r\n ON;RSVP=T"
+                    + "RUE;CN=alex.doe@gmail.com;X-NUM-GUESTS=0:mailto:alex.doe@gmail.\r\n com"),
+            event("a7", "Quoted", when, "ATTENDEE;CN=\"Doe, Alex: Jr\";PARTSTAT=\"needs-action\":MAILTO:alex.doe@gmail.com"),
+            event("a8", "Someone else declined", when, "ATTENDEE;PARTSTAT=DECLINED:mailto:sam@example.com",
+                    "ATTENDEE;PARTSTAT=ACCEPTED:mailto:alex.doe@gmail.com"),
+        };
+        String[] lines = new String[events.length + 1];
+        lines[0] = owner;
+        System.arraycopy(events, 0, lines, 1, events.length);
+        String ics = cal(lines);
+        long from = day("20261028"), to = day("20261029");
+        eq("unaccepted invitations are left out", "Accepted|Maybe|Mine|Someone else declined", titles(read(ics, from, to)));
+        eq("... unless asked for", 8, Ical.occurrences(ics, 0, from, to, NY, 100, false).size());
+        eq("... from bytes too", 4, Ical.occurrences(ics.getBytes(StandardCharsets.UTF_8), 0, from, to, NY, 100).size());
+        eq("... or kept from bytes", 8, Ical.occurrences(ics.getBytes(StandardCharsets.UTF_8), 0, from, to, NY, 100, false).size());
+
+        // The calendar name after the events still names the owner.
+        String[] late = new String[events.length + 1];
+        System.arraycopy(events, 0, late, 0, events.length);
+        late[events.length] = owner;
+        eq("owner named after the events", 4, read(cal(late), from, to).size());
+
+        // A calendar whose name is not an address has no known owner: everything shows.
+        String[] shared = new String[events.length + 1];
+        shared[0] = "X-WR-CALNAME:Family";
+        System.arraycopy(events, 0, shared, 1, events.length);
+        eq("no owner, nothing left out", 8, read(cal(shared), from, to).size());
+        eq("only the first calendar name counts", "Invited", titles(read(cal("X-WR-CALNAME:Family", owner, events[1]), from, to)));
+
+        // One occurrence declined out of an accepted series: that day is gone, moved or not.
+        String series = cal(owner,
+                event("r1", "Sync", "DTSTART;TZID=America/New_York:20261005T100000", "RRULE:FREQ=WEEKLY;BYDAY=MO",
+                        "ATTENDEE;PARTSTAT=ACCEPTED:mailto:alex.doe@gmail.com"),
+                event("r1", "Sync", "RECURRENCE-ID;TZID=America/New_York:20261026T100000", "DTSTART;TZID=America/New_York:20261027T100000",
+                        "ATTENDEE;PARTSTAT=DECLINED:mailto:alex.doe@gmail.com"),
+                // A series never answered, with one occurrence accepted.
+                event("r2", "Book club", "DTSTART;TZID=America/New_York:20261005T190000", "RRULE:FREQ=WEEKLY;BYDAY=WE",
+                        "ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:alex.doe@gmail.com"),
+                event("r2", "Book club", "RECURRENCE-ID;TZID=America/New_York:20261028T190000", "DTSTART;TZID=America/New_York:20261028T193000",
+                        "ATTENDEE;PARTSTAT=ACCEPTED:mailto:alex.doe@gmail.com"));
+        long a = day("20261026"), b = day("20261105");
+        eq("a declined occurrence leaves its series", "Book club@2026-10-28 19:30|Sync@2026-11-02 10:00", tagged(read(series, a, b)));
+        eq("... and shows when asked", "Sync@2026-10-27 10:00|Book club@2026-10-28 19:30|Sync@2026-11-02 10:00|Book club@2026-11-04 19:00",
+                tagged(Ical.occurrences(series, 0, a, b, NY, 100, false)));
+
+        // Thousands of attendees cost nothing more and cannot hide the owner's answer.
+        StringBuilder crowd = new StringBuilder();
+        for (int i = 0; i < 5000; i++) crowd.append(i > 0 ? "\r\n" : "").append("ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:guest").append(i).append("@example.com");
+        final String big = cal(owner, event("c1", "Crowd", when, crowd.toString(), "ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:alex.doe@gmail.com"),
+                event("c2", "Crowd accepted", when, crowd.toString(), "ATTENDEE;PARTSTAT=ACCEPTED:mailto:alex.doe@gmail.com"));
+        final long f = from, t = to;
+        fast("5,000 attendees an event", 200, () -> eq("a crowd's invitation", "Crowd accepted", titles(read(big, f, t))));
+        String lateBig = cal(event("c1", "Crowd", when, crowd.toString(), "ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:alex.doe@gmail.com"), owner);
+        eq("past the attendees kept, an owner named late is not found: shown, never wrongly hidden", 1, read(lateBig, from, to).size());
+        eq("addresses", "alex@x.com|null|null|null", Ical.address("MAILTO: Alex@X.com ") + "|" + Ical.address("Family") + "|"
+                + Ical.address("a@b@c") + "|" + Ical.address("mailto:a b@c.d"));
     }
 
     private static String tagged(List<Ical.Event> a) {

@@ -32,22 +32,74 @@ context: no `crypto.subtle`, no service workers, no clipboard write without a ge
 - Use `fetch(url, {credentials: 'same-origin', cache: 'no-store'})`.
 - Errors come back as JSON `{"error": ...}` with status 400/401/403/404/413/415/429.
   401 means not paired (show pairing). 429 means slow down (back off 2 s).
+- The key cookie is replaced about once a minute: any answer may carry
+  `Set-Cookie: lucent=...; Path=/; HttpOnly; SameSite=Strict; Max-Age=34560000`. The browser
+  handles it; the page does nothing. The previous key keeps working for 30 s, so up to three
+  requests at once are fine. `401 {"error": "reused"}` means the key was also used from somewhere
+  else (copied): this device was signed out (the answer clears the cookie) and the TV says so.
+  Show pairing again, with a line like "Signed out for safety. Pair again from the TV."
+- Limits a page must stay within: at most 6 connections at once per device (a browser's
+  default), the head of each request sent within 5 s, a whole request within 20 s (photo
+  uploads: 130 s; `/api/pair/wait`: it answers within 25 s). Before pairing, a device's requests
+  are served two at a time; the rest wait their turn, so do not treat a slow file as an error.
 
 ## Pairing (no key yet)
 
-1. `GET /api/hello` → `{"paired": bool, "name": "Lucent", "pairing": bool}`.
+1. `GET /api/hello` → `{"paired": bool, "name": "Lucent", "pairing": bool, "nonce": string}`.
+   `nonce` (22 URL-safe base64 characters) is there only while a pairing window is open, and is
+   new for each window.
 2. If not paired, show the pairing screen. Two ways in, both only work while someone opened
    "Pair a phone" on the TV (a 2 minute window):
    - The TV shows a QR code for `http://<ip>:8686/#k=<22-char secret>`. When the page loads with
      `#k=` in `location.hash`, read it, immediately `history.replaceState(null, '', '/')` to drop
-     it, ask for a device name (prefilled from the user agent: "iPhone", "iPad", "Mac",
-     "Windows PC", "Android phone"), then `POST /api/pair {"k": secret, "name": name}`.
+     it, and keep it in memory only (never in storage, never in a URL, never sent). Ask for a
+     device name (prefilled from the user agent: "iPhone", "iPad", "Mac", "Windows PC",
+     "Android phone"; at most 100 characters, the TV keeps 40). Then prove the secret without
+     sending it:
+     - `GET /api/hello` for the current `nonce`.
+     - `c` = 16 random bytes from `crypto.getRandomValues` as URL-safe base64 without padding
+       (22 characters). A new `c` for every try: the TV refuses one it has seen in this window.
+     - `proof` = lowercase hex of HMAC-SHA256 with key = the UTF-8 bytes of the secret `k` and
+       message = the UTF-8 bytes of `"lucent-pair:" + nonce + ":" + c + ":" + name`, where
+       `name` is exactly the string sent below.
+     - `POST /api/pair {"proof": proof, "c": c, "name": name}`.
+
+     The page is plain http, not a secure context, so `crypto.subtle` is not there: include a
+     small SHA-256 and HMAC in app.js (HMAC per RFC 2104, 64-byte block) and check it against
+     the test vector below. `crypto.getRandomValues` does work on plain http.
+     The old form `{"k": secret}` is refused with 400: the secret never crosses the network.
    - Or the user types the 6-digit code shown on the TV: `POST /api/pair {"pin": "123456", "name": name}`.
-3. Answers: `202 {"wait": id}` (now the TV asks "Allow <name>?" and someone presses OK), or
-   `403 {"error": "wrong"|"closed"|"locked", "lockedFor": ms}`.
+     Five wrong codes from one device, or twenty from everyone, turn the code off for the rest
+     of the window (scanning still works); after three such windows in an hour the TV shows no
+     code for 15 minutes.
+3. Answers: `202 {"wait": id, "match": "042"}`, or `403 {"error": "wrong"|"closed"|"locked", "lockedFor": ms}`,
+   or `400 {"error": "pair"}` for a malformed request.
+   - After 202 the TV asks "Allow <name>?" next to the same three digits: show `match` large
+     ("Check the TV shows 042"), so the owner can tell this phone's request from anyone else's.
+   - `wrong`: the code or proof did not match (a wrong proof costs the window nothing; get a new
+     `c` and nonce and try again). `closed`: no window is open, or it just paired someone.
+     `locked`: the six-digit code is off for this device (or for now); `lockedFor` is how long, in
+     ms. Suggest scanning the QR code instead.
 4. Then loop `POST /api/pair/wait {"id": id}`. It holds up to 25 s. `202 {"wait": id}` means keep
    waiting (show "Press OK on the remote to allow this phone"), `200 {"ok": true}` means paired
    (the server set an HttpOnly cookie; reload the app state), `403` means refused or expired.
+   Only the address that sent the proof or code can collect the key.
+
+### Test vector for the proof
+
+| | |
+|---|---|
+| `k` | `AAECAwQFBgcICQoLDA0ODw` (bytes 0x00..0x0f, base64url) |
+| `nonce` | `EBESExQVFhcYGRobHB0eHw` (bytes 0x10..0x1f) |
+| `c` | `ICEiIyQlJicoKSorLC0uLw` (bytes 0x20..0x2f) |
+| `name` | `Alex’s iPhone` (with U+2019 RIGHT SINGLE QUOTATION MARK, as iOS types it: 15 UTF-8 bytes) |
+| message | `lucent-pair:EBESExQVFhcYGRobHB0eHw:ICEiIyQlJicoKSorLC0uLw:Alex’s iPhone` |
+| `proof` | `39fc66d8e364aba818c0c8c07bc8ae54b309468c50cd2ef41df71f057502e48c` |
+
+With `name` = `Alex's iPhone` (a plain apostrophe) the proof is
+`937c172cd604f7cb7d135d1253a304a03a85313e35362038b0f88c32526d4f29`: a page that encodes the name
+as anything but UTF-8 gets the first one wrong. The same vector is checked by
+`preview/tests/SecurityTest.java` against `Keys.proof`.
 
 ## State
 
@@ -60,13 +112,21 @@ gracefully.
   "tv": {"name": "Lucent", "version": "2.0", "front": true, "mode": "night", "modeSetting": "auto",
          "nextChange": 1793170000000, "sunrise": 1793100000000, "sunset": 1793140000000,
          "moon": "Waxing crescent", "moonLit": 0.31, "urls": ["http://192.168.1.23:8686"],
-         "access": "lan", "now": 1793124300000, "dim": false},
+         "access": "lan", "now": 1793124300000, "dim": false, "ringing": false},
   "me": {"name": "Alex's iPhone", "id": "Ab3d"},
   "weather": {"ok": true, "city": "Cambridge", "tempF": 53, "tempC": 11.6, "feelsF": 49, "hiF": 56, "loF": 41,
               "condition": "Partly cloudy", "code": 2, "day": true, "humidity": 58, "windMph": 9, "windDir": "W",
               "updated": "1:56 PM",
-              "hours": [{"label": "Now", "f": 53, "c": 12, "code": 2, "day": true, "rain": 10}]},
+              "hours": [{"label": "Now", "f": 53, "c": 12, "code": 2, "day": true, "rain": 10}],
+              "rain": {"summary": "Rain from 3:45 PM", "at": 1793140700000, "until": 1793147900000},
+              "model": "NOAA blend (NBM)"},
   "air": {"aqi": 44, "aqiWord": "Good", "uv": 0.8, "uvWord": "Low"},
+  "display": {"width": 3840, "height": 2160, "hz": 60, "hdr": ["HDR10", "HDR10+", "HLG"], "uiWidth": 1920,
+              "uiHeight": 1080, "advice": ""},
+  "samsung": {"connected": true, "device": "Samsung 43\" TU7000", "modes": ["Dynamic", "Standard", "Natural", "Movie"],
+              "mode": "Movie", "glare": false, "follow": "on", "dayMode": "Standard", "nightMode": "Movie",
+              "glareMode": "Dynamic", "error": "", "setup": "none"},
+  "push": {"on": true, "topic": "kJ3x9Qm2LwT7aZp0vB5nRc", "url": "https://ntfy.sh/kJ3x9Qm2LwT7aZp0vB5nRc"},
   "alerts": [{"event": "Wind Advisory", "headline": "...", "severity": "Moderate", "expires": 1793150000000}],
   "bikes": {"ok": true, "label": "Westgate", "fetched": 1793124290000, "published": 1793124260000,
             "stations": [{"id": "f835...", "name": "MIT Vassar St", "short": "Westgate", "ebikes": 1, "classic": 6,
@@ -95,20 +155,34 @@ gracefully.
   "settings": {"units": "f", "clock": "auto", "rotate": "hour", "album": "both", "motion": "full", "ambient": "5",
                "dim": "10", "awakeFrom": "07:00", "awakeTo": "00:30", "bedtime": "off", "findFor": "30",
                "sky": "on", "station": "auto", "alarm": "ring", "wakeForNotes": "day", "mbtaKey": "set"|"",
-               "wifiSsid": "Home", "wifiSet": true, "theme": "auto"},
+               "wifiSsid": "Home", "wifiSet": true, "theme": "auto", "alarmFor": "5", "quality": "motion"},
   "stations": [{"id": "auto", "name": "Westgate"}, {"id": "2261583246847893606", "name": "Hastings Square"}],
   "devices": [{"id": "Ab3d", "name": "Alex's iPhone", "seen": 1793124300000, "ip": "192.168.1.40", "me": true}],
   "health": [{"host": "gbfs.lyft.com", "state": "OK", "sent": 120, "ok": 30, "unchanged": 88, "limited": 0,
               "failed": 2, "perMinute": 40}],
-  "alexa": {"on": false, "url": ""}
+  "alexa": {"on": true, "url": "<find e-bike link>", "stopUrl": "<stop and silence link>",
+            "commands": [{"name": "Bike finder", "say": "Alexa, turn on bike finder", "on": "<url>", "off": "<url>"}]}
 }
 ```
+
+Notes on the newer fields (all optional, the page renders without them):
+
+- `tv.ringing` mirrors `finder.alarm`. Either one being true shows the Silence alarm banner.
+- `weather.rain.summary` is shown under the conditions ("Rain from 3:45 PM" or "Dry for the next 2 hours"),
+  `at` and `until` are epoch ms or 0. `weather.model` is credited next to Open-Meteo ("Open-Meteo, NOAA blend").
+- `display` is what the TV is being sent. The page shows "4K, 60 Hz, HDR10, HDR10+, HLG. Apps draw at 1080p, films
+  play in 4K." and shows `advice` in amber when it is not empty (a one-line fix when the TV is not getting 4K).
+- `samsung` is present when the TV can drive a Samsung over SmartThings. `mode` may be "". `error` is the last
+  error text, empty when fine. `setup` is "begun" between `samsung begin` and `samsung finish`. When `samsung` is
+  missing the page hides the Samsung controls. Secrets never appear in state: phones only see `connected`.
+- `push` is present when phone alerts are available. `topic` is 22 characters of base64url.
+- `alexa.commands` is present only when `alexa.on`. `off` may be "". `url` and `stopUrl` remain for older pages.
 
 ## Actions: `POST /api/<action>` with a JSON body. Reply is `{"ok": true}` plus fields noted.
 
 | Action | Body | Effect |
 |---|---|---|
-| `finder` | `{"do": "start"\|"stop"\|"silence"}` | Start or stop bike finder, or silence a ringing alarm |
+| `finder` | `{"do": "start"\|"stop"\|"silence"}` | Start or stop bike finder, or silence a ringing alarm. A start reply may carry `"note"` (for example "Waking Bluebikes, starting in a moment"), which the page shows |
 | `note` | `{"text": "≤280 chars", "strokes": [...], "paper": 0..3, "pin": bool}` | Note pops up on the TV. Reply `{"ok": true, "id": "..."}` |
 | `notedel` | `{"id"}` | Remove a note |
 | `notepin` | `{"id", "pin": bool}` | Keep a note on the home screen, or not |
@@ -119,12 +193,18 @@ gracefully.
 | `mode` | `{"mode": "auto"\|"day"\|"night"}` | Day and night look |
 | `set` | `{"key": "...", "value": "..." or array}` | Change one setting (keys below) |
 | `media` | `{"do": "toggle"\|"next"\|"prev"}` | Control what is playing on the TV |
-| `tv` | `{"do": "lucent"\|"firetv"\|"sleep"}` | Bring Lucent to the front, open Fire TV's own home, or put the TV to sleep |
+| `tv` | `{"do": "lucent"\|"firetv"\|"sleep"}` | Bring Lucent to the front, open Fire TV's own home, or put the TV to sleep. `sleep` answers 409 when the HOME service is off |
 | `list` | `{"op": "add", "text"}`, `{"op": "toggle", "id"}`, `{"op": "remove", "id"}`, `{"op": "clear"}` | Shared list |
 | `wifi` | `{"do": "show"\|"hide"}` | Show the guest Wi-Fi QR code on the TV for 2 minutes |
 | `revoke` | `{"id"}` | Forget a paired device (its key stops working) |
 | `logout` | `{}` | Forget this device |
 | `refresh` | `{}` | Ask the TV to fetch live data now and keep it fresh for 2 minutes |
+| `samsung` | `{"do": "begin", "clientId", "clientSecret"}` | Start SmartThings sign-in. Reply `{"ok": true, "authorize": "https://api.smartthings.com/v1/oauth/authorize?…"}`. The page opens it only if it is an https smartthings.com address |
+| `samsung` | `{"do": "finish", "code"}` | `code` is the bare code, the whole httpbin address, or the JSON the user pasted (the TV extracts it). Reply `{"ok": true, "device": "…"}`, or 400/409 `{"error": "<words for the user>"}`, which the page shows in amber |
+| `samsung` | `{"do": "disconnect"}` | Forget the SmartThings sign-in |
+| `samsung` | `{"do": "glare", "on": bool}` | Glare picture on (switches to `glareMode`) or back to the day or night picture |
+| `samsung` | `{"do": "mode", "mode": "Dynamic"}` | Set the picture mode now (one of `samsung.modes`) |
+| `push` | `{"do": "test"}` | Send a test notification to subscribed phones. 409 `{"error": "…"}` when phone alerts are off |
 
 Setting keys for `set` (anything else is refused): `units` f/c/off, `clock` auto/12/24,
 `rotate` 1m/5m/10m/hour/day/off, `album` nature/ours/both, `motion` full/reduced, `ambient`
@@ -134,8 +214,19 @@ or off, `findFor` 15/30/60/120, `sky` on/off, `station` (an id from `stations`),
 empty, never echoed back, state shows "set" or ""), `calendars` (array of up to 6 objects
 `{"name": "Us", "url": "https://calendar.google.com/... or webcal://pNN-caldav.icloud.com/..."}`,
 URLs never echoed back in full), `countdowns` (array of up to 6 `{"title", "date": "YYYY-MM-DD"}`),
-`wifiSsid` and `wifiPass` (pass never echoed), `alexa` on/off (when on, state.alexa.url is the
-link to paste into the Alexa routine).
+`wifiSsid` and `wifiPass` (pass never echoed), `alexa` on/off/new (new makes fresh private links and
+invalidates the old ones; when on, state.alexa has the links and `commands`), `alarmFor` 2/5/10/30 (minutes the
+bike alarm rings before it gives up by itself), `quality` motion/still (motion is the slow drifting wallpaper,
+still shows the photo pixel for pixel), `pictureFollow` on/off (the Samsung picture follows day and night),
+`dayMode`, `nightMode` and `glareMode` (each one of `samsung.modes`), `push` on/off/new (new makes a fresh topic,
+and phones must subscribe again).
+
+Calendars round trip: state.calendar.feeds[].url is masked like "https://calendar.google.com/…". When saving the
+list with `set calendars`, send unchanged feeds back with that exact masked url and the TV keeps the saved
+address. New feeds send the full URL (https:// or webcal://).
+
+Errors from actions: a 400 or 409 may carry `{"error": "<a sentence for the user>"}`. The page shows that sentence
+when it is a sentence, and its own wording for numeric errors.
 
 ## Photo upload
 
@@ -147,7 +238,8 @@ of EXIF, GPS included), scale so the long side is at most 3840 px, and export wi
 `canvas.toBlob(cb, 'image/jpeg', 0.9)`. Use `<input type="file" accept="image/jpeg,image/png" multiple>`
 so iOS hands over JPEG instead of HEIC. Upload one at a time and show progress (XMLHttpRequest
 upload progress events are fine). Reply `{"ok": true, "id": "..."}` or an error
-(`413` too big, `507`-like `{"error": "full"}` when storage is full, `415` not a photo).
+(`413` too big, `507`-like `{"error": "full"}` when storage is full, `415` not a photo, `409`
+`{"error": "album full"}` or `{"error": "tv storage low"}`).
 Photos are fetched back as `GET /api/photo/<id>.thumb.jpg` (about 480 px) and `/api/photo/<id>.jpg`
 (full) with the same X-Lucent header: fetch them as blobs and show through `URL.createObjectURL`
 (an `<img src>` cannot send the header).

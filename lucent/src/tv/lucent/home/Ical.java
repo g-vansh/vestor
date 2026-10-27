@@ -33,6 +33,12 @@ import java.util.TimeZone;
  * that fails in any way is skipped alone. Rules it cannot follow exactly (BYWEEKNO, BYYEARDAY,
  * BYHOUR and the like, or another calendar scale) keep just their first occurrence rather than
  * show wrong ones.
+ *
+ * Invitations the calendar's owner has not accepted are left out unless the caller asks for
+ * them: in a Google secret address for a primary calendar, X-WR-CALNAME is the owner's email
+ * address, and an invitation not yet answered (or declined) carries an ATTENDEE line for that
+ * address with PARTSTAT=NEEDS-ACTION (or DECLINED). A calendar whose name is not an address
+ * keeps every event, since there is no telling who its owner is.
  */
 final class Ical {
     private Ical() {}
@@ -65,22 +71,41 @@ final class Ical {
     private static final int DAILY = 1, WEEKLY = 2, MONTHLY = 3, YEARLY = 4;
     private static final String[] WEEKDAYS = {"MO", "TU", "WE", "TH", "FR", "SA", "SU"};
 
-    /** Occurrences overlapping [fromMs, toMs) in {@link #ORDER}. Never throws. */
+    /** Occurrences overlapping [fromMs, toMs) in {@link #ORDER}, accepted ones only. Never throws. */
     static List<Event> occurrences(String ics, int calendarIndex, long fromMs, long toMs, TimeZone local, int maxEvents) {
+        return occurrences(ics, calendarIndex, fromMs, toMs, local, maxEvents, true);
+    }
+
+    /**
+     * Occurrences overlapping [fromMs, toMs) in {@link #ORDER}. {@code acceptedOnly}: leave out
+     * invitations the owner has not accepted (see the class comment). Never throws.
+     */
+    static List<Event> occurrences(String ics, int calendarIndex, long fromMs, long toMs, TimeZone local, int maxEvents,
+            boolean acceptedOnly) {
         if (ics == null) return new ArrayList<>();
         // Cut before encoding, so a huge string is never copied whole.
         String s = ics.length() > MAX_BYTES ? ics.substring(0, MAX_BYTES) : ics;
-        return occurrences(s.getBytes(StandardCharsets.UTF_8), calendarIndex, fromMs, toMs, local, maxEvents);
+        return occurrences(s.getBytes(StandardCharsets.UTF_8), calendarIndex, fromMs, toMs, local, maxEvents, acceptedOnly);
     }
 
     /**
      * Occurrences overlapping [fromMs, toMs) from the raw bytes of a feed, in {@link #ORDER}, at
-     * most {@code maxEvents} of them (the earliest). Never throws on bad input: returns what it
-     * could read.
+     * most {@code maxEvents} of them (the earliest), leaving out invitations the owner has not
+     * accepted. Never throws on bad input: returns what it could read.
      */
     static List<Event> occurrences(byte[] ics, int calendarIndex, long fromMs, long toMs, TimeZone local, int maxEvents) {
+        return occurrences(ics, calendarIndex, fromMs, toMs, local, maxEvents, true);
+    }
+
+    /**
+     * As above, with {@code acceptedOnly} false keeping invitations not accepted (or declined) by
+     * the owner too.
+     */
+    static List<Event> occurrences(byte[] ics, int calendarIndex, long fromMs, long toMs, TimeZone local, int maxEvents,
+            boolean acceptedOnly) {
         Run run = new Run(calendarIndex, Math.max(fromMs, MIN_MS), Math.min(toMs, MAX_MS),
                 local == null ? TimeZone.getDefault() : local, maxEvents);
+        run.acceptedOnly = acceptedOnly;
         if (ics == null || maxEvents <= 0 || run.from >= run.to || !isCalendar(ics)) return run.result();
         Feed feed = new Feed();
         try {
@@ -163,19 +188,46 @@ final class Ical {
 
     // ---- Reading -------------------------------------------------------------------------------
 
-    /** A content line's value with the two parameters that matter. */
+    /** A content line's value with the parameters that matter. */
     private static final class Prop {
-        String value = "", tzid, type;
+        String value = "", tzid, type, partstat;
     }
+
+    /** ATTENDEE addresses kept for one event: only those that did not accept. */
+    private static final int MAX_UNANSWERED = 64;
 
     /** One VEVENT as written, before any time is worked out. */
     private static final class Raw {
         String uid = "", summary, location, status = "", rrule, duration;
         Prop start, end, recurrenceId;
         List<Prop> exdates, rdates;
+        /** Lowercase addresses of attendees that have not accepted (NEEDS-ACTION or DECLINED). */
+        List<String> unanswered;
+        /** Set when the owner was already known as such an attendee while reading. */
+        boolean ownerUnanswered;
 
         boolean cancelled() {
             return status.trim().equalsIgnoreCase("CANCELLED");
+        }
+
+        /** Whether {@code owner} (a lowercase address, or null) has not accepted this event. */
+        boolean notAcceptedBy(String owner) {
+            if (owner == null) return false;
+            return ownerUnanswered || unanswered != null && unanswered.contains(owner);
+        }
+
+        void attendee(String line, int nameEnd, String owner) {
+            Prop p = prop(line, nameEnd);
+            if (p == null || p.partstat == null) return;
+            if (!p.partstat.equals("NEEDS-ACTION") && !p.partstat.equals("DECLINED")) return;
+            String who = address(p.value);
+            if (who == null) return;
+            if (who.equals(owner)) {
+                ownerUnanswered = true;
+                return;
+            }
+            if (unanswered == null) unanswered = new ArrayList<>();
+            if (unanswered.size() < MAX_UNANSWERED) unanswered.add(who);
         }
 
         void set(String name, String line, int nameEnd) {
@@ -234,6 +286,26 @@ final class Ical {
     private static final class Feed {
         final List<Raw> events = new ArrayList<>();
         String zone;
+        /** The owner's address from X-WR-CALNAME, lowercase, or null when the name is not one. */
+        String owner;
+    }
+
+    /**
+     * A lowercase email address from "mailto:someone@example.com" or a bare address, or null when
+     * it does not look like one.
+     */
+    static String address(String v) {
+        if (v == null) return null;
+        String a = v.trim();
+        if (a.regionMatches(true, 0, "mailto:", 0, 7)) a = a.substring(7).trim();
+        if (a.length() < 3 || a.length() > 254) return null;
+        int at = a.indexOf('@');
+        if (at <= 0 || at != a.lastIndexOf('@') || at == a.length() - 1) return null;
+        for (int i = 0; i < a.length(); i++) {
+            char c = a.charAt(i);
+            if (c <= ' ' || c == ':' || c == ';' || c == ',' || c == '"' || c == '<' || c == '>') return null;
+        }
+        return a.toLowerCase(Locale.US);
     }
 
     /**
@@ -264,6 +336,7 @@ final class Ical {
      */
     private static void read(String text, Feed feed) {
         int n = text.length(), i = 0, depth = 0, seen = 0, at = 0;
+        boolean ownerRead = false;
         String[] stack = new String[MAX_DEPTH];
         Raw cur = null;
         while (i < n) {
@@ -317,9 +390,15 @@ final class Ical {
                 if (name.equals("X-WR-TIMEZONE") && feed.zone == null && depth <= 1) {
                     Prop p = prop(line, nameEnd);
                     if (p != null) feed.zone = p.value.trim();
+                } else if (name.equals("X-WR-CALNAME") && !ownerRead && depth <= 1) {
+                    // The first calendar name decides, an address or not.
+                    ownerRead = true;
+                    Prop p = prop(line, nameEnd);
+                    if (p != null) feed.owner = address(unescape(p.value));
                 }
             } else if (depth == at) {
-                cur.set(name, line, nameEnd);
+                if (name.equals("ATTENDEE")) cur.attendee(line, nameEnd, feed.owner);
+                else cur.set(name, line, nameEnd);
             }
         }
         // An event still open at the end was cut off, so it is left out.
@@ -367,8 +446,8 @@ final class Ical {
         int eq = line.indexOf('=', start);
         if (eq < 0 || eq >= end) return;
         String key = line.substring(start, eq).trim().toUpperCase(Locale.US);
-        boolean tz = key.equals("TZID");
-        if (!tz && !key.equals("VALUE")) return;
+        boolean tz = key.equals("TZID"), part = key.equals("PARTSTAT");
+        if (!tz && !part && !key.equals("VALUE")) return;
         String v = line.substring(eq + 1, end).trim();
         if (v.startsWith("\"")) {
             int close = v.indexOf('"', 1);
@@ -379,6 +458,7 @@ final class Ical {
         }
         v = caret(v).trim();
         if (tz) p.tzid = v;
+        else if (part) p.partstat = v.toUpperCase(Locale.US);
         else p.type = v.toUpperCase(Locale.US);
     }
 
@@ -946,6 +1026,8 @@ final class Ical {
         final int[] buf = new int[372];
         final boolean[] keep = new boolean[372], mark = new boolean[372];
         int budget = MAX_FEED_STEPS;
+        /** Leave out what the feed's owner has not accepted. */
+        boolean acceptedOnly = true;
 
         Run(int calendar, long from, long to, TimeZone local, int max) {
             this.calendar = calendar;
@@ -1011,10 +1093,14 @@ final class Ical {
                     cancelled.add(r.uid);
                 }
             }
+            // Only the owner of a primary calendar is known: its not-accepted invitations are left out
+            // here, after the overrides were gathered, so a declined occurrence still takes its date
+            // out of the series it moved from.
+            String owner = acceptedOnly ? feed.owner : null;
             for (Raw r : feed.events) {
                 budget--;
                 try {
-                    if (r.cancelled()) continue;
+                    if (r.cancelled() || r.notAcceptedBy(owner)) continue;
                     if (r.recurrenceId == null) {
                         new Series(this, r, overrides.get(r.uid), true).run();
                     } else if (r.uid.isEmpty() || !cancelled.contains(r.uid)) {

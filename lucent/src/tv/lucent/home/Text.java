@@ -12,10 +12,19 @@ final class Text {
     static final int MAX = 120;
 
     static String clean(CharSequence in) {
-        if (in == null) return "";
-        int n = Math.min(in.length(), MAX * 2);
-        StringBuilder sb = new StringBuilder(Math.min(n, MAX));
-        for (int i = 0; i < n && sb.length() < MAX; i++) {
+        return clean(in, MAX);
+    }
+
+    /**
+     * The same cleaning with another cap, for the few texts that may be longer than a name (a
+     * note's text keeps up to {@link Notes#MAX_TEXT}). At most {@code 2 * max} characters of the
+     * input are ever looked at.
+     */
+    static String clean(CharSequence in, int max) {
+        if (in == null || max <= 0) return "";
+        int n = Math.min(in.length(), max * 2);
+        StringBuilder sb = new StringBuilder(Math.min(n, max));
+        for (int i = 0; i < n && sb.length() < max; i++) {
             char c = in.charAt(i);
             if (c < 0x20 || (c >= 0x7F && c < 0xA0)) {
                 // Control characters, line breaks and tabs read as a space.

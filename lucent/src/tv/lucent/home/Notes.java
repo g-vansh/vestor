@@ -81,7 +81,9 @@ final class Notes {
         Note n = new Note();
         n.from = Keys.cleanName(from);
         n.at = now;
-        String text = Text.clean(Json.str(body, "text", ""));
+        // Cleaned with room for one more character than allowed, so a longer text is refused
+        // rather than cut where a name would be.
+        String text = Text.clean(Json.str(body, "text", ""), MAX_TEXT + 1);
         if (text.length() > MAX_TEXT) throw new IllegalArgumentException("text too long");
         n.text = text;
         int paper = Json.integer(body, "paper", 0);

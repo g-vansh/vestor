@@ -82,7 +82,7 @@ public final class ConsoleDemo {
 
             @Override
             public void pairRequest(final Keys.Pending p) {
-                System.out.println("pair request from " + p.name + ": allowing in 1.5 s");
+                System.out.println("pair request from " + p.name + " at " + p.ip + ", match " + p.match + ": allowing in 1.5 s");
                 Thread t = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -112,6 +112,27 @@ public final class ConsoleDemo {
         System.out.println("pair " + base + "/#k=" + w[0]);
         System.out.println("pin " + w[1]);
         System.out.flush();
+        // What the TV would show: wrong codes typed, and signed-out or moved devices.
+        Thread events = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                int wrong = 0;
+                while (true) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        return;
+                    }
+                    if (keys.wrongCodes() != wrong) {
+                        wrong = keys.wrongCodes();
+                        System.out.println("wrong codes typed: " + wrong);
+                    }
+                    for (String e : keys.events()) System.out.println("event " + e);
+                }
+            }
+        });
+        events.setDaemon(true);
+        events.start();
         Thread.sleep(Long.MAX_VALUE);
     }
 }

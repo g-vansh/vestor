@@ -81,6 +81,7 @@ public final class Hostile {
         budgets();
         amplifiers(dir);
         allowlist();
+        streams(rnd, rounds);
         System.out.println(checks + " checks, " + failures + " failures");
         if (failures > 0) System.exit(1);
     }
@@ -138,6 +139,61 @@ public final class Hostile {
         } catch (Throwable t) {
             fail(what, t);
         }
+    }
+
+    /**
+     * Server-sent events and ntfy lines, mutated and random, through the stream reader with a
+     * handler that parses what it gets: nothing may escape, and every hostile shape must end the
+     * connection as a fault (false), never hang or read on without bound.
+     */
+    private static void streams(Random rnd, int rounds) {
+        final long far = System.currentTimeMillis() + 3600000L;
+        final Stream.Handler parse = new Stream.Handler() {
+            @Override
+            public void event(String type, String data) {
+                Json.parse(data);
+            }
+
+            @Override
+            public void state(boolean open) {}
+        };
+        byte[] sse = ("event: reset\ndata: [{\"id\":\"p1\",\"attributes\":{\"arrival_time\":\"2026-10-27T09:00:00-04:00\"}}]\n\n"
+                + ": keep-alive\n\nevent: update\r\ndata: {\"id\":\"p1\",\n\ndata: \"x\"}\n\nevent: remove\ndata: {\"id\":\"p1\"}\n\n")
+                .getBytes(StandardCharsets.UTF_8);
+        byte[] ntfy = "{\"id\":\"a\",\"event\":\"open\"}\n{\"id\":\"b\",\"event\":\"message\",\"message\":\"find\"}\n"
+                .getBytes(StandardCharsets.UTF_8);
+        for (int i = 0; i < rounds; i++) {
+            final byte[] a = mutate(sse, rnd), b = mutate(ntfy, rnd);
+            run("Stream SSE", () -> new Stream("https://api-v3.mbta.com/x", null, Stream.SSE, 1000, 64 * 1024, parse)
+                    .read(new java.io.ByteArrayInputStream(a), far));
+            run("Stream lines", () -> new Stream("https://ntfy.sh/x", null, Stream.LINES, 1000, parse).read(new java.io.ByteArrayInputStream(b), far));
+            final byte[] r = new byte[rnd.nextInt(4096)];
+            rnd.nextBytes(r);
+            run("Stream random", () -> new Stream("https://ntfy.sh/x", null, Stream.SSE, 1000, parse).read(new java.io.ByteArrayInputStream(r), far));
+        }
+        // An event built from many short data lines past 2 MB, and a line with no end past 1 MB.
+        StringBuilder many = new StringBuilder();
+        for (int i = 0; i < Stream.MAX_EVENT / 1000 + 10; i++) many.append("data: ").append(rep('x', 1000)).append('\n');
+        streamFault("an event past 2 MB", many.toString().getBytes(StandardCharsets.UTF_8), parse, far);
+        streamFault("a line past 1 MB", rep('y', Stream.MAX_LINE + 10).getBytes(StandardCharsets.UTF_8), parse, far);
+    }
+
+    private static void streamFault(String what, byte[] b, Stream.Handler h, long far) {
+        checks++;
+        try {
+            if (new Stream("https://api-v3.mbta.com/x", null, Stream.SSE, 1000, h).read(new java.io.ByteArrayInputStream(b), far)) {
+                failures++;
+                System.out.println("FAIL stream: " + what + " read as a clean end");
+            }
+        } catch (Throwable t) {
+            fail("stream: " + what, t);
+        }
+    }
+
+    private static String rep(char c, int n) {
+        char[] a = new char[n];
+        java.util.Arrays.fill(a, c);
+        return new String(a);
     }
 
     private static void protobuf(byte[] b) {

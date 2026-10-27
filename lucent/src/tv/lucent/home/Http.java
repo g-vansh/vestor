@@ -16,7 +16,9 @@ import java.util.Map;
  * - GET and POST only, one request per connection (every answer closes it), so there is no
  *   pipelining or keep-alive state to confuse.
  * - A request line of at most 2048 bytes, at most 40 headers and 8 KB of them, plain ASCII,
- *   CRLF or LF line ends, no folded headers, no NUL.
+ *   CRLF or LF line ends, no bare CR inside a line, no folded headers, no NUL, all of it within
+ *   one deadline for the whole head (not a timeout per read, which a client sending a byte at a
+ *   time could stretch forever).
  * - A body only with a single, plain Content-Length, capped per route by the caller. Any
  *   Transfer-Encoding is refused (501), as is Expect (417), so there is no chunked parser to get
  *   wrong and no smuggling between two ideas of where a body ends.
@@ -34,6 +36,8 @@ final class Http {
         final Map<String, String> headers = new LinkedHashMap<>();
         byte[] body = new byte[0];
         String peer = "";
+        /** A new key cookie value to hand back with whatever the answer turns out to be, or null. */
+        String setCookie;
 
         String header(String name) {
             return headers.get(name.toLowerCase(Locale.US));
@@ -56,8 +60,16 @@ final class Http {
 
     /** Reads the request line and headers. The body is read separately, once its cap is known. */
     static Request head(InputStream in) throws IOException, Refused {
+        return head(in, 0);
+    }
+
+    /**
+     * As {@link #head(InputStream)}, refused with 408 once {@code deadline} (System.nanoTime, 0
+     * for none) passes, however the bytes are spread out.
+     */
+    static Request head(InputStream in, long deadline) throws IOException, Refused {
         Request r = new Request();
-        String line = line(in, MAX_LINE);
+        String line = line(in, MAX_LINE, deadline);
         if (line == null) throw new Refused(400, "empty");
         if (line.startsWith("PRI * HTTP/2")) throw new Refused(505, "http2");
         int a = line.indexOf(' '), b = line.lastIndexOf(' ');
@@ -82,7 +94,7 @@ final class Http {
         }
         int total = 0;
         while (true) {
-            String h = line(in, MAX_LINE * 2);
+            String h = line(in, MAX_LINE * 2, deadline);
             if (h == null) throw new Refused(400, "headers ended early");
             if (h.isEmpty()) break;
             total += h.length() + 2;
@@ -146,16 +158,28 @@ final class Http {
 
     /** One line of ASCII, without its CR LF, or null at the end of the stream. */
     static String line(InputStream in, int max) throws IOException, Refused {
+        return line(in, max, 0);
+    }
+
+    /**
+     * One line of ASCII, without its CR LF, or null at the end of the stream. A CR anywhere but
+     * just before the LF is refused, as is any byte that arrives after {@code deadline}
+     * (System.nanoTime, 0 for none).
+     */
+    static String line(InputStream in, int max, long deadline) throws IOException, Refused {
         ByteArrayOutputStream b = new ByteArrayOutputStream(128);
+        boolean cr = false;
         int c;
         while ((c = in.read()) >= 0) {
+            if (deadline != 0 && System.nanoTime() - deadline > 0) throw new Refused(408, "too slow");
             if (c == '\n') {
                 byte[] raw = b.toByteArray();
-                int len = raw.length > 0 && raw[raw.length - 1] == '\r' ? raw.length - 1 : raw.length;
-                return new String(raw, 0, len, StandardCharsets.US_ASCII);
+                return new String(raw, 0, cr ? raw.length - 1 : raw.length, StandardCharsets.US_ASCII);
             }
+            if (cr) throw new Refused(400, "bare CR");
             if (c == 0 || c >= 0x80 || c < 0x20 && c != '\r' && c != '\t') throw new Refused(400, "bad byte");
             if (b.size() >= max) throw new Refused(431, "line too long");
+            cr = c == '\r';
             b.write(c);
         }
         return b.size() == 0 ? null : b.toString("US-ASCII");
@@ -195,6 +219,7 @@ final class Http {
             case 429: return "Too Many Requests";
             case 431: return "Request Header Fields Too Large";
             case 501: return "Not Implemented";
+            case 502: return "Bad Gateway";
             case 503: return "Service Unavailable";
             case 505: return "HTTP Version Not Supported";
             default: return "Error";
