@@ -323,6 +323,18 @@ final class Ws {
     private IOException fail(int code, String why) {
         try {
             write(0x8, new byte[] {(byte) (code >> 8), (byte) code});
+            // Closing with unread bytes waiting makes TCP reset the connection, and a reset can
+            // throw away the close frame before the TV reads it. So what is left is read and
+            // dropped first, for at most 300 ms or 256 KB.
+            socket.setSoTimeout(300);
+            byte[] sink = new byte[8192];
+            long end = System.nanoTime() + 300000000L;
+            int total = 0;
+            while (System.nanoTime() - end < 0 && total < 262144) {
+                int n = in.read(sink);
+                if (n < 0) break;
+                total += n;
+            }
         } catch (IOException ignored) {
             // closing anyway
         }
