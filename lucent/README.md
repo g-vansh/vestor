@@ -8,6 +8,9 @@ Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
 
 ## What 2.0 adds
 
+- **A dashboard that rests.** The home screen is the clock, today and an info bar along the
+  bottom. Down brings up the apps, and they go back down by themselves, so nothing covers the
+  photo when you are not watching anything.
 - **Phone control center.** Scan a code on the TV once and your phone can draw notes that write
   themselves onto the TV, send hearts, upload family photos, keep a shared list and countdowns,
   start bike finder, play and pause music, show guests the Wi-Fi and change any setting.
@@ -15,8 +18,15 @@ Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
   crossfading over half a minute. Change it by hand from the remote or a phone.
 - **A screen that stays on all day and dims itself.** No screensaver during the hours you choose,
   a soft dim after ten idle minutes, and an optional bedtime when the TV goes to sleep.
-- **Bike alarm.** When bike finder sees an e-bike it rings until you press any button, over
-  whatever is playing. Alexa in the bedroom can start it: "Alexa, find e-bike".
+- **Bike alarm.** When bike finder sees an e-bike it rings at full volume until you press any
+  button, over whatever is playing, and your phones buzz with a link to reserve it in Bluebikes.
+  Any Echo can start it: "Alexa, turn on bike finder".
+- **A Glare button.** One press switches the Samsung to its brightest picture for a sunny
+  afternoon, from the remote, a phone or Alexa. The evening picture comes back at sunset.
+- **Rain in the next two hours** for Westgate, from NOAA's 15-minute HRRR forecast: "Rain from
+  3:45 PM" or "Dry for the next 2 hours".
+- **A 4K check.** The Sound card says what the stick is sending the TV (4K, 60 Hz, HDR10) and
+  names the one setting to change if 4K or HDR is not getting through.
 - **Your photos as the wallpaper**, uploaded from a phone, stored on the TV at up to 4K, rotating
   with the nature photographs or on their own, with a photo from this day in an earlier year
   first each morning.
@@ -34,20 +44,29 @@ No ads, no sponsored rows, no autoplaying trailers, no accounts.
 
 ## Using it with the remote
 
+The home screen rests as a dashboard: the clock, today's plans and any pinned note above, and
+the info bar along the bottom with the bikes, the weather, the shuttles and planes overhead. The
+apps stay out of sight until you ask for them, so nothing sits on top of the photo.
+
 | Remote | Does |
 |---|---|
-| Left / Right | Move along the dock, the glance bar or the top row |
-| Up | From the dock to the glance bar, then to the top row |
-| Down | Back towards the dock |
+| Down | Bring up the apps |
+| Left / Right | Wake the info bar, then move along it. On the apps or the top row, move along those |
+| Up | From the apps to the info bar, then to the top row |
 | OK on an app | Open it |
-| OK on a glance card | Open its full panel. Left and Right move between panels |
+| OK on an info card | Open its full panel. Left and Right move between panels |
 | OK on the bikes card | Start bike finder and open the Bluebikes panel |
 | Hold OK on the bikes card | Start or stop bike finder without opening anything |
 | Hold OK on an app, or ☰ | Move, Hide or App Info. ☰ elsewhere opens Settings |
 | Play/Pause | Play or pause whatever is playing on the TV |
 | Rewind / Fast Forward | The previous or next wallpaper. On the music card, the previous or next track |
-| Back | Close what is open, or jump to the first app |
+| Back | Close what is open. On the apps, jump to the first app, then put the apps away |
 | Any button while the alarm rings | Stops it |
+
+The apps go back down by themselves after two idle minutes (Settings › Apps Go Back Down) and
+the info bar lets go of its focus after half a minute, so the screen settles back into a quiet
+picture that works as the screensaver. For the first few seconds a small "Apps" mark beside the
+bar is the reminder that Down brings them up.
 
 The top row, left to right: **Fire TV Home** (the exit: Amazon's home until you open an app),
 **Mirror a Screen**, **Phone Control** (pair a phone), **Sound** and **Settings**.
@@ -55,24 +74,28 @@ The top row, left to right: **Fire TV Home** (the exit: Amazon's home until you 
 Fire TV keeps four buttons for itself in every app, so no home screen can use them: HOME, the
 microphone (Alexa), volume and the app shortcut buttons. Alexa voice commands work as before.
 
-Focus an item in the glance bar and it grows into a card with the detail. OK grows the card
+Focus an item in the info bar and it grows into a card with the detail. OK grows the card
 into a full panel: the weather's next six hours with the chance of rain, the three nearest docks,
 every shuttle and bus with the following ones, the week's plans and the shared list, what is
 playing, and the other planes in range.
 
 ## Phone control center
 
-The TV serves a small web page on your home Wi-Fi. Nothing is installed on the phone, and
-nothing goes through the internet.
+The TV serves a small web page on your home Wi-Fi. The server runs on the TV itself, inside
+Lucent, and Lucent's HOME service keeps it running behind films too, so it answers whenever the
+Fire TV is on, with no computer or cloud in between. Nothing is installed on the phone.
 
 **Pairing, once per phone or laptop:**
 
 1. On the TV, press Up twice and choose the phone icon. A code appears for two minutes.
 2. Point the phone's camera at the code and open the link. (Or open the address shown under the
    code and type the six digits.)
-3. The TV asks "Allow this device?" Press OK on the remote.
+3. The TV asks "Allow this device?" and shows three digits. If the phone shows the same three,
+   press OK on the remote.
 
 The phone stays paired. On an iPhone, Share › Add to Home Screen turns the page into an app icon.
+Do that first and pair from the icon: Safari and the icon keep separate keys, and a key that turns
+up in two places looks copied, so the TV signs it out. If that happens, pair again from the icon.
 
 **What it does:**
 
@@ -111,7 +134,7 @@ it. Portrait photos are shown whole over a soft, enlarged copy of themselves ins
 cropped to a strip. Settings › Photos picks Ours and Nature (taking turns), Nature, or Ours
 Only. Settings › Change Wallpaper sets the pace, from every minute to every day.
 
-"Picture: Still and Sharpest" stops the slow drift so the photo sits pixel for pixel. Fire OS
+"Wallpaper Motion: Still and Sharpest" stops the slow drift so the photo sits pixel for pixel. Fire OS
 draws every app's screen at 1920 by 1080 and the stick upscales it to the TV's 4K, so that is
 the sharpest any home screen can show a still picture on this stick.
 
@@ -121,6 +144,45 @@ Night starts at sunset and day an hour after sunrise, worked out on the TV for C
 no network call. Settings › Look (or the phone) picks Day or Night by hand. A choice made by
 hand holds until the next sunrise or sunset change, then the automatic rule takes over again.
 At night the photograph dims and warms and the moon's phase joins the line under the clock.
+
+## Glare: a bright picture for sunny afternoons
+
+**First, the Samsung's own settings.** They cost nothing and do the most. From RTINGS' settings
+for this TV (the TU7000):
+
+- Settings › General › **Eco Solution**: turn its options off. Power Saving and Motion Lighting
+  dim the screen to save power. Auto Power Off lives here too (see below).
+- Settings › Picture › Expert Settings › **Brightness** up. On 2020 Samsungs this is the backlight,
+  and raising it costs no picture quality.
+- **HDR films that look too dark** (Netflix in 4K, for example): while the film plays, raise
+  **Brightness** and **Gamma** and set **Contrast Enhancer** to High. RTINGS found Brightness at 5
+  with Contrast Enhancer on High noticeably brighter in HDR.
+
+**The Glare button.** One press puts the Samsung in **Dynamic**, its brightest picture mode, and
+the next press brings back the picture you had. It is in three places: Settings › Glare on the
+TV, the sun button on the phone's Home page, and "Alexa, turn on glare mode" (or turn off). Glare
+ends by itself at sunset. Turn on **TV Picture Follows the Sun** and the TV also changes its
+picture at sunrise and sunset: Standard by day and Movie at night, or any of the TV's four modes
+you pick on the phone. If the TV is off at that moment, Lucent makes the change when it is back.
+
+**Setup, once, about ten minutes with a computer.** The Glare button goes through SmartThings,
+Samsung's own cloud, which is the one way an app may change a Samsung's picture mode.
+
+1. On the Mac: `brew install smartthingscommunity/smartthings/smartthings`
+2. Run `smartthings apps:create`, sign in with the Samsung account the TV uses, and choose
+   **OAuth-In App**. Name it Lucent, pick the scopes `r:devices:*` and `x:devices:*`, and add the
+   redirect URI `https://httpbin.org/get`. Copy the Client ID and Client Secret it prints.
+3. On the phone page, Settings › Samsung Picture: paste both, tap Continue, then **Open Samsung
+   Sign-in** and allow it.
+4. The browser lands on a page of plain text from httpbin.org. Copy its address (or only the
+   code in it), paste it into the phone page and tap Connect.
+
+What it can reach: Samsung grants those two scopes for every device on the account, so Lucent
+looks only for the TV and touches nothing else. The secret and the sign-in stay on the TV, phones
+only ever learn "Connected", and Disconnect forgets all of it. The one-time code passes through
+httpbin.org once and is useless without the secret. Samsung drops a sign-in nobody used for about
+a month, so Lucent renews it every 20 days. To withdraw it from Samsung's side, run
+`smartthings apps:delete`.
 
 ## Staying on all day, dimming, bedtime
 
@@ -133,14 +195,17 @@ timers apply again.
 A **bedtime** set on the phone puts the TV to sleep at that time if nobody has pressed a button
 for ten minutes. Once a night: wake it again and it stays awake.
 
-Two TV settings matter for an all-day screen:
+**Will the TV go to sleep by itself in chill mode?** The Fire TV will not: during the awake
+hours Lucent holds the screen on, which stops Fire TV's screensaver and its sleep timer. The
+Samsung can, so change one setting on it:
 
-- **Samsung:** Settings › General (General & Privacy on newer models) › Power and Energy Saving
-  (Eco Solution on older ones) › **Auto Power Off: Off**, or the TV switches itself off after
-  four hours without its own remote. Keep **Anynet+ (HDMI-CEC)** on so the Fire TV can turn the
-  TV on and off.
-- **Fire TV:** Fire OS 8 can ask "Are you still watching?" after about four hours without a
-  button press. Any button answers it.
+- **Samsung:** Settings › General › Eco Solution › **Auto Power Off: Off**. It is on from the
+  factory, and it turns the TV off when the Samsung's own remote has not been touched for four
+  hours (the shortest choice on this model), after a five-minute warning. The Fire TV remote does
+  not count as touching it. Keep **Anynet+ (HDMI-CEC)** on so the Fire TV can still turn the TV
+  on and off.
+- **Fire TV:** Fire OS 8 can ask "Are you still watching?" after about four hours of a film
+  without a button press. Any button answers it.
 
 ## Bike finder and the alarm
 
@@ -158,20 +223,72 @@ Only bikes the station will actually rent count. Westgate's dock is the one MIT 
 of the Westgate low-rise buildings on Vassar Street ("MIT Vassar St" in the feed). Lucent finds
 it by name or position, so a rename does not break it. Settings › Bike Station follows another.
 
-## "Alexa, find e-bike" from the bedroom
+The alarm rings at one steady level from the first second, a little under full scale so the
+soundbar never clips, and the soundbar's volume decides how loud that is.
 
-Alexa cannot open a sideloaded app by voice, so Lucent listens for a private signal instead:
+## Phone alerts, and reserving the bike
 
-1. On the phone page, Settings › Alexa › On. It shows a private link (and a second one to stop).
-2. At virtualsmarthome.xyz, sign in with your Amazon account and create a URL switch whose "on"
-   address is that link. Enable the Virtual Smart Home skill in the Alexa app and let it
-   discover the new device.
-3. In the Alexa app, add a routine: when you say "find e-bike", turn on that device.
+When bike finder finds an e-bike, every phone you set up buzzes with "E-bike ready at Westgate".
+Tapping it opens the Bluebikes app, where **Reserve** holds the bike for up to 10 minutes.
 
-Then "Alexa, find e-bike" on any Echo wakes the TV, brings Lucent to the front and starts bike
-finder. The signal travels through ntfy.sh, a public relay. The link holds a random 22-character
-name that works as its password, so treat it like one. Settings › Alexa › New Link replaces it
-if it ever leaks.
+1. On the phone page, Settings › Phone Alerts › On.
+2. Install **ntfy** from the App Store (free), tap +, and subscribe to the topic the page shows.
+   Do it on both phones. **Send a Test** checks it.
+
+ntfy.sh carries the alert to Apple's notification service. The topic is a long random name that
+works as its password. Anyone who learned it could read the alerts or send you fake ones, which
+is all a topic allows, and New Topic replaces it.
+
+**Could Lucent reserve the bike by itself?** Every route I could find, and why the alert is the
+one that ships:
+
+- **Bluebikes and Lyft publish no reservation API.** The public feed (GBFS) is read-only: station
+  counts and a link into the app. Nothing in it acts on an account.
+- **The app's private interface** could be copied, but the TV would have to hold your Lyft
+  sign-in, it breaks Lyft's terms (which can close the account), and every reserved minute is
+  billed, so a bug would cost money. Not built.
+- **Phone automation:** I found no Siri or Shortcuts action for Bluebikes, so a shortcut can
+  open the app but cannot press Reserve.
+- **What works:** the alert, one tap into Bluebikes, and Reserve. The reserved bike's screen says
+  "reserved" and nobody else can undock it. A reserved minute costs the same as a minute ridden
+  ($0.07 on the $5 Boston Bikes Pass), per the City of Boston's Bluebikes FAQ.
+
+## Alexa and the Echos
+
+**What works with nothing set up.** In the Alexa app, Devices › your Echo › Settings, link the
+living room Echo to the Fire TV (same Amazon account). Then from the Echo: "Alexa, open Netflix",
+"Alexa, pause", "Alexa, play", "Alexa, go home" (which lands on Lucent), "Alexa, volume up", and
+"Alexa, turn off the TV". The microphone button on the Fire TV remote takes the same requests.
+
+**Lucent's own commands, from any Echo in the house.** Alexa cannot open a sideloaded app's
+features by voice, so each command is a small virtual switch that sends a private signal to the
+TV:
+
+| Say | Does |
+|---|---|
+| "Alexa, turn on bike finder" (or off) | Wakes the TV, brings Lucent up and starts bike finder. Off stops it and the alarm |
+| "Alexa, turn on glare mode" (or off) | The Samsung's bright picture, or back |
+| "Alexa, turn on night look" (or off) | The evening look now. Off goes back to following the sun |
+| "Alexa, turn on Lucent" (or off) | Brings Lucent to the front. Off opens Fire TV's own home |
+| "Alexa, turn on guest Wi-Fi" (or off) | Shows the guest Wi-Fi code on the TV, or puts it away |
+| "Alexa, turn on hearts" | Hearts float up the screen |
+
+Setup, once:
+
+1. On the phone page, Settings › Alexa › On. It lists each command with its two addresses.
+2. At virtualsmarthome.xyz, sign in with your Amazon account, open **URL Switch**, and add one
+   switch per command with the name in the table (Bike Finder, Glare Mode and so on). Paste the
+   "on" address and, where there is one, the "off" address. The Copy buttons on the phone page
+   save typing.
+3. In the Alexa app, enable the **URL Switch** skill and let it discover devices.
+
+"Alexa, turn on bike finder" works straight away. For your own phrase ("Alexa, find e-bike"),
+make a routine in the Alexa app: when you say it, turn on Bike Finder.
+
+The signal travels through ntfy.sh, a public relay, and the TV listens on one private topic. The
+addresses hold a random name that works as their password, so treat them like one. Only the
+words above do anything, each message counts once and only within two minutes, and Settings ›
+Alexa › New Link replaces the name if it ever leaks.
 
 ## Shared calendar
 
@@ -252,6 +369,42 @@ stick Amazon transcodes streaming audio to **Dolby MAT**, which is why the VIZIO
 - **DTS:** Samsung TVs do not pass DTS over ARC or eARC. Streaming services use Dolby, so this
   only matters for Plex or Kodi files.
 
+## The best picture: 4K and HDR
+
+Fire TV draws every app's screen, Lucent's included, at 1920 by 1080, and films go to the TV
+at the full 4K. So menus look the same whatever you set, and films are where 4K shows. Three
+settings let the whole picture through:
+
+1. **Samsung, on the Fire TV's input:** Settings › General › External Device Manager › **Input
+   Signal Plus** › on for **HDMI 1**. Without it that port takes 4K only in 8-bit colour, so HDR
+   never reaches the screen.
+2. **Fire TV:** Settings › Display & Sounds › Display › **Video Resolution: Auto** and **Dynamic
+   Range Settings: Adaptive**, which sends HDR only when the film has it. **Match Original Frame
+   Rate: On** plays films at their own 24 frames a second, so slow pans move evenly.
+3. **The cable:** the one from the Fire TV box, or any Premium High Speed HDMI cable, straight
+   into HDMI 1. The VIZIO stays on HDMI 2 (eARC).
+
+To check, open **Sound** on the top row. Under Picture over HDMI it shows what the stick is
+sending, for example "4K, 60 Hz, HDR10, HDR10+ and HLG", and when something is off it names the
+setting to change. The phone page shows the same line. The TU7000 takes HDR10, HDR10+ and HLG.
+No Samsung TV takes Dolby Vision, so Netflix and Prime Video send HDR10 or HDR10+.
+
+## Weather for Westgate
+
+The forecast is for Westgate itself (sent rounded to about 2 km), from Open-Meteo, which is free
+and needs no key. For Boston it already blends the best free models there are:
+
+- **NOAA's HRRR** for the next day and a half: 3 km detail, a new run every hour, and real
+  15-minute steps. That is where "Rain from 3:45 PM" on the weather card comes from.
+- **NOAA's National Blend of Models** for each hour's chance of rain. The National Weather
+  Service's own forecasts start from the same blend.
+- **GFS** beyond that, and **National Weather Service alerts** for Cambridge every two minutes.
+
+Why this over the others: the Weather Service's own forecast is built from the same blend and is
+free too, but it is redone a few times a day and has no 15-minute steps. Apple's WeatherKit needs
+a paid developer account, and Tomorrow.io and OpenWeather want a key, with a tight daily cap or a
+card on file. The one thing more exact would be a weather station on your own balcony.
+
 ## Never rate limited, always fresh
 
 Each service publishes how often it may be asked. Lucent keeps a budget per service, below that
@@ -267,11 +420,13 @@ answer is empty and costs almost nothing. Connections are kept open between requ
 | MBTA 85 | api-v3.mbta.com | Every 10 s without a key. With a free MBTA key (phone › Settings), a live stream that pushes each change the moment the MBTA has it |
 | Planes | opendata.adsb.fi, then api.adsb.lol | Every 5 s. If adsb.fi fails, adsb.lol takes over within its 500-a-day allowance |
 | Flight routes | api.adsbdb.com, then hexdb.io | Once per flight, kept for 12 hours |
-| Weather | api.open-meteo.com | Every 15 minutes, which is how often it updates |
+| Weather | api.open-meteo.com | Every 15 minutes. NOAA's HRRR runs hourly, with 15-minute rain steps |
 | Air quality, UV | air-quality-api.open-meteo.com | Hourly |
 | Weather alerts | api.weather.gov | Every 2 minutes |
 | Calendars | Google, iCloud, Outlook | Every 10 minutes |
 | Alexa signal | ntfy.sh | One open connection, only while Alexa is on |
+| Phone alerts | ntfy.sh | Only when bike finder finds a bike |
+| Samsung picture | api.smartthings.com | Only when Glare or the day and night picture changes, and a sign-in renewal every 20 days |
 
 Everything runs while the home screen is up or a phone has the control center open. Behind a
 film nothing is fetched except bike finder and the Alexa signal. The phone page's health list
@@ -368,9 +523,18 @@ device you approved on the TV with the remote, and nothing anyone sends it can t
 - **Not on the internet.** It answers only devices on the same home network subnet as the TV (or
   your own Tailscale devices). Nothing is opened on your router, and there is no cloud service.
 - **Only devices you allowed.** Pairing works only for two minutes after someone opens it on the
-  TV, and every new device needs OK pressed on the remote. The QR code holds a one-time secret.
-  The six-digit code allows five tries per window, and repeated wrong windows lock pairing for
-  fifteen minutes. A paired device holds a long random key, stored on the TV only as a hash.
+  TV, and every new device needs OK pressed on the remote. The TV and the phone both show the same
+  three digits, so you can tell which request you are allowing. The QR code holds a one-time
+  secret that never crosses the network: the phone proves it has it. The six-digit code turns off
+  after five wrong tries from one device (or twenty in all) and stays off for fifteen minutes
+  after three bad windows in an hour, while scanning keeps working. OK counts only after the card
+  has been up for a second, so a press meant for something else cannot allow a device.
+- **Keys that change every minute.** A paired device holds a long random key, stored on the TV
+  only as a hash. Each answer hands the phone a fresh one, and the old one keeps working for 30
+  seconds. If an old key ever comes back, it was copied: the TV signs that device out at once and
+  says so on screen.
+- **Hard to tie up.** A request has five seconds to arrive in full, and each device gets only a
+  few connections at a time, so a slow or flooding device cannot keep the page from your phone.
 - **Locked to its own page.** Requests from any other website are refused, even from a browser
   on your Wi-Fi: the server checks the address it was asked for, where the request came from,
   and a custom header other sites cannot send. The page runs no outside code and loads nothing
@@ -379,24 +543,30 @@ device you approved on the TV with the remote, and nothing anyone sends it can t
   other devices, change who may connect, reach the accessibility service, or touch other apps.
   Everything it sends is checked against fixed lists and sizes.
 - **Plain HTTP on the home network.** The page has no certificate because the TV has no internet
-  name. Someone who knows your Wi-Fi password and records the traffic could copy a phone's key and
-  do what the page can do: send a note, change a setting. Give guests the guest network (the
-  phone page can put its code on the TV), and use Tailscale away from home, which encrypts
-  everything. Settings › Paired Phones on the TV forgets every phone at once.
+  name. Someone on your Wi-Fi who records the traffic could copy a phone's key and do what the
+  page can do (send a note, change a setting) until the key changes, which is within about a
+  minute and a half, and the copy then signs that phone out. Give guests the guest network (the
+  phone page can put its code on the TV). **If the TV shares a network you do not run, such as
+  MIT's or the building's Wi-Fi, set Phone Control Works On to Tailscale Only**, which encrypts
+  everything and answers only your own devices. Settings › Paired Phones forgets every phone at
+  once.
 
 **Everything else**
 
 - **Outgoing only to the hosts above, over HTTPS.** Plain HTTP is refused, and so are certificates
   a user or another app installed. Redirects stay on the same host. Every answer has a size cap
-  and a time limit. No identifiers or cookies leave the TV, and the user agent is just "Lucent" (the
-  National Weather Service, which asks callers for a contact, also gets this project's GitHub
-  address). Weather and planes get positions rounded to a few kilometres.
+  and a time limit. No identifiers or cookies leave the TV, and the user agent is just "Lucent"
+  (the National Weather Service, which asks callers to name themselves, sees "Lucent/2.0, home
+  screen for Fire TV"). Weather and planes get positions rounded to a few kilometres.
+- **The Samsung sign-in stays on the TV.** The SmartThings secret and tokens go only to Samsung,
+  phones never see them, and Disconnect forgets them.
 - **Broken or hostile data cannot take it down.** The parsers are tested against hundreds of
   thousands of broken, truncated and malicious inputs (`preview/tests`): deep nesting, impossible
   numbers, overflowing lengths, zip bombs, calendars with endless repeats. A bad answer skips one
   refresh and the last good data stays on screen.
-- **Photos are opened in a sandbox.** Uploaded and pushed pictures are decoded in an isolated
-  process with no permissions, network or files, and only Lucent's own re-encoded copy is kept.
+- **Pictures are opened in a sandbox.** Every picture that did not ship inside the app (uploads,
+  pushed photos, album wallpapers and your own tile art) is decoded in an isolated process with no
+  permissions, network or files. Only Lucent's own re-encoded copy or plain pixels come back.
 - **It cannot trap the TV.** Amazon's home stays the system's HOME underneath. If Lucent crashes
   three times in three minutes (including crashes in native code), HOME goes back to Amazon's home
   by itself for a while, and Lucent still opens from Your Apps.
@@ -458,7 +628,7 @@ The weather place defaults to Cambridge, MA. To change it, or to pin a bike dock
 station id:
 
 ```
-printf 'city=Cambridge\nlat=42.3736\nlon=-71.1097\nbike_station=auto\n' > lucent.conf
+printf 'city=Cambridge\nlat=42.3556\nlon=-71.1040\nbike_station=auto\n' > lucent.conf
 adb push lucent.conf /sdcard/Android/media/tv.lucent.home/lucent.conf
 ```
 

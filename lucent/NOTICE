@@ -48,13 +48,18 @@ Live data (public feeds)
     in the planes panel), with adsb.lol (ODbL) as the fallback. Flight routes from adsbdb,
     https://www.adsbdb.com, and hexdb.io.
   Calendars are read from the private iCal links you give it (Google Calendar, iCloud, Outlook).
-  The Alexa link uses ntfy, https://ntfy.sh (the public server), as a relay.
+  The Alexa link and the phone alerts use ntfy, https://ntfy.sh (the public server), as a relay.
+  The forecast models behind Open-Meteo's answer for Boston are NOAA's HRRR, National Blend of
+    Models and GFS (US government works).
+  The Glare button uses Samsung's SmartThings API (https://developer.smartthings.com) with an
+    OAuth-In app the owner creates. Its sign-in passes once through httpbin.org, a public echo
+    service, to show the one-time code.
   Stops, routes, station choices and counting rules follow Vestor (github.com/g-vansh/vestor).
 
 Code written for Lucent 2.0
   The control center's server, pairing, QR encoder (ISO/IEC 18004 byte mode), iCalendar reader
-  (RFC 5545 recurrence rules), rate governor and photo sandbox are original to this project and
-  use no libraries.
+  (RFC 5545 recurrence rules), rate governor, photo sandbox and SmartThings client are original
+  to this project and use no libraries.
 
 Glyphs and marks
   Every glyph (weather, bikes, docks, shuttle, aircraft, radar) and the Lucent mark are original
@@ -63,6 +68,6 @@ Glyphs and marks
 Trademarks
   Fire TV, Fire OS, Alexa and Prime Video are Amazon's. Apple, AirPlay, AirPods, FaceTime,
   iCloud and Liquid Glass are Apple's. Google Calendar and YouTube are Google's. Samsung,
-  VIZIO, Spotify, WhatsApp, Tailscale, Bluebikes, Lyft, MIT, the MBTA and BU belong to their
+  SmartThings, VIZIO, Spotify, WhatsApp, Tailscale, Bluebikes, Lyft, MIT, the MBTA and BU belong to their
   owners. Lucent is not affiliated with any of them and draws no third-party logos: dock tiles
   show the banner each app provides, or a tile composed from that app's own icon.

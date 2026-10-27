@@ -1423,6 +1423,25 @@ add airline branding.
 - Next: install on the Fire TV with `lucent/install.sh`, pair a phone, add the
   calendars and the MBTA key.
 
+### 2026-10-27: Lucent 2.0, second round (dashboard, glare, alerts, rain, 4K)
+- Did: the home screen rests as a dashboard (info bar at the bottom, Down for
+  the apps, apps go back down when idle). The bike alarm rings at one steady
+  level. A Glare button switches the Samsung's picture mode through SmartThings,
+  with an optional day and night picture. Phone alerts go out through ntfy with
+  a checked Bluebikes link when bike finder finds a bike. HRRR's 15-minute rain
+  covers the next two hours. A 4K and HDR readout names the one setting to fix.
+  Six Alexa URL-switch commands. The weather place defaults to Westgate. Every
+  outside picture now decodes in the sandbox, and pairing and the server were
+  hardened.
+- Verified: both compiles pass. Desktop suites pass (feeds, hostile, calendar,
+  QR, layout, SmartThings and rain, security, remote fuzz, allocation per
+  frame). Screenshots re-rendered. SmartThings tested against a fake server,
+  not yet against the real TV.
+- Changed from brief: Bluebikes has no public reservation API, so the alert
+  opens the Bluebikes app for a one-tap Reserve instead of reserving by itself.
+- Next: create the SmartThings OAuth-In app and connect it from the phone page.
+  On the Samsung, turn Auto Power Off off and Input Signal Plus on for HDMI 1.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

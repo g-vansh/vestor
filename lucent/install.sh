@@ -103,7 +103,7 @@ set_guard() {
   orig=$(sh_ settings get secure enabled_accessibility_services)
   [[ $orig == null ]] && orig=
   if ! [[ $orig =~ $COMPONENTS ]]; then
-    echo "error: the TV's list of accessibility services looks unusual, so nothing was changed: $(printf '%q' "$orig")" >&2
+    echo "error: the TV's list of accessibility services looks unusual, so the HOME button was left as it is: $(printf '%q' "$orig")" >&2
     exit 1
   fi
   cur=$orig
@@ -246,7 +246,9 @@ if [[ -n $was && $was != "$SIG" ]]; then
     replace_old "The Lucent on this TV is signed with a key this one does not know ($was)."
   fi
 fi
-echo "installing $APK"
+# The APK's own fingerprint, to compare with the one published beside lucent.zip if you like.
+apk_sum=$( { shasum -a 256 "$APK" 2>/dev/null || sha256sum "$APK" 2>/dev/null; } | cut -d' ' -f1)
+echo "installing $APK${apk_sum:+ (SHA-256 $apk_sum)}"
 out=$(install_apk)
 if [[ $out == *INSTALL_FAILED_UPDATE_INCOMPATIBLE* ]]; then
   replace_old "The Lucent on this TV is signed with a different key than this one."
@@ -271,6 +273,11 @@ had_prev=$(sh_ settings get global lucent_prev_guards)
 { [[ $had_prev != null ]] && [[ $had_prev =~ $COMPONENTS ]]; } || had_prev=
 before_services=$(sh_ settings get secure enabled_accessibility_services)
 [[ $before_services == null ]] && before_services=
+if ! [[ $before_services =~ $COMPONENTS ]]; then
+  echo "error: the TV's list of accessibility services changed into something unusual during the install, so HOME was" >&2
+  echo "  left alone. Lucent is installed as a normal app. Run ./install.sh again to finish." >&2
+  exit 1
+fi
 before_enabled=$(sh_ settings get secure accessibility_enabled)
 [[ $before_enabled =~ ^[01]$ ]] || before_enabled=0
 before_constants=$(constants)
