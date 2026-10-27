@@ -48,7 +48,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
 
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
-            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22;
+            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23;
 
     private static Hub instance;
 
@@ -68,6 +68,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     final Console console;
     final Samsung samsung;
     final SamsungRemote remote;
+    final Assistant assistant;
     private Ntfy ntfy;
     /**
      * The Samsung remote's own thread and a short queue: waiting for Allow on the TV can take half
@@ -160,6 +161,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                 prefs.putNow(key, value);
             }
         });
+        assistant = new Assistant(this);
         Finder.get().listen(this);
         Alarm.listen(this);
         applySettings();
@@ -255,6 +257,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                 wifiUntil = 0;
                 post(WIFI, null);
             }
+            assistant.tick(now);
             main.postDelayed(this, 30000);
         }
     };

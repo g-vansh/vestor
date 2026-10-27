@@ -43,6 +43,10 @@ public final class Preview {
         shot(out, "32-bikes-panel", wallFile, new int[] {R, OK, OK}, 0);
         shot(out, "33-shuttles-grocery-friday", wallFile, new int[] {R, R, OK}, 15);
         shot(out, "34-bikes-panel-evening", "nature-04.jpg", new int[] {R, OK, OK}, 16);
+        shot(out, "35-ask-button", wallFile, new int[] {U, L, L, L, L, L, L}, 0);
+        shot(out, "36-answer", "nature-03.jpg", new int[0], 17);
+        shot(out, "37-answer-playing", "nature-04.jpg", new int[0], 18);
+        shot(out, "38-answer-thinking", "nature-04.jpg", new int[0], 19);
         shot(out, "10-finding-home", wallFile, new int[] {OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
         shot(out, "12-apps", wallFile, new int[] {D}, 0);
@@ -253,6 +257,7 @@ public final class Preview {
             scene.toast("Sam's AirPods Pro connected", "Sound plays on Sam's AirPods Pro now", Scene.TOAST_EARBUDS, now);
         }
         if (extra == 13) scene.hearts("hearts", "Alex", now - 1400);
+        if (extra >= 17 && extra <= 19) scene.setAnswer(answer(extra), true);
         if (extra == 14) {
             BufferedImage scratch = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
             scene.setWifi("Memorial Guest", new AwtGfx(scratch.createGraphics(), new File(ROOT, "assets/fonts")),
@@ -555,6 +560,30 @@ public final class Preview {
         m.canNext = true;
         m.canPrev = true;
         return m;
+    }
+
+    /** The assistant's card: a question from a phone answered with sources, a title played, or still thinking. */
+    private static Claude.Answer answer(int extra) {
+        Claude.Answer a = new Claude.Answer();
+        a.at = NOW - 4000;
+        if (extra == 17) {
+            a.from = "Sam's iPhone";
+            a.question = "What's the famous brass producing town in India?";
+            a.text = "Moradabad in Uttar Pradesh is India's famous brass town. It's nicknamed Peetal Nagri, which means Brass City, "
+                    + "and its handcrafted brassware is sold all over the world.";
+            a.sources.add(new String[] {"Moradabad", "https://en.wikipedia.org/wiki/Moradabad"});
+            a.sources.add(new String[] {"Brass City", "https://www.britannica.com/place/Moradabad"});
+        } else if (extra == 18) {
+            a.from = "the TV";
+            a.question = "Play Better Call Saul";
+            a.text = "Better Call Saul is on Netflix, so I've opened it there. Enjoy.";
+            a.did.add("Opened it in Netflix");
+        } else {
+            a.from = "Alex's iPhone";
+            a.question = "Every weekday at 7:15, start the bike finder, and tell me if it'll rain";
+            a.busy = true;
+        }
+        return a;
     }
 
     /** A forecast as the TV would make it at 2:05 pm with e-bikes docked, or none left for the night shots. */

@@ -341,6 +341,18 @@ final class Icons {
         g.line(cx + dx, cy, cx - dx, cy + s * 0.4f, s * 0.16f, color);
     }
 
+    /** The assistant: a four-pointed spark with a small one beside it. */
+    static void sparkle(Gfx g, float cx, float cy, float s, int color) {
+        star(g, cx - s * 0.06f, cy + s * 0.05f, s * 0.42f, color);
+        star(g, cx + s * 0.32f, cy - s * 0.3f, s * 0.15f, color);
+    }
+
+    private static void star(Gfx g, float cx, float cy, float r, int color) {
+        float in = r * 0.26f;
+        g.fillPolygon(new float[] {cx, cy - r, cx + in, cy - in, cx + r, cy, cx + in, cy + in, cx, cy + r, cx - in, cy + in, cx - r, cy,
+            cx - in, cy - in}, color);
+    }
+
     static void check(Gfx g, float cx, float cy, float s, int color) {
         g.line(cx - s * 0.36f, cy + s * 0.02f, cx - s * 0.1f, cy + s * 0.28f, s * 0.14f, color);
         g.line(cx - s * 0.1f, cy + s * 0.28f, cx + s * 0.38f, cy - s * 0.26f, s * 0.14f, color);
@@ -526,6 +538,11 @@ final class Icons {
         g.text(code, Gfx.TEXT_SEMIBOLD, size, 0.06f, l + w / 2, cy + g.capHeight(Gfx.TEXT_SEMIBOLD, size) / 2,
                 Pixels.alpha(ink, alpha), Gfx.CENTER, 0);
         return w;
+    }
+
+    /** How wide {@link #keycap} draws {@code label} at height {@code h}. */
+    static float keycapWidth(Gfx g, float h, String label) {
+        return Math.max(h, g.measure(label, Gfx.TEXT_SEMIBOLD, h * 0.48f, 0.04f) + h * 0.6f);
     }
 
     /** The remote's OK key as a small keycap, for hints such as "OK  Find me an e-bike". */

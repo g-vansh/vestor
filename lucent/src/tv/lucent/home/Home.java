@@ -366,6 +366,13 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             case Hub.FORECAST:
                 scene.setForecast((Forecast.Result) detail, now);
                 break;
+            case Hub.ANSWER:
+                if (detail instanceof Claude.Answer) {
+                    Claude.Answer a = (Claude.Answer) detail;
+                    // Over Lucent only: an answer never covers a film (the phone shows it there).
+                    scene.setAnswer(a, inFront);
+                }
+                break;
             case Hub.PAIR:
                 if (detail instanceof Keys.Pending) {
                     Keys.Pending p = (Keys.Pending) detail;
@@ -1187,6 +1194,9 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             case "note":
                 writeNote();
                 break;
+            case "ask":
+                ask();
+                break;
             case "forget":
                 hub.keys.revokeAll(now);
                 scene.toast("Phones forgotten", "Pair again from Phone Control", Scene.TOAST_PHONE, now);
@@ -1206,6 +1216,54 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 break;
         }
         view.kick();
+    }
+
+    /**
+     * A question for the assistant from the remote. The Fire TV keyboard's microphone (where this
+     * model offers it) turns speech into the text; a phone's keyboard microphone always does.
+     */
+    private void ask() {
+        if (!hub.assistant.claude.hasKey()) {
+            scene.toast("Ask Lucent needs a Claude API key", "On your phone: Settings, Claude", Scene.TOAST_INFO, System.currentTimeMillis());
+            view.kick();
+            return;
+        }
+        final EditText field = new EditText(this);
+        field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        field.setImeOptions(EditorInfo.IME_ACTION_SEND);
+        field.setHint("Ask anything, or say what to play");
+        field.setFilters(new android.text.InputFilter[] {new android.text.InputFilter.LengthFilter(Claude.MAX_QUESTION)});
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Ask Lucent")
+                .setView(field)
+                .setPositiveButton("Ask", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface d, int which) {
+                        send(field.getText().toString());
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .create();
+        field.setOnEditorActionListener(new android.widget.TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(android.widget.TextView v, int action, android.view.KeyEvent e) {
+                if (action != EditorInfo.IME_ACTION_SEND && action != EditorInfo.IME_ACTION_DONE) return false;
+                dialog.dismiss();
+                send(field.getText().toString());
+                return true;
+            }
+        });
+        dialog.show();
+    }
+
+    private void send(String text) {
+        if (Text.clean(text).isEmpty()) return;
+        try {
+            hub.assistant.ask(text, "the TV");
+        } catch (Claude.Failed f) {
+            scene.toast("Couldn't ask", f.getMessage(), Scene.TOAST_INFO, System.currentTimeMillis());
+            view.kick();
+        }
     }
 
     /**

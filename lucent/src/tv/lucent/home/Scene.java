@@ -87,11 +87,11 @@ final class Scene {
     static final int MEDIA_TOGGLE = 0, MEDIA_NEXT = 1, MEDIA_PREV = 2;
 
     private static final int NONE = 0, SETTINGS = 1, TILE_MENU = 2, AUDIO = 4, MOVE = 5, PANEL = 6, PAIR = 7, ASK = 8,
-            NOTE = 9, MIRROR = 10, WIFI = 11, ALARM = 12;
+            NOTE = 9, MIRROR = 10, WIFI = 11, ALARM = 12, ANSWER = 13;
     private static final int DOCK = 0, TOP = 1, GLANCE = 2;
     /** Top controls, left to right. */
-    private static final int T_EXIT = 0, T_MIRROR = 1, T_PHONE = 2, T_AUDIO = 3, T_GEAR = 4, T_COUNT = 5;
-    private static final String[] TOP_NAMES = {"Fire TV Home", "Mirror a Screen", "Phone Control", "Sound", "Settings"};
+    private static final int T_ASK = 0, T_EXIT = 1, T_MIRROR = 2, T_PHONE = 3, T_AUDIO = 4, T_GEAR = 5, T_COUNT = 6;
+    private static final String[] TOP_NAMES = {"Ask Lucent", "Fire TV Home", "Mirror a Screen", "Phone Control", "Sound", "Settings"};
     private static final String[] MENU_ROWS = {"Move", "Hide from Home", "App Info"};
 
     /** Light text drawn straight on the photograph, whatever the look (the scrim keeps it legible). */
@@ -531,6 +531,90 @@ final class Scene {
         }
     }
 
+    // ---- The assistant's answer ------------------------------------------------------------------
+
+    private Claude.Answer answer;
+    private long answerShown;
+
+    /**
+     * A question on its way or its answer. {@code show} brings the card up (Lucent is in front);
+     * otherwise only an open card is updated.
+     */
+    void setAnswer(Claude.Answer a, boolean show) {
+        if (a == null) return;
+        boolean same = answer != null && answer.question.equals(a.question) && Math.abs(answer.at - a.at) < 120000L;
+        answer = a;
+        textVersion++;
+        if (mode == ANSWER) return;
+        // A new question opens the card, and so does its answer (even if the card was closed while
+        // Lucent was thinking); a repeat of "thinking" does not.
+        if (show && (!same || !a.busy) && mode != ALARM && mode != ASK && mode != PAIR) {
+            closeOverlays();
+            mode = ANSWER;
+            answerShown = lastNow;
+            modal.to(1);
+        }
+    }
+
+    private void drawAnswer(Gfx g, float t, long now) {
+        float p = mode == ANSWER ? modal.value : 0;
+        Claude.Answer a = answer;
+        if (p <= 0.003f || a == null) return;
+        float w = Math.min(dp(860), width - dp(80)), h = dp(470), l = (width - w) / 2, tp = (height - h) / 2;
+        sheetFrame(g, l, tp, w, h, p, t);
+        float x = l + dp(44), right = l + w - dp(44), mw = right - x;
+        Icons.sparkle(g, x + dp(12), tp + dp(52), dp(24), Pixels.alpha(Tone.ACCENT, p));
+        String who = a.from.isEmpty() || "the TV".equals(a.from) ? "YOU ASKED" : "ASKED ON " + a.from.toUpperCase(Locale.US);
+        g.text(who, Gfx.MONO, dp(12.5f), 0.1f, x + dp(36), tp + dp(57), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        Pop.lines(g, a.question, Gfx.TEXT_SEMIBOLD, dp(19), x, tp + dp(100), mw, dp(26), 2, Tone.text(Tone.SECONDARY, p));
+        float y = tp + dp(172);
+        if (a.busy) {
+            int dots = (int) ((now / 400) % 4);
+            String thinking = "Thinking" + "...".substring(0, dots);
+            g.text(thinking, Gfx.SERIF, dp(34), -0.01f, x, y + dp(8), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+            g.text("A search on the web can take up to a minute.", Gfx.TEXT_MEDIUM, dp(15), 0, x, y + dp(52), Tone.text(Tone.TERTIARY, p),
+                    Gfx.LEFT, 0);
+        } else if (!a.error.isEmpty() && a.text.isEmpty()) {
+            Pop.lines(g, a.error, Gfx.TEXT_MEDIUM, dp(23), x, y, mw, dp(33), 4, Tone.text(Tone.PRIMARY, p));
+        } else {
+            Pop.lines(g, a.text, Gfx.TEXT_MEDIUM, dp(23), x, y, mw, dp(33), 6, Tone.text(Tone.PRIMARY, p));
+        }
+        float by = tp + h - dp(92);
+        if (!a.did.isEmpty()) {
+            StringBuilder did = new StringBuilder();
+            for (String d : a.did) did.append(did.length() > 0 ? "  \u00b7  " : "").append(d);
+            Icons.check(g, x + dp(9), by - dp(6), dp(18), Pixels.alpha(Tone.ACCENT, p));
+            g.text(Text.fit(g, did.toString(), Gfx.TEXT_SEMIBOLD, dp(16), mw - dp(30)), Gfx.TEXT_SEMIBOLD, dp(16), 0, x + dp(28), by,
+                    Pixels.alpha(Tone.ACCENT, p), Gfx.LEFT, 0);
+        }
+        StringBuilder src = new StringBuilder();
+        for (String[] sr : a.sources) {
+            String host = sr[1].replaceFirst("^https://(www\\.)?", "");
+            int slash = host.indexOf('/');
+            if (slash > 0) host = host.substring(0, slash);
+            src.append(src.length() > 0 ? "  \u00b7  " : "Sources: ").append(host);
+        }
+        float fy = tp + h - dp(40);
+        if (src.length() > 0) {
+            g.text(Text.fit(g, src.toString(), Gfx.TEXT_REGULAR, dp(13.5f), mw - dp(220)), Gfx.TEXT_REGULAR, dp(13.5f), 0, x, fy,
+                    Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
+        }
+        // Keys, right to left: Back closes, OK asks the next question once this one is answered.
+        int ink = Tone.text(Tone.SECONDARY, p);
+        float cw = g.measure("Close", Gfx.TEXT_MEDIUM, dp(14), 0);
+        float kx = right - cw;
+        g.text("Close", Gfx.TEXT_MEDIUM, dp(14), 0, kx, fy, ink, Gfx.LEFT, 0);
+        kx -= dp(8) + Icons.keycapWidth(g, dp(24), "Back");
+        Icons.keycap(g, kx, fy - dp(6), dp(24), "Back", ink);
+        if (!a.busy) {
+            float aw = g.measure("Ask again", Gfx.TEXT_MEDIUM, dp(14), 0);
+            kx -= dp(22) + aw;
+            g.text("Ask again", Gfx.TEXT_MEDIUM, dp(14), 0, kx, fy, ink, Gfx.LEFT, 0);
+            kx -= dp(8) + Icons.keycapWidth(g, dp(24), "OK");
+            Icons.keycap(g, kx, fy - dp(6), dp(24), "OK", ink);
+        }
+    }
+
     /** The guest Wi-Fi card, shown for two minutes, or null to hide. */
     void setWifi(String ssid, Gfx g, boolean[][] qr, long until) {
         if (ssid == null || qr == null) {
@@ -759,6 +843,15 @@ final class Scene {
                     host.action("wifi-hide");
                 }
                 return true;
+            case ANSWER:
+                if (k == OK || k == BACK || k == MENU) {
+                    host.sound(false);
+                    mode = NONE;
+                    modal.to(0);
+                    // OK on an answer that is in asks the next question.
+                    if (k == OK && answer != null && !answer.busy) host.action("ask");
+                }
+                return true;
             case MIRROR:
                 mirrorKey(k);
                 return true;
@@ -850,6 +943,9 @@ final class Scene {
                         break;
                     case T_PHONE:
                         host.pairing(true);
+                        break;
+                    case T_ASK:
+                        host.action("ask");
                         break;
                     case T_MIRROR:
                         mode = MIRROR;
@@ -1491,7 +1587,8 @@ final class Scene {
 
     /** Whether something shows seconds (bike finder's timer, music), which needs a few frames a second. */
     boolean ticking() {
-        return cards.finding() || notice.value > 0.01f || cards.media.playing || mode == PAIR || mode == WIFI;
+        return cards.finding() || notice.value > 0.01f || cards.media.playing || mode == PAIR || mode == WIFI
+                || mode == ANSWER && answer != null && answer.busy;
     }
 
     /** Whether the wallpaper drifts, which needs slow continuous frames. */
@@ -1541,6 +1638,7 @@ final class Scene {
         drawPair(g, t, now);
         drawAsk(g, t);
         drawWifi(g, t, now);
+        drawAnswer(g, t, now);
         drawNote(g, t, now);
         drawNotice(g, now, t);
         drawAlarm(g, now, t);
@@ -2119,6 +2217,9 @@ final class Scene {
                     break;
                 case T_EXIT:
                     Icons.exit(g, cx, mid, dp(22), ink);
+                    break;
+                case T_ASK:
+                    Icons.sparkle(g, cx, mid, dp(24), ink);
                     break;
                 default: {
                     float iconC = r[0] + capH / 2;

@@ -14,6 +14,26 @@ import java.util.TimeZone;
 final class State {
     private State() {}
 
+    /**
+     * The assistant: whether a key is set (with only its last four characters), the month's
+     * spending against the cap, the question being answered, the last answers and the automations.
+     */
+    private static void assistant(Jw w, Hub h, long now) {
+        Claude c = h.assistant.claude;
+        w.key("assistant").obj().put("on", c.hasKey()).put("hint", c.keyHint()).put("model", Claude.MODEL).put("cap", c.cap())
+                .put("spent", c.spent(now)).put("perDay", Claude.PER_DAY);
+        Claude.Answer latest = h.assistant.latest;
+        if (latest != null && latest.busy) {
+            w.key("asking");
+            Claude.answerJson(w, latest);
+        }
+        w.key("history").arr();
+        for (Claude.Answer a : c.history()) Claude.answerJson(w, a);
+        w.endArr().key("rules").arr();
+        for (Claude.Rule r : c.rules()) Claude.ruleJson(w, r);
+        w.endArr().end();
+    }
+
     static String json(Hub h, Keys.Device me, long now) {
         Jw w = new Jw().obj();
         TimeZone zone = TimeZone.getDefault();
@@ -105,6 +125,7 @@ final class State {
         String topic = h.prefs.get(Prefs.PUSH_TOPIC, "");
         boolean on = h.pushOn();
         w.key("push").obj().put("on", on).put("topic", on ? topic : "").put("url", on ? "https://ntfy.sh/" + topic : "").end();
+        assistant(w, h, System.currentTimeMillis());
     }
 
     /** Only what the page shows: never the app's secret or the tokens. */

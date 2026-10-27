@@ -81,6 +81,8 @@ final class Pace {
         set("ntfy.sh", 5000, 4);
         // SmartThings: a picture-mode change or two, a status read, a token refresh a day.
         set("api.smartthings.com", 1500, 12);
+        // Claude: a question is a few requests (searches, an action, the answer). Its own limits are far higher.
+        set("api.anthropic.com", 250, 30);
     }
 
     private static void set(String host, long gapMs, int perMinute) {

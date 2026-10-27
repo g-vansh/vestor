@@ -6,6 +6,8 @@
 #   ./install.sh --undo                # give HOME back to Amazon (Lucent stays installed)
 #   ./install.sh --remove              # give HOME back and uninstall Lucent
 #   ./install.sh --adb-off             # turn ADB Debugging off once you are done (safer)
+#   ./install.sh --claude-key FILE     # put the Claude API key from FILE on the TV (Ask Lucent)
+#   LUCENT_CLAUDE_KEY=FILE ./install.sh   # the same, as part of an install or update
 #
 # Nothing here touches /system, roots the device or disables Amazon apps. Everything it
 # changes is listed under "What it changes" in README.md and reversed by --undo.
@@ -56,8 +58,27 @@ case ${1:-} in
   --undo) mode=undo ;;
   --remove) mode=remove ;;
   --adb-off) mode=adboff ;;
-  *) echo "usage: $0 [--undo | --remove | --adb-off]" >&2; exit 2 ;;
+  --claude-key) mode=claudekey; LUCENT_CLAUDE_KEY=${2:-} ;;
+  --claude-key-forget) mode=claudeforget ;;
+  *) echo "usage: $0 [--undo | --remove | --adb-off | --claude-key FILE | --claude-key-forget]" >&2; exit 2 ;;
 esac
+
+# The Claude API key, read from a file you keep private, goes over ADB straight into Lucent's
+# private storage. It is never on a command line here or in your shell's history; on the TV only
+# ADB's shell may hand it to Lucent (KeyDrop). Phones never see it again.
+claude_key() {
+  local f=$1 k out
+  [[ -f $f ]] || { echo "error: no key file at $f" >&2; return 1; }
+  k=$(LC_ALL=C tr -d ' \r\n\t' < "$f")
+  [[ $k =~ ^sk-ant-[A-Za-z0-9_-]{20,300}$ ]] || { echo "error: $f does not hold a Claude API key (it starts with sk-ant-)" >&2; return 1; }
+  out=$(printf '%s\n' "$k" | adb_ shell 'read -r k; am broadcast -n tv.lucent.home/.KeyDrop -a tv.lucent.home.CLAUDE_KEY --es key "$k"' 2>&1 | tr -d '\r')
+  if [[ $out == *'data="ok"'* ]]; then
+    echo "Claude key saved on the TV (it ends in ${k: -4}). Ask Lucent is ready: the sparkle at the top of the home screen."
+  else
+    echo "error: the TV did not take the key. Is Lucent installed? $(plain "$out")" >&2
+    return 1
+  fi
+}
 
 command -v "$ADB" >/dev/null || { echo "error: adb not found. Install Android platform-tools (brew install android-platform-tools)." >&2; exit 1; }
 [[ $(adb_ get-state 2>/dev/null || true) == device ]] || {
@@ -65,6 +86,17 @@ command -v "$ADB" >/dev/null || { echo "error: adb not found. Install Android pl
 
 # ADB is the one way in from the network, so it should stay off unless you are installing,
 # updating or undoing. This flips the same switch as Developer Options and ends the session.
+if [[ $mode == claudekey ]]; then
+  [[ -n ${LUCENT_CLAUDE_KEY:-} ]] || { echo "usage: $0 --claude-key FILE" >&2; exit 2; }
+  claude_key "$LUCENT_CLAUDE_KEY"
+  exit $?
+fi
+if [[ $mode == claudeforget ]]; then
+  out=$(sh_ am broadcast -n $PKG/.KeyDrop -a tv.lucent.home.CLAUDE_KEY_FORGET 2>&1 || true)
+  if [[ $out == *'data="ok"'* ]]; then echo "The Claude key is gone from the TV."; else echo "error: the TV did not answer: $(plain "$out")" >&2; exit 1; fi
+  exit 0
+fi
+
 if [[ $mode == adboff ]]; then
   sh_ settings put global adb_enabled 0 >/dev/null 2>&1 || true
   if [[ -n ${ADB_SERIAL:-} ]]; then "$ADB" disconnect "$ADB_SERIAL" >/dev/null 2>&1 || true
@@ -344,6 +376,8 @@ if sh_ cmd notification allow_listener "$LISTENER" >/dev/null 2>&1; then
 else
   echo "note: Now Playing was not granted, so the music card stays hidden. Everything else works."
 fi
+
+if [[ -n ${LUCENT_CLAUDE_KEY:-} ]]; then claude_key "$LUCENT_CLAUDE_KEY" || true; fi
 
 sh_ input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
 sh_ am start -n $PKG/.Home >/dev/null 2>&1 || true

@@ -53,7 +53,8 @@ final class Net {
             "api.open-meteo.com", "air-quality-api.open-meteo.com", "api.weather.gov",
             "gbfs.lyft.com", "passio3.com", "api-v3.mbta.com",
             "api.adsb.lol", "api.airplanes.live", "opendata.adsb.fi", "hexdb.io", "api.adsbdb.com",
-            "calendar.google.com", "outlook.office365.com", "outlook.live.com", "ntfy.sh", "api.smartthings.com"));
+            "calendar.google.com", "outlook.office365.com", "outlook.live.com", "ntfy.sh", "api.smartthings.com",
+            "api.anthropic.com"));
 
     /** Whether {@code host} is one Lucent may contact. iCloud serves published calendars from pNN-caldav or pNN-calendars. */
     static boolean allowedHost(String host) {

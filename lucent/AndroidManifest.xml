@@ -83,6 +83,11 @@
             </intent-filter>
         </service>
 
+        <!-- install.sh's way to hand over the Claude key: only ADB's shell holds this permission. -->
+        <receiver
+            android:name=".KeyDrop"
+            android:exported="true"
+            android:permission="android.permission.WRITE_SECURE_SETTINGS" />
         <receiver
             android:name=".Boot"
             android:exported="true">

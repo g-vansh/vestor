@@ -143,6 +143,46 @@ final class Actions {
                 h.systemVolume(what);
                 return OK;
             }
+            case "ask": {
+                // Queued: the answer comes in the state a few seconds later, and on the TV.
+                try {
+                    Jw w = new Jw();
+                    Claude.answerJson(w, h.assistant.ask(Json.str(body, "text", ""), d.name));
+                    return w.toString();
+                } catch (Claude.Failed f) {
+                    throw new Http.Refused(409, f.getMessage());
+                }
+            }
+            case "assistant": {
+                Claude c = h.assistant.claude;
+                try {
+                    switch (Json.str(body, "do", "")) {
+                        case "key":
+                            c.setKey(Json.str(body, "key", "").trim());
+                            break;
+                        case "forget":
+                            c.forgetKey();
+                            break;
+                        case "cap":
+                            c.setCap((int) Json.num(body, "dollars", -1));
+                            break;
+                        case "clear":
+                            c.clearHistory();
+                            break;
+                        case "ruledel":
+                            c.deleteRule(Json.str(body, "id", ""));
+                            break;
+                        case "ruleon":
+                            c.setRuleOn(Json.str(body, "id", ""), Json.bool(body, "on", true));
+                            break;
+                        default:
+                            throw new Http.Refused(400, "assistant");
+                    }
+                } catch (Claude.Failed f) {
+                    throw new Http.Refused(400, f.getMessage());
+                }
+                return OK;
+            }
             case "push": {
                 if (!"test".equals(Json.str(body, "do", ""))) throw new Http.Refused(400, "push");
                 if (!h.pushOn()) throw new Http.Refused(409, "phone alerts are off");
