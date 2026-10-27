@@ -1464,6 +1464,30 @@ add airline branding.
 - Next: run `./install.sh --claude-key claude-key.txt`, pair the Samsung remote from
   the phone (Settings, Samsung remote), and check "play" links on the real stick.
 
+### 2026-10-27: VestorOS (Lucent renamed), cheaper Ask, transport research
+- Did: renamed the TV app from Lucent to Vestor everywhere (folder vestoros/, package
+  tv.vestor.home, app label VestorOS, "Ask Vestor"), with its own new signing key, since
+  a new package is a new app to Android. install.sh now moves a TV from Lucent: strips
+  Lucent's HOME service, carries its --undo records over, copies pushed wallpapers and
+  banners, and disables Lucent (not removed) once VestorOS has HOME. Ask now answers on
+  Claude Haiku 5.5, which consults Opus 5.5 only for hard questions and retries on
+  Sonnet 5.5 if it stumbles, with a phone setting for Opus every time. The phone page
+  gained the Ask screen and Claude settings (model, cost per answer, cap, key, privacy,
+  automations). The 85 rows say "Weekdays" on weekends (no weekend trips). The Samsung
+  remote's close frame now survives a protocol error.
+- Verified: measured live on Haiku: 0.02 to 0.08 cents and about 2 s for plain
+  questions, about 1.2 cents with a web search, 4.4 cents when Opus advised. All
+  desktop suites pass after the rename (Hostile 187,253 checks, SamsungRemoteTest 542,
+  five runs in a row). Phone page: 280 mock checks and the end-to-end run against the
+  real server. Installer dry-run against a fake TV for install and undo. Signed build
+  verified (certificate d6ee2421, label VestorOS, targetSdk 28).
+- Changed from brief: booking a Bluebikes e-bike from the TV is left out (no API, and
+  automating Lyft's app breaks its terms). The TV alerts the phone, which opens the
+  Bluebikes app. WhatsApp video on this Stick is not possible (no camera support).
+  Other transport (EZRide, more MBTA routes, Red Line at Central) researched, not wired.
+- Next: install VestorOS, re-pair phones, allow it on the Samsung, run
+  `./install.sh --claude-key claude-key.txt`, then `adb uninstall tv.lucent.home` once happy.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
