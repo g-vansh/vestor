@@ -35,6 +35,78 @@ final class Prefs {
             AMBIENT = "ambient", ORDER = "order", HIDDEN = "hidden", SHOWN = "shown", WALL_AT = "wall_at",
             WEATHER_JSON = "weather_json", WEATHER_AT = "weather_at", STATION = "bike_station",
             FIND_FOR = "find_for", SKY = "sky";
+    /** Added in 2.0. Values and defaults are listed in {@link #DEFAULTS}. */
+    static final String ALBUM = "album", DIM = "dim", AWAKE_FROM = "awake_from", AWAKE_TO = "awake_to", BEDTIME = "bedtime",
+            ALARM = "alarm", ALARM_FOR = "alarm_for", WAKE_NOTES = "wake_notes", MODE = "mode", MODE_UNTIL = "mode_until",
+            MBTA_KEY = "mbta_key", CALENDARS = "calendars", WIFI_SSID = "wifi_ssid", WIFI_PASS = "wifi_pass",
+            ALEXA = "alexa", ALEXA_TOPIC = "alexa_topic", ACCESS = "access", TAKEOVER = "takeover", WALLPAPER = "wallpaper",
+            QUALITY = "wall_quality", SEEN_DAY = "seen_day", NOTE_SEEN = "note_seen";
+
+    /** Every setting the control center may change, with its allowed values (null: free text checked elsewhere). */
+    static final String[][] CHOICES = {
+        {UNITS, "f", "c", "off"},
+        {CLOCK, "auto", "12", "24"},
+        {ROTATE, "10m", "1m", "5m", "hour", "day", "off"},
+        {ALBUM, "both", "nature", "ours"},
+        {MOTION, "full", "reduced"},
+        {AMBIENT, "2", "5", "15", "off"},
+        {DIM, "10", "5", "30", "off"},
+        {FIND_FOR, "30", "15", "60", "120"},
+        {SKY, "on", "off"},
+        {ALARM, "ring", "chime"},
+        {ALARM_FOR, "10", "2", "5", "30"},
+        {WAKE_NOTES, "never", "day", "always"},
+        {QUALITY, "motion", "still"},
+    };
+
+    /** Names the control center uses where they differ from the stored key. */
+    private static final String[][] API = {
+        {"findFor", FIND_FOR}, {"wakeForNotes", WAKE_NOTES}, {"alarmFor", ALARM_FOR}, {"quality", QUALITY},
+    };
+
+    static String api(String key) {
+        for (String[] a : API) if (a[1].equals(key)) return a[0];
+        return key;
+    }
+
+    static String key(String api) {
+        for (String[] a : API) if (a[0].equals(api)) return a[1];
+        return api;
+    }
+
+    /** The default of a choice setting: its first allowed value. */
+    static String fallback(String key) {
+        for (String[] c : CHOICES) if (c[0].equals(key)) return c[1];
+        return "";
+    }
+
+    /** Whether {@code value} is allowed for {@code key}. */
+    static boolean allowed(String key, String value) {
+        for (String[] c : CHOICES) {
+            if (!c[0].equals(key)) continue;
+            for (int i = 1; i < c.length; i++) if (c[i].equals(value)) return true;
+            return false;
+        }
+        return false;
+    }
+
+    /** "HH:MM" from 00:00 to 23:59, or one of the words given. */
+    static boolean clockOr(String v, String... words) {
+        for (String w : words) if (w.equals(v)) return true;
+        return v != null && v.matches("([01][0-9]|2[0-3]):[0-5][0-9]");
+    }
+
+    /** Minutes after midnight of "HH:MM", or -1. */
+    static int minutes(String v) {
+        if (v == null || !v.matches("([01][0-9]|2[0-3]):[0-5][0-9]")) return -1;
+        return Integer.parseInt(v.substring(0, 2)) * 60 + Integer.parseInt(v.substring(3));
+    }
+
+    /** A choice setting's value, never one outside its allowed list. */
+    String choice(String key) {
+        String v = get(key, fallback(key));
+        return allowed(key, v) ? v : fallback(key);
+    }
 
     private static final String CITY = "conf_city", LAT = "conf_lat", LON = "conf_lon";
     private static final String CITY_RULE = "[\\p{L}\\p{N} ,.'-]{1,40}", STATION_RULE = "[A-Za-z0-9_-]{1,64}";
@@ -86,6 +158,10 @@ final class Prefs {
 
     void put(String key, String value) {
         p.edit().putString(key, value).apply();
+    }
+
+    void remove(String key) {
+        p.edit().remove(key).apply();
     }
 
     long getLong(String key) {

@@ -18,16 +18,28 @@ import java.util.Locale;
  * them, so countdowns do not jitter sideways. Colour is spent only on meaning.
  */
 final class Cards {
-    static final int WEATHER = 0, BIKES = 1, TRANSIT = 2, SKY = 3, COUNT = 4;
+    static final int WEATHER = 0, BIKES = 1, TRANSIT = 2, SKY = 3, PLANS = 4, MUSIC = 5, COUNT = 6;
 
     /** Found e-bikes are announced on the bikes card for this long. */
     static final long FOUND_SHOWN_MS = 15 * 60000L;
 
     Model.Weather weather;
+    /** Air quality and UV (Open-Meteo), and the most serious weather alert (NWS), or null. */
+    Model.Air air;
+    Model.Alert alert;
     Model.Bikes bikes;
     Model.Transit transit;
     Model.Sky sky;
     Model.Finder finder = new Model.Finder();
+    /** The shared calendars' next two weeks, sorted, and the feed names by index. */
+    List<Ical.Event> events = new ArrayList<>();
+    List<String> feeds = new ArrayList<>();
+    List<Plans.Countdown> countdowns = new ArrayList<>();
+    List<Plans.Item> items = new ArrayList<>();
+    Model.Media media = new Model.Media();
+    /** The device's elapsed-realtime clock, for the music position. */
+    long uptime;
+    java.util.TimeZone zone = java.util.TimeZone.getDefault();
     boolean h24, still;
     long now;
     float time;
@@ -46,6 +58,8 @@ final class Cards {
             case WEATHER: return "Weather";
             case BIKES: return "Bluebikes";
             case TRANSIT: return "Shuttles";
+            case PLANS: return "Plans";
+            case MUSIC: return "Now Playing";
             default: return "Planes Overhead";
         }
     }
@@ -85,9 +99,17 @@ final class Cards {
         return new SimpleDateFormat(h24 ? "HH:mm" : "h:mm a", Locale.US).format(new Date(at));
     }
 
-    private static String elapsed(long ms) {
+    private long elapsedFor = -1;
+    private String elapsedText = "";
+
+    /** "4:07", made once a second rather than once a frame. */
+    private String elapsed(long ms) {
         long s = Math.max(0, ms / 1000);
-        return String.format(Locale.US, "%d:%02d", s / 60, s % 60);
+        if (s != elapsedFor) {
+            elapsedFor = s;
+            elapsedText = s / 60 + ":" + (s % 60 < 10 ? "0" : "") + s % 60;
+        }
+        return elapsedText;
     }
 
     private static String thousands(int v) {
@@ -100,7 +122,7 @@ final class Cards {
 
     /** Small caps label, the way every card names its source. */
     private void meta(Gfx g, String s, float x, float base, float a) {
-        g.text(s.toUpperCase(Locale.US), Gfx.TEXT_SEMIBOLD, dp(11.5f), 0.12f, x, base, Tone.text(Tone.TERTIARY + 0.12f, a), Gfx.LEFT, 0);
+        g.text(s.toUpperCase(Locale.US), Gfx.MONO, dp(11.5f), 0.08f, x, base, Tone.text(Tone.TERTIARY + 0.14f, a), Gfx.LEFT, 0);
     }
 
     /** Freshness at the right of a header: a live mark while fresh, amber once stale. */
@@ -163,6 +185,10 @@ final class Cards {
                 return compactBikes(g, x, cy, a, draw);
             case TRANSIT:
                 return compactTransit(g, x, cy, a, draw);
+            case PLANS:
+                return compactPlans(g, x, cy, a, draw);
+            case MUSIC:
+                return compactMusic(g, x, cy, a, draw);
             default:
                 return compactSky(g, x, cy, a, draw);
         }
@@ -290,7 +316,8 @@ final class Cards {
             return x + g.measure("Clear skies", Gfx.TEXT_MEDIUM, dp(15), 0) - x0;
         }
         float base = cy + cap(g, Gfx.TEXT_SEMIBOLD, dp(17)) / 2;
-        String head = !f.from.isEmpty() && !f.to.isEmpty() ? f.from + " → " + f.to : Sky.flightName(f);
+        String head = !f.from.isEmpty() && !f.to.isEmpty() ? f.from + " \u2192 " + f.to
+                : !f.from.isEmpty() ? "From " + f.from : !f.to.isEmpty() ? "To " + f.to : Sky.flightName(f);
         if (draw) g.text(head, Gfx.TEXT_SEMIBOLD, dp(17), 0.01f, x, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
         x += g.measure(head, Gfx.TEXT_SEMIBOLD, dp(17), 0.01f) + dp(9);
         String alt = thousands(f.altFt) + " ft";
@@ -308,6 +335,8 @@ final class Cards {
             case WEATHER: return dp(304);
             case BIKES: return dp(344);
             case TRANSIT: return dp(364);
+            case PLANS: return dp(380);
+            case MUSIC: return dp(400);
             default: return dp(352);
         }
     }
@@ -323,6 +352,12 @@ final class Cards {
                 break;
             case TRANSIT:
                 transitCard(g, l, t, r, a, 4, dp(33));
+                break;
+            case PLANS:
+                plansCard(g, l, t, r, a);
+                break;
+            case MUSIC:
+                musicCard(g, l, t, r, b, a);
                 break;
             default:
                 skyCard(g, l, t, r, a);
@@ -343,8 +378,8 @@ final class Cards {
         Icons.weatherColor(g, Icons.forCode(w.code, w.day), x + dp(26), t + dp(74), dp(54), a);
         float tx = x + dp(66), base = t + dp(96);
         String lead = w.lead(w.tempC) + "°";
-        g.text(lead, Gfx.DISPLAY_LIGHT, dp(56), -0.02f, tx, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
-        tx += g.measure(lead, Gfx.DISPLAY_LIGHT, dp(56), -0.02f) + dp(8);
+        g.text(lead, Gfx.SERIF_LIGHT, dp(60), -0.02f, tx, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
+        tx += g.measure(lead, Gfx.SERIF_LIGHT, dp(60), -0.02f) + dp(8);
         g.text(w.other(w.tempC) + "°" + w.otherUnit(), Gfx.TEXT_MEDIUM, dp(22), 0, tx, base, Tone.text(Tone.SECONDARY, a),
                 Gfx.LEFT, 0);
         g.text(w.condition, Gfx.TEXT_SEMIBOLD, dp(16), 0, x, t + dp(128), Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
@@ -388,9 +423,9 @@ final class Cards {
         int e = s.rentableEbikes();
         float base = top + dp(50 * k);
         String es = String.valueOf(e);
-        g.text(es, Gfx.DISPLAY_LIGHT, dp(54 * k), -0.02f, x - dp(2), base, e > 0 ? Pixels.alpha(Tone.VOLT, a * dim)
+        g.text(es, Gfx.SERIF_LIGHT, dp(60 * k), -0.02f, x - dp(2), base, e > 0 ? Pixels.alpha(Tone.VOLT, a * dim)
                 : Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0.2f);
-        float ew = g.measure(es, Gfx.DISPLAY_LIGHT, dp(54 * k), -0.02f);
+        float ew = g.measure(es, Gfx.SERIF_LIGHT, dp(60 * k), -0.02f);
         Icons.bolt(g, x + dp(6 * k), base + dp(18 * k), dp(13 * k), Pixels.alpha(Tone.VOLT, a * dim));
         g.text(e == 1 ? "e-bike" : "e-bikes", Gfx.TEXT_MEDIUM, dp(13 * k), 0, x + dp(15 * k), base + dp(22 * k),
                 Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
@@ -420,7 +455,7 @@ final class Cards {
             float w = r - l;
             float x = l;
             int[] counts = {e, c, k, empty};
-            int[] colors = {Tone.VOLT, Tone.PEDAL, Pixels.white(0.25f), Pixels.white(0.12f)};
+            int[] colors = {Tone.VOLT, Tone.PEDAL, Tone.text(0.25f, 1), Tone.text(0.12f, 1)};
             for (int i = 0; i < 4; i++) {
                 float sw = w * counts[i] / n;
                 if (sw > 0.5f) g.fillRoundRect(x, t, x + sw - dp(1), t + h, h / 2, Pixels.alpha(colors[i], a));
@@ -437,10 +472,10 @@ final class Cards {
             } else if (i < e + c) {
                 g.fillRoundRect(x, t, x + sw, t + h, Math.min(sw, h) / 2, Pixels.alpha(Tone.PEDAL, 0.92f * a));
             } else if (i < e + c + k) {
-                g.fillRoundRect(x, t, x + sw, t + h, Math.min(sw, h) / 2, Pixels.white(0.16f * a));
+                g.fillRoundRect(x, t, x + sw, t + h, Math.min(sw, h) / 2, Tone.text(0.16f, a));
             } else {
                 g.strokeRoundRect(x + dp(0.5f), t + dp(0.5f), x + sw - dp(0.5f), t + h - dp(0.5f), Math.min(sw, h) / 2,
-                        dp(1), Pixels.white(0.3f * a));
+                        dp(1), Tone.text(0.3f, a));
             }
         }
     }
@@ -554,21 +589,33 @@ final class Cards {
         if (!f.type.isEmpty()) g.text(f.type, Gfx.TEXT_SEMIBOLD, dp(12), 0.08f, right, t + dp(172), Tone.text(Tone.TERTIARY, a), Gfx.RIGHT, 0);
     }
 
-    /** "BOS → SFO" in display type with the places beneath; or the registration if unknown. */
+    /**
+     * "BOS → SFO" in serif with the places beneath. When only one end is believable (a low flight
+     * near Logan whose looked-up route was stale), "Departing Boston" or "Landing at Boston".
+     */
     private void route(Gfx g, Model.Flight f, float x, float base, float maxR, float size, float a) {
-        if (f.from.isEmpty() || f.to.isEmpty()) {
-            g.text("Route unknown", Gfx.DISPLAY_LIGHT, size * 0.7f, -0.01f, x, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+        if (f.from.isEmpty() && f.to.isEmpty()) {
+            g.text("Route unknown", Gfx.SERIF_LIGHT, size * 0.7f, -0.01f, x, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
             if (!f.reg.isEmpty()) g.text(f.reg, Gfx.TEXT_MEDIUM, dp(13), 0, x, base + dp(20), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
             return;
         }
-        g.text(f.from, Gfx.DISPLAY_LIGHT, size, 0.01f, x, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
-        float fw = g.measure(f.from, Gfx.DISPLAY_LIGHT, size, 0.01f);
+        if (f.from.isEmpty() || f.to.isEmpty()) {
+            boolean leaving = f.to.isEmpty();
+            String code = leaving ? f.from : f.to, city = leaving ? f.fromCity : f.toCity;
+            g.text(leaving ? "Departing" : "Landing at", Gfx.SERIF_ITALIC, size * 0.62f, 0, x, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            float w = g.measure(leaving ? "Departing" : "Landing at", Gfx.SERIF_ITALIC, size * 0.62f, 0) + dp(12);
+            g.text(code, Gfx.SERIF_LIGHT, size, 0.01f, x + w, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
+            if (!city.isEmpty()) g.text(city, Gfx.TEXT_REGULAR, dp(13), 0, x + w, base + dp(20), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            return;
+        }
+        g.text(f.from, Gfx.SERIF_LIGHT, size, 0.01f, x, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
+        float fw = g.measure(f.from, Gfx.SERIF_LIGHT, size, 0.01f);
         float ax0 = x + fw + dp(14), ax1 = ax0 + size * 1.05f;
-        float ay = base - g.capHeight(Gfx.DISPLAY_LIGHT, size) / 2;
+        float ay = base - g.capHeight(Gfx.SERIF_LIGHT, size) / 2;
         g.line(ax0, ay, ax1, ay, dp(1.5f), Tone.text(Tone.SECONDARY, a));
         Icons.plane(g, (ax0 + ax1) / 2, ay, dp(14), 90, Tone.text(Tone.PRIMARY, a));
         float tx = ax1 + dp(14);
-        g.text(f.to, Gfx.DISPLAY_LIGHT, size, 0.01f, tx, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
+        g.text(f.to, Gfx.SERIF_LIGHT, size, 0.01f, tx, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
         g.text(Notice.fit(g, f.fromCity, Gfx.TEXT_REGULAR, dp(13), ax0 - x), Gfx.TEXT_REGULAR, dp(13), 0, x, base + dp(20),
                 Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
         g.text(Notice.fit(g, f.toCity, Gfx.TEXT_REGULAR, dp(13), Math.max(dp(60), maxR - tx + dp(40))), Gfx.TEXT_REGULAR, dp(13), 0,
@@ -591,6 +638,8 @@ final class Cards {
             case WEATHER: return new float[] {dp(640), dp(356)};
             case BIKES: return new float[] {dp(660), dp(372)};
             case TRANSIT: return new float[] {dp(620), dp(436)};
+            case PLANS: return new float[] {dp(760), dp(440)};
+            case MUSIC: return new float[] {dp(720), dp(360)};
             default: return new float[] {dp(620), dp(372)};
         }
     }
@@ -608,13 +657,19 @@ final class Cards {
             case TRANSIT:
                 transitPanel(g, l, t, r, b, a);
                 break;
+            case PLANS:
+                plansPanel(g, l, t, r, b, a);
+                break;
+            case MUSIC:
+                musicPanel(g, l, t, r, b, a, button);
+                break;
             default:
                 skyPanel(g, l, t, r, b, a);
         }
     }
 
     private void title(Gfx g, String s, String sub, float x, float t, float a) {
-        g.text(s, Gfx.DISPLAY_SEMIBOLD, dp(28), -0.01f, x, t + dp(52), Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
+        g.text(s, Gfx.SERIF, dp(34), -0.01f, x, t + dp(54), Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
         if (sub != null && !sub.isEmpty()) {
             g.text(sub, Gfx.TEXT_REGULAR, dp(14.5f), 0, x + dp(1), t + dp(76), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
         }
@@ -630,8 +685,8 @@ final class Cards {
         Icons.weatherColor(g, Icons.forCode(w.code, w.day), x + dp(36), t + dp(86), dp(76), a);
         float tx = x + dp(92), base = t + dp(114);
         String lead = w.lead(w.tempC) + "°";
-        g.text(lead, Gfx.DISPLAY_LIGHT, dp(76), -0.02f, tx, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
-        tx += g.measure(lead, Gfx.DISPLAY_LIGHT, dp(76), -0.02f) + dp(10);
+        g.text(lead, Gfx.SERIF_LIGHT, dp(84), -0.02f, tx, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0.2f);
+        tx += g.measure(lead, Gfx.SERIF_LIGHT, dp(84), -0.02f) + dp(10);
         g.text(w.other(w.tempC) + "°" + w.otherUnit(), Gfx.TEXT_MEDIUM, dp(26), 0, tx, base, Tone.text(Tone.SECONDARY, a),
                 Gfx.LEFT, 0);
         float cx = l + dp(372);
@@ -642,7 +697,7 @@ final class Cards {
         g.text(details(w), Gfx.TEXT_REGULAR, dp(14), 0, cx, t + dp(134), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
         int n = Math.min(7, w.hourC.size());
         float lineY = t + dp(160);
-        g.fillRect(l + dp(28), lineY, r - dp(28), lineY + Math.max(1, dp(0.6f)), Pixels.white(0.14f * a));
+        g.fillRect(l + dp(28), lineY, r - dp(28), lineY + Math.max(1, dp(1)), Tone.hairline(a));
         if (n > 0) {
             float colW = (r - l - dp(56)) / n;
             for (int i = 0; i < n; i++) {
@@ -663,9 +718,26 @@ final class Cards {
                         Tone.text(Tone.TERTIARY, a), Gfx.CENTER, 0);
             }
         }
-        String foot = w.city + (w.updated.isEmpty() ? "" : "  ·  Updated " + w.updated) + "  ·  Weather by Open-Meteo";
-        g.text(Notice.fit(g, foot, Gfx.TEXT_REGULAR, dp(12), r - l - dp(64)), Gfx.TEXT_REGULAR, dp(12), 0, l + dp(32),
-                b - dp(20), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        float fx = l + dp(32);
+        Model.Air air = this.air;
+        if (air != null && air.ok) {
+            // Air and sun, coloured only when they ask for care.
+            String aq = "Air " + air.aqi + ", " + Extras.aqiWord(air.aqi).toLowerCase(Locale.US);
+            int aqC = air.aqi > 100 ? Pixels.alpha(Tone.AMBER, a) : Tone.text(Tone.SECONDARY, a);
+            g.text(aq, Gfx.TEXT_MEDIUM, dp(12.5f), 0, fx, b - dp(20), aqC, Gfx.LEFT, 0);
+            fx += g.measure(aq, Gfx.TEXT_MEDIUM, dp(12.5f), 0) + dp(14);
+            if (air.uv >= 0) {
+                String uv = "UV " + Math.round(air.uv) + ", " + Extras.uvWord(air.uv).toLowerCase(Locale.US);
+                int uvC = air.uv >= 6 ? Pixels.alpha(Tone.AMBER, a) : Tone.text(Tone.SECONDARY, a);
+                g.text(uv, Gfx.TEXT_MEDIUM, dp(12.5f), 0, fx, b - dp(20), uvC, Gfx.LEFT, 0);
+                fx += g.measure(uv, Gfx.TEXT_MEDIUM, dp(12.5f), 0) + dp(14);
+            }
+        }
+        Model.Alert al = alert;
+        String foot = (al != null ? al.event + "  ·  " : "") + w.city + (w.updated.isEmpty() ? "" : "  ·  Updated " + w.updated)
+                + "  ·  Weather by Open-Meteo" + (al != null ? " and the NWS" : "");
+        g.text(Notice.fit(g, foot, Gfx.TEXT_REGULAR, dp(12), r - dp(32) - fx), Gfx.TEXT_REGULAR, dp(12), 0, fx,
+                b - dp(20), al != null ? Pixels.alpha(Tone.AMBER, a) : Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
     }
 
     private void bikesPanel(Gfx g, float l, float t, float r, float b, float a, float button, float rad) {
@@ -686,7 +758,7 @@ final class Cards {
         }
         // Nearby docks, in a column on the right.
         float nx = leftR + dp(12);
-        g.fillRect(leftR - dp(6), t + dp(98), leftR - dp(6) + Math.max(1, dp(0.6f)), t + dp(232), Pixels.white(0.14f * a));
+        g.fillRect(leftR - dp(6), t + dp(98), leftR - dp(6) + Math.max(1, dp(1)), t + dp(232), Tone.hairline(a));
         meta(g, "Nearby", nx, t + dp(112), a);
         float y = t + dp(140);
         if (bikes != null) {
@@ -705,8 +777,8 @@ final class Cards {
         float bt = b - dp(104), bb = bt + dp(52), inset = dp(18);
         float bl = l + inset, br = r - inset;
         float lit = Math.max(0, Math.min(1, button));
-        g.fillRoundRect(bl, bt, br, bb, rad - inset, Pixels.white((0.12f + 0.81f * lit) * a));
-        int ink = Pixels.alpha(Pixels.lerp(Tone.TEXT, Tone.INK, lit), a);
+        g.fillRoundRect(bl, bt, br, bb, rad - inset, Tone.focus((0.12f + 0.81f * lit) * a));
+        int ink = Tone.onFocus(lit, a);
         String label = finding() ? "Stop Finding" : foundRecently() ? "Find Another E-Bike" : "Find Me an E-Bike";
         float cy = (bt + bb) / 2;
         float lw = g.measure(label, Gfx.TEXT_SEMIBOLD, dp(18), 0);
@@ -749,7 +821,7 @@ final class Cards {
 
     private void transitPanel(Gfx g, float l, float t, float r, float b, float a) {
         float x = l + dp(32), right = r - dp(32);
-        title(g, "Shuttles and Buses", "MIT shuttles and the MBTA 85 near " + stationLabel(), x, t, a);
+        title(g, "Shuttles and Buses", "MIT shuttles, and the 85 both ways (85A Assembly, 85B BU)", x, t, a);
         if (transit == null) {
             g.text("Looking for shuttles", Gfx.TEXT_MEDIUM, dp(17), 0, x, t + dp(150), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
             return;
@@ -771,9 +843,9 @@ final class Cards {
             if (live) countdown(g, ln, right, cy, dp(28), a);
             else g.text(ln.idle, Gfx.TEXT_MEDIUM, dp(14), 0, right, cy + dp(5), Tone.text(Tone.TERTIARY, a), Gfx.RIGHT, 0);
             y += rowH;
-            g.fillRect(x, y - dp(0.5f), right, y - dp(0.5f) + Math.max(1, dp(0.6f)), Pixels.white(0.08f * a));
+            g.fillRect(x, y - dp(0.5f), right, y - dp(0.5f) + Math.max(1, dp(1)), Tone.hairline(0.6f * a));
         }
-        g.text("Live from MIT's Passio feed and the MBTA. Times are the next tracked buses.", Gfx.TEXT_REGULAR, dp(12), 0,
+        g.text(transit.live ? "Live from MIT's Passio feed and the MBTA's live stream." : "Live from MIT's Passio feed and the MBTA, every 10 s.", Gfx.TEXT_REGULAR, dp(12), 0,
                 x, b - dp(20), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
     }
 
@@ -792,18 +864,286 @@ final class Cards {
         route(g, f, x, t + dp(170), right, dp(46), a);
         g.text(telemetry(f), Gfx.TEXT_MEDIUM, dp(14), 0, x, t + dp(222), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
         float y = t + dp(256);
-        g.fillRect(x, y - dp(10), right, y - dp(10) + Math.max(1, dp(0.6f)), Pixels.white(0.12f * a));
+        g.fillRect(x, y - dp(10), right, y - dp(10) + Math.max(1, dp(1)), Tone.hairline(a));
         for (int i = 1; i < Math.min(4, sky.flights.size()); i++) {
             Model.Flight o = sky.flights.get(i);
             Icons.plane(g, x + dp(9), y + dp(1), dp(16), o.track, Tone.text(Tone.SECONDARY, a));
             g.text(Sky.flightName(o), Gfx.TEXT_MEDIUM, dp(14), 0, x + dp(26), y + dp(6), Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
-            String rt = !o.from.isEmpty() && !o.to.isEmpty() ? o.from + " → " + o.to : "";
+            String rt = !o.from.isEmpty() && !o.to.isEmpty() ? o.from + " \u2192 " + o.to : !o.from.isEmpty() ? "From " + o.from
+                    : !o.to.isEmpty() ? "To " + o.to : "";
             g.text(rt, Gfx.TEXT_MEDIUM, dp(14), 0.02f, x + dp(250), y + dp(6), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
             g.text(thousands(o.altFt) + " ft  ·  " + String.format(Locale.US, "%.1f mi", o.miles), Gfx.TEXT_REGULAR, dp(13), 0,
                     right, y + dp(6), Tone.text(Tone.TERTIARY, a), Gfx.RIGHT, 0);
             y += dp(26);
         }
-        g.text("Aircraft from adsb.lol (ODbL), routes from hexdb.io", Gfx.TEXT_REGULAR, dp(12), 0, x, b - dp(18),
+        g.text("Aircraft from " + (sky.source.isEmpty() ? "adsb.fi" : sky.source) + ", routes from adsbdb and hexdb.io", Gfx.TEXT_REGULAR, dp(12), 0, x, b - dp(18),
                 Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+    }
+
+    // ---- Plans: shared calendars, countdowns, the list ----------------------------------------
+
+    /** Each calendar's colour, by its place in the list. */
+    static final int[] CAL_COLORS = {0xFFEC944C, 0xFF6EC1FF, 0xFFB79CFF, 0xFF7FD49B, 0xFFF4D06F, 0xFFFF8FA8};
+
+    static int calColor(int i) {
+        return CAL_COLORS[Math.max(0, i) % CAL_COLORS.length];
+    }
+
+    /** Whether the Plans card has anything to show. */
+    boolean hasPlans() {
+        return !events.isEmpty() || !countdowns.isEmpty() || !feeds.isEmpty();
+    }
+
+    /** The next thing on the calendars that has not ended, or null. */
+    Ical.Event nextEvent() {
+        for (Ical.Event e : events) if (e.end > now) return e;
+        return null;
+    }
+
+    /** "7:30 PM", "Today", "Tomorrow 9 AM", "Thu 7:30 PM". */
+    String when(Ical.Event e, boolean withDay) {
+        String day = dayName(e.start);
+        if (e.allDay) return withDay ? day : "All day";
+        String time = new SimpleDateFormat(h24 ? "HH:mm" : "h:mm a", Locale.US).format(new Date(e.start));
+        if (!withDay || "Today".equals(day)) return time;
+        return day + " " + time;
+    }
+
+    private String dayName(long t) {
+        long today = Sun.startOfDay(now, zone);
+        long day = Sun.startOfDay(t, zone);
+        long diff = Math.round((day - today) / 86400000.0);
+        if (diff <= 0) return "Today";
+        if (diff == 1) return "Tomorrow";
+        SimpleDateFormat f = new SimpleDateFormat(diff < 7 ? "EEEE" : "EEE, MMM d", Locale.US);
+        f.setTimeZone(zone);
+        return f.format(new Date(t));
+    }
+
+    /** The nearest countdown still to come, or null. */
+    Plans.Countdown nextCountdown() {
+        Plans.Countdown best = null;
+        int bestDays = Integer.MAX_VALUE;
+        for (Plans.Countdown c : countdowns) {
+            int d = Plans.daysTo(c.date, now, zone);
+            if (d >= 0 && d < bestDays) {
+                bestDays = d;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    private float compactPlans(Gfx g, float x, float cy, float a, boolean draw) {
+        float x0 = x;
+        Ical.Event e = nextEvent();
+        if (draw) Icons.calendar(g, x + dp(13), cy, dp(26), Tone.text(Tone.PRIMARY, a), e == null ? Tone.ACCENT : calColor(e.calendar));
+        x += dp(36);
+        float base = cy + cap(g, Gfx.TEXT_SEMIBOLD, dp(17)) / 2;
+        if (e != null) {
+            String when = when(e, true);
+            if (draw) g.text(when, Gfx.TEXT_MEDIUM, dp(15), 0, x, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            x += g.measure(when, Gfx.TEXT_MEDIUM, dp(15), 0) + dp(8);
+            String title = Text.fit(g, e.title.isEmpty() ? "Busy" : e.title, Gfx.TEXT_SEMIBOLD, dp(17), dp(150));
+            if (draw) g.text(title, Gfx.TEXT_SEMIBOLD, dp(17), 0, x, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
+            return x + g.measure(title, Gfx.TEXT_SEMIBOLD, dp(17), 0) - x0;
+        }
+        Plans.Countdown c = nextCountdown();
+        if (c != null) {
+            int days = Plans.daysTo(c.date, now, zone);
+            String n = days == 0 ? "Today" : String.valueOf(days);
+            if (draw) g.text(n, Gfx.SERIF, dp(22), 0, x, base + dp(1), Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
+            x += g.measure(n, Gfx.SERIF, dp(22), 0) + dp(7);
+            String rest = Text.fit(g, (days == 0 ? "" : days == 1 ? "day · " : "days · ") + c.title, Gfx.TEXT_MEDIUM, dp(15), dp(200));
+            if (draw) g.text(rest, Gfx.TEXT_MEDIUM, dp(15), 0, x, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            return x + g.measure(rest, Gfx.TEXT_MEDIUM, dp(15), 0) - x0;
+        }
+        if (draw) g.text("Nothing planned", Gfx.TEXT_MEDIUM, dp(15), 0, x, base, Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        return x + g.measure("Nothing planned", Gfx.TEXT_MEDIUM, dp(15), 0) - x0;
+    }
+
+    private void plansCard(Gfx g, float l, float t, float r, float a) {
+        float x = l + dp(22), right = r - dp(22);
+        int today = 0;
+        for (Ical.Event e : events) if (e.end > now && "Today".equals(dayName(e.start))) today++;
+        meta(g, today == 0 ? "Plans" : "Today  \u00B7  " + today + (today == 1 ? " event" : " events"), x, t + dp(30), a);
+        float y = t + dp(64);
+        int shown = 0;
+        for (Ical.Event e : events) {
+            if (e.end <= now || shown >= 3) continue;
+            g.fillCircle(x + dp(4), y - dp(5), dp(4), Pixels.alpha(calColor(e.calendar), a));
+            String when = when(e, true);
+            g.text(when, Gfx.MONO, dp(12.5f), 0.02f, x + dp(16), y, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            float tx = x + dp(16) + Math.max(dp(92), g.measure(when, Gfx.MONO, dp(12.5f), 0.02f) + dp(10));
+            g.text(Text.fit(g, e.title, Gfx.TEXT_MEDIUM, dp(15.5f), right - tx), Gfx.TEXT_MEDIUM, dp(15.5f), 0, tx, y,
+                    Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
+            y += dp(30);
+            shown++;
+        }
+        if (shown == 0) {
+            g.text(feeds.isEmpty() ? "Add your calendars from your phone" : "Nothing on the calendars", Gfx.TEXT_MEDIUM, dp(15), 0, x,
+                    y, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            y += dp(30);
+        }
+        Plans.Countdown c = nextCountdown();
+        if (c != null) {
+            int days = Plans.daysTo(c.date, now, zone);
+            String line = days == 0 ? c.title + " is today" : days + (days == 1 ? " day to " : " days to ") + c.title;
+            g.text(Text.fit(g, line, Gfx.SERIF_ITALIC, dp(19), right - x), Gfx.SERIF_ITALIC, dp(19), 0, x, t + dp(172),
+                    Pixels.alpha(Tone.ROSE, a), Gfx.LEFT, 0);
+        }
+    }
+
+    private void plansPanel(Gfx g, float l, float t, float r, float b, float a) {
+        float x = l + dp(32), split = l + dp(440), right = r - dp(32);
+        title(g, "Plans", feeds.isEmpty() ? "Shared calendars appear here once added from your phone"
+                : "From " + joined(feeds), x, t, a);
+        float y = t + dp(108);
+        String lastDay = "";
+        int rows = 0;
+        for (Ical.Event e : events) {
+            if (e.end <= now) continue;
+            String day = dayName(e.start);
+            if (!day.equals(lastDay)) {
+                if (rows >= 9) break;
+                if (!lastDay.isEmpty()) y += dp(6);
+                meta(g, day, x, y, a);
+                y += dp(26);
+                lastDay = day;
+            }
+            if (rows >= 9 || y > b - dp(40)) break;
+            g.fillRoundRect(x, y - dp(14), x + dp(4), y + dp(4), dp(2), Pixels.alpha(calColor(e.calendar), a));
+            String when = e.allDay ? "All day" : new SimpleDateFormat(h24 ? "HH:mm" : "h:mm a", Locale.US).format(new Date(e.start));
+            g.text(when, Gfx.MONO, dp(13), 0.02f, x + dp(14), y, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            float tx = x + dp(110);
+            g.text(Text.fit(g, e.title, Gfx.TEXT_MEDIUM, dp(16), split - tx - dp(24)), Gfx.TEXT_MEDIUM, dp(16), 0, tx, y,
+                    Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
+            y += dp(30);
+            rows++;
+        }
+        if (rows == 0) g.text("Nothing in the next two weeks", Gfx.SERIF_ITALIC, dp(20), 0, x, y + dp(10), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+        g.fillRect(split - dp(6), t + dp(100), split - dp(5), b - dp(32), Tone.hairline(a));
+        float cx = split + dp(18), cy = t + dp(108);
+        meta(g, "Counting down", cx, cy, a);
+        cy += dp(14);
+        int cds = 0;
+        for (Plans.Countdown c : countdowns) {
+            int days = Plans.daysTo(c.date, now, zone);
+            if (days < 0) continue;
+            cy += dp(44);
+            String n = days == 0 ? "Today" : String.valueOf(days);
+            g.text(n, Gfx.SERIF_LIGHT, dp(40), -0.01f, cx, cy, Pixels.alpha(cds == 0 ? Tone.ROSE : Tone.TEXT, a), Gfx.LEFT, 0);
+            float nw = g.measure(n, Gfx.SERIF_LIGHT, dp(40), -0.01f) + dp(10);
+            g.text(Text.fit(g, (days == 0 ? "" : days == 1 ? "day  " : "days  ") + c.title, Gfx.TEXT_MEDIUM, dp(15), right - cx - nw),
+                    Gfx.TEXT_MEDIUM, dp(15), 0, cx + nw, cy - dp(4), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            if (++cds >= 3) break;
+        }
+        if (cds == 0) {
+            cy += dp(34);
+            g.text("Add a date from your phone", Gfx.TEXT_MEDIUM, dp(14), 0, cx, cy, Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        }
+        cy += dp(36);
+        meta(g, "Our list", cx, cy, a);
+        cy += dp(8);
+        int shown = 0;
+        for (Plans.Item i : items) {
+            if (cy > b - dp(44)) break;
+            cy += dp(28);
+            Icons.box(g, cx + dp(8), cy - dp(5), dp(15), i.done, Tone.text(i.done ? Tone.TERTIARY : Tone.SECONDARY, a));
+            g.text(Text.fit(g, i.text, Gfx.TEXT_MEDIUM, dp(15), right - cx - dp(28)), Gfx.TEXT_MEDIUM, dp(15), 0, cx + dp(24), cy,
+                    Tone.text(i.done ? Tone.TERTIARY : Tone.PRIMARY, a), Gfx.LEFT, 0);
+            shown++;
+        }
+        if (shown == 0) g.text("Empty. Add things from your phone", Gfx.TEXT_MEDIUM, dp(14), 0, cx, cy + dp(28), Tone.text(Tone.TERTIARY, a),
+                Gfx.LEFT, 0);
+    }
+
+    private static String joined(List<String> names) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < names.size() && i < 4; i++) {
+            if (i > 0) b.append(i == names.size() - 1 ? " and " : ", ");
+            b.append(names.get(i));
+        }
+        return b.toString();
+    }
+
+    // ---- Now Playing ----------------------------------------------------------------------------
+
+    private float compactMusic(Gfx g, float x, float cy, float a, boolean draw) {
+        float x0 = x;
+        Model.Media m = media;
+        float s = dp(34);
+        if (draw) art(g, m, x, cy - s / 2, s, dp(8), a);
+        x += s + dp(10);
+        float base = cy + cap(g, Gfx.TEXT_SEMIBOLD, dp(16)) / 2;
+        String title = Text.fit(g, m.title.isEmpty() ? m.app : m.title, Gfx.TEXT_SEMIBOLD, dp(16), dp(220));
+        if (draw) g.text(title, Gfx.TEXT_SEMIBOLD, dp(16), 0, x, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
+        x += g.measure(title, Gfx.TEXT_SEMIBOLD, dp(16), 0) + dp(10);
+        if (draw) Icons.bars(g, x + dp(8), cy, dp(16), still || !m.playing ? -1 : time, Pixels.alpha(Tone.ACCENT, a));
+        return x + dp(16) - x0;
+    }
+
+    /** Album art in a rounded square, or a glyph on a tile of the accent colour. */
+    private void art(Gfx g, Model.Media m, float l, float t, float s, float rad, float a) {
+        if (m.art != null) {
+            g.fillRoundRectImage(m.art, l, t, l + s, t + s, l, t, l + s, t + s, rad, Math.round(255 * a));
+            g.strokeRoundRect(l + dp(0.5f), t + dp(0.5f), l + s - dp(0.5f), t + s - dp(0.5f), rad, dp(1), Tone.hairline(a));
+        } else {
+            g.fillRoundRect(l, t, l + s, t + s, rad, Pixels.alpha(Tone.ACCENT, 0.85f * a));
+            Icons.note(g, l + s / 2, t + s / 2, s * 0.5f, Pixels.alpha(0xFFFFFFFF, a));
+        }
+    }
+
+    private void musicCard(Gfx g, float l, float t, float r, float b, float a) {
+        Model.Media m = media;
+        float x = l + dp(22);
+        meta(g, m.app.isEmpty() ? "Now playing" : m.app, x, t + dp(30), a);
+        float s = dp(112);
+        art(g, m, x, t + dp(48), s, dp(14), a);
+        float tx = x + s + dp(18), right = r - dp(22);
+        Pop.lines(g, m.title.isEmpty() ? "Nothing playing" : m.title, Gfx.SERIF, dp(22), tx, t + dp(76), right - tx, dp(26), 2,
+                Tone.text(Tone.PRIMARY, a));
+        g.text(Text.fit(g, m.artist, Gfx.TEXT_MEDIUM, dp(15), right - tx), Gfx.TEXT_MEDIUM, dp(15), 0, tx, t + dp(134),
+                Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+        progress(g, m, tx, t + dp(152), right, a);
+    }
+
+    private void progress(Gfx g, Model.Media m, float l, float y, float r, float a) {
+        if (m.duration <= 0) return;
+        long pos = m.positionNow(uptime);
+        float f = Math.max(0, Math.min(1, pos / (float) m.duration));
+        g.fillRoundRect(l, y, r, y + dp(4), dp(2), Tone.text(0.18f, a));
+        g.fillRoundRect(l, y, l + (r - l) * f, y + dp(4), dp(2), Tone.text(Tone.PRIMARY, a));
+        g.text(mmss(pos), Gfx.MONO, dp(11.5f), 0.02f, l, y + dp(22), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        g.text("-" + mmss(m.duration - pos), Gfx.MONO, dp(11.5f), 0.02f, r, y + dp(22), Tone.text(Tone.TERTIARY, a), Gfx.RIGHT, 0);
+    }
+
+    private static String mmss(long ms) {
+        long s = Math.max(0, ms / 1000);
+        return s >= 3600 ? String.format(Locale.US, "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
+                : String.format(Locale.US, "%d:%02d", s / 60, s % 60);
+    }
+
+    private void musicPanel(Gfx g, float l, float t, float r, float b, float a, float button) {
+        Model.Media m = media;
+        float s = b - t - dp(64), x = l + dp(32), y = t + dp(32);
+        art(g, m, x, y, s, dp(20), a);
+        float tx = x + s + dp(32), right = r - dp(32);
+        meta(g, (m.playing ? "Playing on " : "Paused on ") + (m.app.isEmpty() ? "the TV" : m.app), tx, y + dp(18), a);
+        Pop.lines(g, m.title.isEmpty() ? "Nothing playing" : m.title, Gfx.SERIF, dp(36), tx, y + dp(70), right - tx, dp(40), 2,
+                Tone.text(Tone.PRIMARY, a));
+        g.text(Text.fit(g, m.artist, Gfx.TEXT_MEDIUM, dp(18), right - tx), Gfx.TEXT_MEDIUM, dp(18), 0, tx, y + dp(150),
+                Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+        g.text(Text.fit(g, m.album, Gfx.TEXT_REGULAR, dp(15), right - tx), Gfx.TEXT_REGULAR, dp(15), 0, tx, y + dp(174),
+                Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        progress(g, m, tx, y + dp(196), right, a);
+        float cy = b - dp(54), mid = (tx + right) / 2;
+        Icons.skip(g, mid - dp(80), cy, dp(26), false, Tone.text(m.canPrev ? Tone.PRIMARY : Tone.TERTIARY, a));
+        float lit = Math.max(0, Math.min(1, button));
+        g.fillCircle(mid, cy, dp(30), Tone.focus((0.14f + 0.8f * lit) * a));
+        Icons.play(g, mid, cy, dp(24), m.playing, Tone.onFocus(lit, a));
+        Icons.skip(g, mid + dp(80), cy, dp(26), true, Tone.text(m.canNext ? Tone.PRIMARY : Tone.TERTIARY, a));
+        g.text("OK to play or pause  \u00B7  \u23EA \u23E9 to skip", Gfx.TEXT_REGULAR, dp(12.5f), 0, mid, b - dp(14),
+                Tone.text(Tone.TERTIARY, a), Gfx.CENTER, 0);
     }
 }

@@ -24,6 +24,8 @@ public final class Preview {
     private static final File FIX = new File(ROOT, "preview/fixtures");
 
     public static void main(String[] args) throws Exception {
+        // The fixtures were recorded at 2:05 PM in Cambridge (18:05 UTC): times read in Boston time.
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("America/New_York"));
         File out = new File(args.length > 0 ? args[0] : "preview-out");
         out.mkdirs();
         String wallFile = args.length > 1 ? args[1] : "nature-01.jpg";
@@ -40,11 +42,22 @@ public final class Preview {
         shot(out, "10-finding-home", wallFile, new int[] {U, R, OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
         shot(out, "12-ambient", wallFile, new int[0], 1);
-        shot(out, "13-settings", wallFile, new int[] {U, U, R, OK, D, D, D, D, D, D}, 0);
+        shot(out, "13-settings", wallFile, new int[] {U, U, R, R, R, R, R, OK, D, D, D, D, D, D}, 0);
         shot(out, "14-dock-scrolled", wallFile, new int[] {R, R, R, R}, 0);
-        shot(out, "15-sound", wallFile, new int[] {U, U, L, OK}, 0);
+        shot(out, "15-sound", wallFile, new int[] {U, U, L, L, L, L, R, R, R, OK}, 0);
         shot(out, "18-home-forest", "nature-02.jpg", new int[] {U, R}, 0);
         shot(out, "19-home-night", "nature-04.jpg", new int[0], 0);
+        shot(out, "20-day", "nature-11.jpg", new int[0], 5);
+        shot(out, "21-note", "nature-06.jpg", new int[0], 6);
+        shot(out, "22-bike-alarm", "nature-04.jpg", new int[0], 7);
+        shot(out, "23-pair-phone", "nature-01.jpg", new int[0], 8);
+        shot(out, "24-plans-and-music", "nature-03.jpg", new int[] {U}, 9);
+        shot(out, "25-plans-panel", "nature-03.jpg", new int[] {U, L, L, R, R, R, R, OK}, 5);
+        shot(out, "26-mirror", "nature-10.jpg", new int[] {U, U, L, L, L, L, R, OK}, 0);
+        shot(out, "27-allow-phone", "nature-04.jpg", new int[0], 11);
+        shot(out, "28-headphones", "nature-05.jpg", new int[] {U, U, L, L, L, L, R, R, R, OK}, 12);
+        shot(out, "29-hearts", "nature-04.jpg", new int[0], 13);
+        shot(out, "30-guest-wifi", "nature-12.jpg", new int[0], 14);
         overlay(out, "16-alert-over-video", false);
         overlay(out, "17-reminder-over-video", true);
     }
@@ -132,6 +145,15 @@ public final class Preview {
                 finder.state = Model.Finder.IDLE;
                 holder[0].setFinder(finder.copy(), null, clock[0]);
             }
+            public void silenceAlarm() {
+                holder[0].setAlarm(false, null, null, clock[0]);
+            }
+            public void media(int what) {}
+            public void wallpaper(int dir) {}
+            public void mirror(boolean apple) {}
+            public void pairing(boolean open) {}
+            public void decide(String id, boolean allow) {}
+            public void action(String key) {}
         };
         Scene scene = new Scene(host);
         holder[0] = scene;
@@ -147,6 +169,20 @@ public final class Preview {
         scene.setClock("2:05", "PM", "Tuesday, October 27");
         scene.setOptions(options());
         scene.setAmbientAfter(extra == 1 ? 1000 : 300000);
+        scene.setDimAfter(extra == 1 ? 0 : 600000);
+        scene.setHour(14, "Cambridge");
+        scene.setSun(NOW - 7 * 3600000L, NOW + 3 * 3600000L + 1200000L, 0.42);
+        scene.setUptime(1000000);
+        // Day by default; night where asked for.
+        scene.setNight(extra == 6 || extra == 7 || extra == 11 || extra == 13 || wallFile.equals("nature-04.jpg"), true);
+        if (extra == 5 || extra == 9 || extra == 12) scene.setPlans(events(), java.util.Arrays.asList("Us", "Work"), countdowns(), items());
+        if (extra == 9 || extra == 12) scene.setMedia(music());
+        if (extra != 1) scene.setPinned(note(false));
+        Model.Air air = new Model.Air();
+        air.ok = true;
+        air.aqi = 32;
+        air.uv = 3.1;
+        scene.setAir(air);
         long now = NOW;
         scene.enter(now);
         for (int i = 0; i < 90; i++) {
@@ -164,6 +200,35 @@ public final class Preview {
             Model.Station st = bikes(true).main();
             scene.setFinder(f, st, now);
         }
+        if (extra == 6) scene.showNote(note(true), now);
+        if (extra == 7) {
+            Model.Finder f = finder.copy();
+            f.state = Model.Finder.FOUND;
+            f.ebikes = 2;
+            f.ended = now;
+            f.station = "Westgate";
+            scene.setAlarm(true, f, bikes(true).main(), now);
+        }
+        if (extra == 8) {
+            String[] window = {"http://192.168.1.23:8686/#k=Gk2b7Qv1p9XcR0aYt4LmWn8sHq3Ze6Uo", "482913", "http://192.168.1.23:8686"};
+            BufferedImage scratch = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
+            scene.setPairing(window, new AwtGfx(scratch.createGraphics(), new File(ROOT, "assets/fonts")), Qr.encode(window[0]),
+                    now + Keys.WINDOW_MS - 37000);
+        }
+        if (extra == 11) scene.ask("p1", "Sam's iPhone");
+        if (extra == 12) {
+            Model.Audio a = audio();
+            a.route = "Bluetooth";
+            a.device = "Sam's AirPods Pro";
+            scene.setAudio(a);
+            scene.toast("Sam's AirPods Pro connected", "Sound plays on Sam's AirPods Pro now", Scene.TOAST_EARBUDS, now);
+        }
+        if (extra == 13) scene.hearts("hearts", "Alex", now - 1400);
+        if (extra == 14) {
+            BufferedImage scratch = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
+            scene.setWifi("Memorial Guest", new AwtGfx(scratch.createGraphics(), new File(ROOT, "assets/fonts")),
+                    Qr.encode("WIFI:T:WPA;S:Memorial Guest;P:example-only;;"), now + 98000);
+        }
         for (int k : keys) {
             scene.key(k, now);
             for (int i = 0; i < 30; i++) {
@@ -172,7 +237,7 @@ public final class Preview {
                 scene.step(1 / 60f, now);
             }
         }
-        int settle = extra == 1 ? 240 : extra == 4 ? 75 : 90;
+        int settle = extra == 1 ? 240 : extra == 4 ? 75 : extra == 6 ? 200 : extra == 13 ? 40 : 90;
         for (int i = 0; i < settle; i++) {
             now += 16;
             clock[0] = now;
@@ -370,6 +435,99 @@ public final class Preview {
         return img.getRGB(0, 0, n, n, null, 0, n);
     }
 
+    /** A drawn note: a heart traced the way a finger would, and a line of text. */
+    static Notes.Note note(boolean drawn) {
+        Notes.Note n = new Notes.Note();
+        n.id = drawn ? "n2" : "n1";
+        n.from = drawn ? "Alex" : "Sam";
+        n.at = NOW - (drawn ? 0 : 3 * 3600000L);
+        n.paper = drawn ? 2 : 1;
+        n.text = drawn ? "Dinner at Oleana at 8?" : "Back by 7. Love you";
+        if (drawn) {
+            int steps = 90;
+            int[] heart = new int[2 + steps * 2];
+            heart[0] = 1;
+            heart[1] = 22;
+            for (int i = 0; i < steps; i++) {
+                double t = Math.PI * 2 * i / (steps - 1);
+                double x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+                heart[2 + i * 2] = (int) Math.round(5000 + x * 190);
+                heart[3 + i * 2] = (int) Math.round(4300 - y * 190);
+            }
+            n.strokes.add(heart);
+            int[] swash = new int[2 + 40 * 2];
+            swash[0] = 2;
+            swash[1] = 10;
+            for (int i = 0; i < 40; i++) {
+                swash[2 + i * 2] = 2200 + i * 140;
+                swash[3 + i * 2] = (int) Math.round(8600 + 260 * Math.sin(i / 4.0));
+            }
+            n.strokes.add(swash);
+        }
+        return n;
+    }
+
+    private static List<Ical.Event> events() {
+        List<Ical.Event> list = new ArrayList<>();
+        String[][] e = {{"Dinner with friends", "Oleana", "0", "19", "0"}, {"Wedding cake tasting", "Flour, Central Sq", "0", "26", "0"},
+            {"Seminar: Platform economics", "E62-450", "1", "38", "1"}, {"Marathon training run", "", "0", "62", "0"}};
+        for (String[] x : e) {
+            Ical.Event ev = new Ical.Event();
+            ev.title = x[0];
+            ev.location = x[1];
+            ev.calendar = Integer.parseInt(x[2]);
+            ev.start = NOW + Long.parseLong(x[3]) * 3600000L / 4;
+            ev.end = ev.start + 90 * 60000L;
+            list.add(ev);
+        }
+        Ical.Event all = new Ical.Event();
+        all.title = "Sam's birthday";
+        all.allDay = true;
+        all.start = NOW + 2 * 86400000L;
+        all.end = all.start + 86400000L;
+        list.add(all);
+        return list;
+    }
+
+    private static List<Plans.Countdown> countdowns() {
+        List<Plans.Countdown> list = new ArrayList<>();
+        Plans.Countdown c = new Plans.Countdown();
+        c.title = "Wedding";
+        c.date = "2027-06-12";
+        list.add(c);
+        return list;
+    }
+
+    private static List<Plans.Item> items() {
+        List<Plans.Item> list = new ArrayList<>();
+        String[] t = {"Oat milk", "Flowers for Saturday", "Return the library books"};
+        for (int i = 0; i < t.length; i++) {
+            Plans.Item it = new Plans.Item();
+            it.id = "l" + i;
+            it.text = t[i];
+            it.done = i == 2;
+            it.by = i == 0 ? "Sam" : "Alex";
+            list.add(it);
+        }
+        return list;
+    }
+
+    private static Model.Media music() {
+        Model.Media m = new Model.Media();
+        m.active = true;
+        m.playing = true;
+        m.app = "Music";
+        m.title = "Slow Morning";
+        m.artist = "The Quiet Rooms";
+        m.album = "Live at Home";
+        m.duration = 303000;
+        m.position = 98000;
+        m.positionAt = 1000000 - 4000;
+        m.canNext = true;
+        m.canPrev = true;
+        return m;
+    }
+
     private static Model.Audio audio() {
         Model.Audio a = new Model.Audio();
         a.known = true;
@@ -383,21 +541,27 @@ public final class Preview {
         return a;
     }
 
+    /** The same rows as the TV's settings sheet (Home.options), with sample values. */
     private static List<Model.Option> options() {
         List<Model.Option> list = new ArrayList<>();
+        list.add(new Model.Option("look", "Look", new String[] {"auto", "day", "night"}, new String[] {"Day and Night by the Sun", "Day", "Night"}));
         list.add(new Model.Option("wall", "Wallpaper", new String[] {"0", "1"}, new String[] {"Moraine Lake", "Spruce Forest"}));
-        list.add(new Model.Option("rotate", "Change Wallpaper", new String[] {"off", "10m", "hour", "day"},
-                new String[] {"Never", "Every 10 Minutes", "Every Hour", "Every Day"}));
-        list.add(new Model.Option("motion", "Motion", new String[] {"full", "reduced"}, new String[] {"Full", "Reduced"}));
-        list.add(new Model.Option("clock", "Clock", new String[] {"12", "24"}, new String[] {"12-Hour", "24-Hour"}));
+        list.add(new Model.Option("album", "Photos", new String[] {"both", "nature", "ours"}, new String[] {"Ours and Nature", "Nature", "Ours Only"}));
+        list.add(new Model.Option("rotate", "Change Wallpaper", new String[] {"10m", "hour"}, new String[] {"Every 10 Minutes", "Every Hour"}));
+        list.add(new Model.Option("wall_quality", "Picture", new String[] {"motion", "still"}, new String[] {"Slow Drift", "Still and Sharpest"}));
+        list.add(new Model.Option("dim", "Dim When Idle", new String[] {"10", "off"}, new String[] {"After 10 Minutes", "Never"}));
+        list.add(new Model.Option("ambient", "Hide the Dock", new String[] {"5", "off"}, new String[] {"After 5 Minutes", "Never"}));
         list.add(new Model.Option("units", "Weather", new String[] {"f", "c", "off"}, new String[] {"\u00b0F, with \u00b0C", "\u00b0C, with \u00b0F", "Off"}));
         list.add(new Model.Option("bike_station", "Bike Station", new String[] {"auto", "p"}, new String[] {"Westgate", "Pacific St"}));
+        list.add(new Model.Option("alarm", "When an E-Bike Is Found", new String[] {"ring", "chime"}, new String[] {"Ring Until Stopped", "Chime Once"}));
+        list.add(new Model.Option("alarm_for", "Alarm Rings For", new String[] {"10", "30"}, new String[] {"Up to 10 Minutes", "Up to 30 Minutes"}));
         list.add(new Model.Option("find_for", "Bike Finder Gives Up", new String[] {"30", "60"}, new String[] {"After 30 Minutes", "After an Hour"}));
         list.add(new Model.Option("sky", "Planes Overhead", new String[] {"on", "off"}, new String[] {"Show", "Hide"}));
-        list.add(new Model.Option("ambient", "Ambient Mode", new String[] {"2", "5", "off"}, new String[] {"After 2 Minutes", "After 5 Minutes", "Off"}));
-        list.add(new Model.Option("unhide", "Hidden Apps", null, new String[] {"2 hidden, Show All"}));
+        list.add(new Model.Option("pair", "Phone Control", null, new String[] {"Pair a Phone  \u00b7  192.168.1.23:8686"}));
+        list.add(new Model.Option("note", "Write a Note", null, new String[] {"Type or Speak"}));
+        list.add(new Model.Option("bluetooth", "Bluetooth Headphones", null, new String[] {"Pair or Switch"}));
+        list.add(new Model.Option("takeover", "Lucent Opens on HOME", new String[] {"on", "off"}, new String[] {"Yes", "No, Use Fire TV's Home"}));
         list.add(new Model.Option("fire", "Fire TV Settings", null, new String[] {""}));
-        list.add(new Model.Option("amazon", "Amazon Home", null, new String[] {""}));
         return list;
     }
 }

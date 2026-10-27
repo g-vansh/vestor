@@ -15,8 +15,10 @@ public final class Fuzz {
         BufferedImage img = new BufferedImage(1920, 1080, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2 = img.createGraphics();
         AwtGfx g = new AwtGfx(g2, new File(root, "assets/fonts"));
-        int[] keys = {Scene.LEFT, Scene.RIGHT, Scene.UP, Scene.DOWN, Scene.OK, Scene.LONG_OK, Scene.BACK, Scene.MENU};
-        final int[] calls = new int[12];
+        int[] keys = {Scene.LEFT, Scene.RIGHT, Scene.UP, Scene.DOWN, Scene.OK, Scene.LONG_OK, Scene.BACK, Scene.MENU, Scene.PLAY,
+            Scene.REWIND, Scene.FORWARD};
+        final int[] calls = new int[19];
+        final AwtGfx qrGfx = g;
         final List<String> hidden = new ArrayList<>();
         for (int variant = 0; variant < 6; variant++) {
             Random rnd = new Random(variant);
@@ -51,6 +53,22 @@ public final class Fuzz {
                     finder.state = Model.Finder.IDLE;
                     self[0].setFinder(finder.copy(), null, clock[0]);
                 }
+                public void silenceAlarm() {
+                    calls[12]++;
+                    self[0].setAlarm(false, null, null, clock[0]);
+                }
+                public void media(int what) { calls[13]++; }
+                public void wallpaper(int dir) { calls[14]++; }
+                public void mirror(boolean apple) { calls[15]++; }
+                public void pairing(boolean open) {
+                    calls[16]++;
+                    if (open) {
+                        String[] w = {"http://192.168.1.9:8686/#k=abc", "123456", "http://192.168.1.9:8686"};
+                        self[0].setPairing(w, qrGfx, Qr.encode(w[0]), clock[0] + Keys.WINDOW_MS);
+                    }
+                }
+                public void decide(String id, boolean allow) { calls[17]++; }
+                public void action(String key) { calls[18]++; }
             };
             Scene s = new Scene(host);
             self[0] = s;
@@ -100,6 +118,7 @@ public final class Fuzz {
                     finder.state = f.state;
                     s.setFinder(f, null, now);
                 }
+                if (rnd.nextInt(60) == 0) moment(s, rnd, now, qrGfx);
                 s.key(keys[rnd.nextInt(keys.length)], now);
                 for (int k = 0; k < 2; k++) {
                     now += 16;
@@ -119,7 +138,91 @@ public final class Fuzz {
         }
         System.out.println("host calls: launch " + calls[0] + ", info " + calls[1] + ", fire " + calls[2] + ", amazon " + calls[3]
                 + ", option " + calls[4] + ", order " + calls[5] + ", hide " + calls[6] + ", unhide " + calls[7] + ", sound " + calls[8]
-                + ", find " + calls[9] + ", stop " + calls[10] + ", dismiss " + calls[11]);
+                + ", find " + calls[9] + ", stop " + calls[10] + ", dismiss " + calls[11] + ", silence " + calls[12] + ", media "
+                + calls[13] + ", wallpaper " + calls[14] + ", mirror " + calls[15] + ", pairing " + calls[16] + ", decide " + calls[17]
+                + ", action " + calls[18]);
+    }
+
+    /** One of the moments the hub sends, at random: notes, hearts, the alarm, a phone asking, Wi-Fi. */
+    private static void moment(Scene s, Random rnd, long now, AwtGfx g) {
+        switch (rnd.nextInt(12)) {
+            case 0:
+                s.showNote(Preview.note(rnd.nextBoolean()), now);
+                break;
+            case 1:
+                s.hearts(rnd.nextBoolean() ? "hearts" : rnd.nextBoolean() ? "sparkles" : "wave", "Someone", now);
+                break;
+            case 2: {
+                Model.Finder f = new Model.Finder();
+                f.state = Model.Finder.FOUND;
+                f.ebikes = 1;
+                f.ended = now;
+                s.setAlarm(rnd.nextBoolean(), f, null, now);
+                break;
+            }
+            case 3:
+                s.ask(rnd.nextBoolean() ? "p" + rnd.nextInt(9) : null, "A phone with a very long name that goes on and on");
+                break;
+            case 4:
+                s.setWifi(rnd.nextBoolean() ? "Guest" : null, g, Qr.encode("WIFI:T:WPA;S:Guest;P:x;;"), now + rnd.nextInt(130000));
+                break;
+            case 5:
+                s.setNight(rnd.nextBoolean(), rnd.nextBoolean());
+                break;
+            case 6:
+                s.setPinned(rnd.nextBoolean() ? Preview.note(rnd.nextBoolean()) : null);
+                break;
+            case 7:
+                s.toast("Headphones connected", rnd.nextBoolean() ? "" : "Sound plays here now", 1 + rnd.nextInt(5), now);
+                break;
+            case 8: {
+                Model.Media m = new Model.Media();
+                m.active = rnd.nextBoolean();
+                m.playing = rnd.nextBoolean();
+                m.title = rnd.nextBoolean() ? "" : "A song title long enough to need cutting short on the card";
+                m.artist = "Artist";
+                m.duration = rnd.nextInt(400000);
+                m.position = rnd.nextInt(500000);
+                m.positionAt = rnd.nextInt(1000);
+                s.setMedia(m);
+                break;
+            }
+            case 9: {
+                List<Ical.Event> ev = new ArrayList<>();
+                for (int i = 0; i < rnd.nextInt(12); i++) {
+                    Ical.Event e = new Ical.Event();
+                    e.title = "Event " + i;
+                    e.start = now + rnd.nextInt(7) * 86400000L - 3600000L;
+                    e.end = e.start + rnd.nextInt(5) * 3600000L;
+                    e.allDay = rnd.nextInt(4) == 0;
+                    e.calendar = rnd.nextInt(3);
+                    ev.add(e);
+                }
+                List<Plans.Item> items = new ArrayList<>();
+                for (int i = 0; i < rnd.nextInt(6); i++) {
+                    Plans.Item it = new Plans.Item();
+                    it.text = "Item " + i;
+                    it.done = rnd.nextBoolean();
+                    items.add(it);
+                }
+                s.setPlans(ev, java.util.Arrays.asList("Us", "Work"), new ArrayList<Plans.Countdown>(), items);
+                break;
+            }
+            case 10: {
+                List<Model.Alert> alerts = new ArrayList<>();
+                if (rnd.nextBoolean()) {
+                    Model.Alert a = new Model.Alert();
+                    a.event = "Winter Storm Warning";
+                    a.headline = "Heavy snow expected, with a very long headline that runs past the edge";
+                    a.severity = "Severe";
+                    alerts.add(a);
+                }
+                s.setAlerts(alerts);
+                break;
+            }
+            default:
+                s.setSun(now - 3600000L * rnd.nextInt(12), now + 3600000L * rnd.nextInt(12), rnd.nextDouble());
+        }
     }
 
     /** Random live data, including empty, odd and extreme cases. */

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -12,9 +13,17 @@ import java.util.Map;
  *
  * Design rules, after Apple's Liquid Glass guidance: glass is only the functional layer (dock,
  * glance bar, top controls, sheets) floating over the photograph, never glass on glass; one
- * material variant (regular, adaptive dimming) everywhere; corners concentric (inner radius =
+ * material everywhere, adapting to the light underneath; corners concentric (inner radius =
  * outer radius minus padding); colour comes from the wallpaper, the apps and the data, not from
- * tinting the chrome; focus is shown by lift, light and a white fill rather than an outline.
+ * tinting the chrome; focus is shown by lift, light and a fill rather than an outline.
+ *
+ * The type is editorial, after the sites the owner chose (analoguegroup.org, worksinprogress.co,
+ * landonorris.com, therevivalfund.com, apple.com): a serif (Newsreader Display) for the clock and
+ * the big numbers, a grotesk (Inter) for everything you read, small mono capitals (Geist Mono)
+ * for labels, tight leading on display type and generous space around it.
+ *
+ * Two looks, day and night ({@link Tone}): frosted light glass from an hour after sunrise, warm
+ * dark glass and a dimmed photograph from sunset, crossfading over half a minute.
  *
  * Live information follows visionOS's two levels of detail: the glance bar above the dock shows
  * one line per subject that reads from the couch; focus grows a segment into a card, and OK
@@ -50,16 +59,43 @@ final class Scene {
 
         /** Clear a finished search from the bikes card. */
         void dismissFinder();
+
+        /** Stop the bike alarm ringing. */
+        void silenceAlarm();
+
+        /** {@link #MEDIA_TOGGLE}, {@link #MEDIA_NEXT} or {@link #MEDIA_PREV} for what is playing. */
+        void media(int what);
+
+        /** The next (1) or previous (-1) wallpaper. */
+        void wallpaper(int dir);
+
+        /** Mirroring: an AirPlay receiver app ({@code apple}) or Fire TV's own (Android, Windows). */
+        void mirror(boolean apple);
+
+        /** Opens or closes the window for pairing a phone. */
+        void pairing(boolean open);
+
+        /** OK (allow) or Back (refuse) on "Allow this phone?". */
+        void decide(String id, boolean allow);
+
+        /** A settings sheet action row other than the built-in ones. */
+        void action(String key);
     }
 
-    static final int LEFT = 1, RIGHT = 2, UP = 3, DOWN = 4, OK = 5, LONG_OK = 6, BACK = 7, MENU = 8;
+    static final int LEFT = 1, RIGHT = 2, UP = 3, DOWN = 4, OK = 5, LONG_OK = 6, BACK = 7, MENU = 8,
+            PLAY = 9, REWIND = 10, FORWARD = 11;
+    static final int MEDIA_TOGGLE = 0, MEDIA_NEXT = 1, MEDIA_PREV = 2;
 
-    private static final int NONE = 0, SETTINGS = 1, TILE_MENU = 2, AUDIO = 4, MOVE = 5, PANEL = 6;
+    private static final int NONE = 0, SETTINGS = 1, TILE_MENU = 2, AUDIO = 4, MOVE = 5, PANEL = 6, PAIR = 7, ASK = 8,
+            NOTE = 9, MIRROR = 10, WIFI = 11, ALARM = 12;
     private static final int DOCK = 0, TOP = 1, GLANCE = 2;
-    private static final int T_AUDIO = 0, T_GEAR = 1;
+    /** Top controls, left to right. */
+    private static final int T_EXIT = 0, T_MIRROR = 1, T_PHONE = 2, T_AUDIO = 3, T_GEAR = 4, T_COUNT = 5;
+    private static final String[] TOP_NAMES = {"Fire TV Home", "Mirror a Screen", "Phone Control", "Sound", "Settings"};
     private static final String[] MENU_ROWS = {"Move", "Hide from Home", "App Info"};
 
-    private static final int INK = Tone.INK;
+    /** Light text drawn straight on the photograph, whatever the look (the scrim keeps it legible). */
+    private static final int ON_PHOTO = 0xFFF5F1EA;
 
     // Gradient constants: colours at full strength, opacity passed separately (see Gfx).
     private static final int[] TOP_LIGHT = {0x24FFFFFF, 0x0DFFFFFF, 0x08FFFFFF};
@@ -73,6 +109,7 @@ final class Scene {
     private static final float[] THREE_STOPS = {0f, 0.5f, 1f};
     private static final int[] FALLBACK_SKY = {0xFF0E1A2E, 0xFF1C2350, 0xFF07080D};
     private static final int[] EDGE_GLINT = {0x00FFFFFF, 0xD9FFFFFF, 0x00FFFFFF};
+    private static final int[] RULE = {0x00F5F1EA, 0xCCF5F1EA, 0x00F5F1EA};
 
     final Host host;
 
@@ -88,25 +125,55 @@ final class Scene {
     private Model.Wall wall, oldWall;
     private Model.Weather weather;
     private Model.Audio audio;
+    private Model.Air air;
+    private List<Model.Alert> alerts = new ArrayList<>();
     final Cards cards = new Cards();
     private boolean skyOn = true;
-    private String time = "", ampm = "", date = "";
+    private String time = "", ampm = "", date = "", city = "Cambridge";
+    private int hour = 12;
+    private long sunrise, sunset;
+    private double moon;
     private final List<Model.Option> options = new ArrayList<>();
-    private boolean reduced, weatherOn = true;
-    private long ambientAfter = 5 * 60000L;
+    private boolean reduced, still, weatherOn = true;
+    private long ambientAfter = 5 * 60000L, dimAfter = 10 * 60000L;
     private String hint = "";
+
+    // Moments.
+    private Notes.Note pinned, popNote;
+    private Ink pinnedInk, popInk;
+    private long noteAt;
+    private String heartKind = "", heartFrom = "";
+    private long heartsAt = -100000, heartSeed;
+    private boolean ringing;
+    private Model.Finder alarmFinder;
+    private Model.Station alarmStation;
+    private long alarmAt;
+    private String[] pairWindow;
+    private Object pairQr, wifiQr;
+    private long pairUntil, wifiUntil;
+    private String askId = "", askName = "";
+    private String wifiSsid = "";
+    private String mirrorApp;
+    private String toastTitle = "", toastDetail = "";
+    private int toastIcon;
+    private long toastAt = -100000;
+    private int mirrorRow;
+    /** The clock's words, rebuilt only when what they say changes (never once a frame). */
+    private String eyebrowText = "", skyText = "", nextText = "", greetText = "";
+    private long textKey = Long.MIN_VALUE;
+    private int textVersion;
 
     // Focus and overlays.
     private int zone = DOCK, focus, topFocus = T_GEAR, mode = NONE, row, menuRow;
     private int glanceFocus = Cards.BIKES, panelKind = Cards.BIKES, panelPrev = Cards.BIKES;
     private final List<Spring> tileFocus = new ArrayList<>();
-    private final Spring[] topSpring = {new Spring(0, 0.3f, 0.1f), new Spring(0, 0.3f, 0.1f)};
+    private final Spring[] topSpring = new Spring[T_COUNT];
     /** How far each glance segment has grown into its card. */
     private final Spring[] grow = new Spring[Cards.COUNT];
     /** Compact widths as last measured, for focus moves between draws. */
     private final float[] segW = new float[Cards.COUNT];
-    private final Spring panel = new Spring(0, 0.46f, 0.06f), panelSwap = new Spring(1, 0.3f, 0);
-    private final Spring panelW = new Spring(0, 0.4f, 0.04f), panelH = new Spring(0, 0.4f, 0.04f);
+    private final Spring panel = new Spring(0, 0.5f, 0.12f), panelSwap = new Spring(1, 0.3f, 0);
+    private final Spring panelW = new Spring(0, 0.45f, 0.08f), panelH = new Spring(0, 0.45f, 0.08f);
     private final Spring button = new Spring(0, 0.25f, 0.05f);
     private final float[] panelFrom = new float[4];
     private final Spring notice = new Spring(0, 0.45f, 0.08f);
@@ -115,31 +182,63 @@ final class Scene {
     private int finderState = Model.Finder.IDLE;
     private final Spring scroll = new Spring(0, 0.5f, 0);
     private final Spring tiltX = new Spring(0, 0.6f, 0.25f), tiltY = new Spring(0, 0.6f, 0.25f);
-    private final Spring ambient = new Spring(0, 1.6f, 0), ui = new Spring(1, 0.55f, 0);
+    private final Spring ambient = new Spring(0, 1.6f, 0), ui = new Spring(1, 0.55f, 0), dim = new Spring(0, 3.5f, 0);
     private final Spring sheet = new Spring(0, 0.45f, 0.06f), menu = new Spring(0, 0.34f, 0.12f), pop = new Spring(0, 0.34f, 0.1f);
     private final Spring glanceLight = new Spring(0, 0.5f, 0);
     private final Spring sheetScroll = new Spring(0, 0.4f, 0), sheetPill = new Spring(0, 0.28f, 0.08f), menuPill = new Spring(0, 0.25f, 0.08f);
     private final Spring light = new Spring(0, 1.4f, 0.2f);
     private final Spring fade = new Spring(1, 1.5f, 0);
-    private long lastInput, start = -1, wallSince, nowMs;
+    /** The look: 0 night, 1 day. A slow crossfade, as the light outside changes. */
+    private final Spring look = new Spring(0, 6f, 0);
+    private final Spring noteSpring = new Spring(0, 0.55f, 0.14f), modal = new Spring(0, 0.42f, 0.1f);
+    private final Spring alarmSpring = new Spring(0, 0.45f, 0.12f), toastSpring = new Spring(0, 0.4f, 0.1f);
+    private final Spring pinSpring = new Spring(0, 0.6f, 0.1f), mirrorPill = new Spring(0, 0.28f, 0.08f);
+    private long lastInput, start = -1, wallSince, nowMs, enteredAt;
     private float[] wallRect = new float[4];
 
     private Gfx cacheOwner;
     /**
      * Pre-rendered nine-slice shadows by corner radius and blur, least recently used dropped.
      */
-    private final Map<String, Object> shadows = new LinkedHashMap<String, Object>(16, 0.75f, true) {
+    private final Map<LongKey, Object> shadows = new LinkedHashMap<LongKey, Object>(16, 0.75f, true) {
         private static final long serialVersionUID = 1L;
 
         @Override
-        protected boolean removeEldestEntry(Map.Entry<String, Object> e) {
+        protected boolean removeEldestEntry(Map.Entry<LongKey, Object> e) {
             return size() > 64;
         }
     };
 
+    /** A long as a map key without boxing: lookups reuse {@link #probe}, so a frame allocates nothing. */
+    private static final class LongKey {
+        long v;
+
+        LongKey(long v) {
+            this.v = v;
+        }
+
+        LongKey set(long x) {
+            v = x;
+            return this;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof LongKey && ((LongKey) o).v == v;
+        }
+
+        @Override
+        public int hashCode() {
+            return (int) (v ^ (v >>> 32));
+        }
+    }
+
+    private final LongKey probe = new LongKey(0);
+
     Scene(Host host) {
         this.host = host;
         for (int i = 0; i < Cards.COUNT; i++) grow[i] = new Spring(0, 0.38f, 0.1f);
+        for (int i = 0; i < T_COUNT; i++) topSpring[i] = new Spring(0, 0.3f, 0.1f);
     }
 
     // ---- Inputs from the platform ----------------------------------------------------------
@@ -149,8 +248,9 @@ final class Scene {
         height = h;
         d = density;
         cards.density(density);
+        // The safe frame: 48 dp at the sides, 30 at top and bottom (Fire TV's 5% overscan rule).
         side = dp(48);
-        top = dp(40);
+        top = dp(34);
         dockL = dp(40);
         dockR = w - dp(40);
         dockB = h - dp(30);
@@ -203,12 +303,23 @@ final class Scene {
     }
 
     void setWeather(Model.Weather w) {
+        textVersion++;
         weather = w;
         cards.weather = w;
     }
 
     void setAudio(Model.Audio a) {
         audio = a;
+    }
+
+    void setAir(Model.Air a) {
+        air = a;
+        cards.air = a;
+    }
+
+    void setAlerts(List<Model.Alert> list) {
+        alerts = list == null ? new ArrayList<Model.Alert>() : list;
+        cards.alert = alerts.isEmpty() ? null : alerts.get(0);
     }
 
     void setBikes(Model.Bikes b) {
@@ -223,9 +334,45 @@ final class Scene {
         cards.sky = s;
     }
 
+    void setPlans(List<Ical.Event> events, List<String> feeds, List<Plans.Countdown> countdowns, List<Plans.Item> items) {
+        textVersion++;
+        cards.events = events;
+        cards.feeds = feeds;
+        cards.countdowns = countdowns;
+        cards.items = items;
+    }
+
+    void setMedia(Model.Media m) {
+        cards.media = m == null ? new Model.Media() : m;
+    }
+
+    /** The device's elapsed-realtime clock, which music positions are measured on. */
+    void setUptime(long ms) {
+        cards.uptime = ms;
+    }
+
     void setSkyOn(boolean on) {
         skyOn = on;
         if (!on && glanceFocus == Cards.SKY) glanceFocus = Cards.TRANSIT;
+    }
+
+    /** Sunrise and sunset today, and the moon's phase (0 new, 0.5 full). */
+    void setSun(long rise, long set, double moonPhase) {
+        textVersion++;
+        sunrise = rise;
+        sunset = set;
+        moon = moonPhase;
+    }
+
+    /** Night or day. {@code instant} for the first frame, else a 30 s crossfade. */
+    void setNight(boolean night, boolean instant) {
+        textVersion++;
+        if (instant || reduced) look.snap(night ? 0 : 1);
+        else look.to(night ? 0 : 1);
+    }
+
+    boolean night() {
+        return look.target < 0.5f;
     }
 
     /**
@@ -253,15 +400,145 @@ final class Scene {
         noticeSpec = spec;
         noticeAt = now;
         noticeUntil = now + forMs;
-        lastInput = now;
-        ambient.to(0);
+        wake(now);
         notice.to(1);
     }
 
+    /** The bike alarm started or stopped ringing. While it rings, any button stops it. */
+    void setAlarm(boolean on, Model.Finder f, Model.Station s, long now) {
+        ringing = on;
+        if (on) {
+            alarmFinder = f;
+            alarmStation = s;
+            alarmAt = now;
+            notice.to(0);
+            wake(now);
+            mode = ALARM;
+            alarmSpring.to(1);
+        } else {
+            alarmSpring.to(0);
+            if (mode == ALARM) mode = NONE;
+        }
+    }
+
+    /** A note arrived: it fills the middle of the screen and writes itself, then steps back. */
+    void showNote(Notes.Note n, long now) {
+        if (n == null) return;
+        popNote = n;
+        float k = noteScale(Pop.noteSize(n, NOTE_DRAW));
+        popInk = new Ink(n, Math.round(dp(NOTE_DRAW) * k), Math.round(dp(NOTE_DRAW) * 0.75f * k));
+        noteAt = now;
+        wake(now);
+        if (mode != ALARM && mode != ASK) {
+            closeOverlays();
+            mode = NOTE;
+        }
+        noteSpring.snap(reduced ? 1 : 0);
+        noteSpring.to(1);
+    }
+
+    /** The note kept on the home screen, or null. */
+    void setPinned(Notes.Note n) {
+        if (n == pinned || n != null && pinned != null && n.id.equals(pinned.id)) {
+            pinned = n;
+            return;
+        }
+        pinned = n;
+        pinnedInk = n == null ? null : new Ink(n, Math.round(dp(PIN_DRAW * PIN_SCALE)), Math.round(dp(PIN_DRAW * PIN_SCALE) * 0.75f));
+        pinSpring.snap(0);
+        pinSpring.to(n == null ? 0 : 1);
+    }
+
+    /** Hearts (or sparkles, or a wave) float up the screen. */
+    void hearts(String kind, String from, long now) {
+        heartKind = kind;
+        heartFrom = from == null ? "" : from;
+        heartsAt = now;
+        heartSeed = now;
+        wake(now);
+    }
+
+    /** The pairing window: {QR link, code, address} and the QR's modules, or null when closed. */
+    void setPairing(String[] window, Gfx g, boolean[][] qr, long until) {
+        pairWindow = window;
+        pairUntil = until;
+        pairQr = window == null || qr == null || g == null ? null : qrImage(g, qr);
+        if (window != null) {
+            closeOverlays();
+            mode = PAIR;
+            modal.to(1);
+        } else if (mode == PAIR) {
+            mode = NONE;
+            modal.to(0);
+        }
+    }
+
+    /** "Allow this phone?" for a device that scanned or typed the code, or null to clear. */
+    void ask(String id, String name) {
+        if (id == null) {
+            if (mode == ASK) {
+                mode = NONE;
+                modal.to(0);
+            }
+            askId = "";
+            return;
+        }
+        askId = id;
+        askName = name;
+        if (mode != ALARM) {
+            mode = ASK;
+            modal.to(1);
+        }
+    }
+
+    /** The guest Wi-Fi card, shown for two minutes, or null to hide. */
+    void setWifi(String ssid, Gfx g, boolean[][] qr, long until) {
+        if (ssid == null || qr == null) {
+            if (mode == WIFI) {
+                mode = NONE;
+                modal.to(0);
+            }
+            wifiQr = null;
+            return;
+        }
+        wifiSsid = ssid;
+        wifiUntil = until;
+        wifiQr = qrImage(g, qr);
+        if (mode != ALARM && mode != ASK) {
+            closeOverlays();
+            mode = WIFI;
+            modal.to(1);
+        }
+    }
+
+    /** Which AirPlay receiver app is installed, by name, or null. */
+    void setMirrorApp(String label) {
+        mirrorApp = label;
+    }
+
+    /** A short message at the top: headphones connected, a photo arrived. */
+    void toast(String title, String detail, int icon, long now) {
+        toastTitle = title;
+        toastDetail = detail == null ? "" : detail;
+        toastIcon = icon;
+        toastAt = now;
+        toastSpring.to(1);
+    }
+
+    static final int TOAST_EARBUDS = 1, TOAST_SOUNDBAR = 2, TOAST_PHOTO = 3, TOAST_PHONE = 4, TOAST_INFO = 5;
+
     void setClock(String time, String ampm, String date) {
+        textVersion++;
         this.time = time;
         this.ampm = ampm == null ? "" : ampm;
         this.date = date;
+    }
+
+    /** The hour now (0-23), for the greeting, and the place, for the clock's label. */
+    void setHour(int h, String place) {
+        textVersion++;
+        hour = h;
+        if (place != null && !place.isEmpty()) city = place;
     }
 
     void setOptions(List<Model.Option> list) {
@@ -275,12 +552,19 @@ final class Scene {
         cards.still = on;
     }
 
+    /** The photograph pixel for pixel, without the slow drift: the sharpest picture, and fewer frames. */
+    void setStill(boolean on) {
+        still = on;
+    }
+
     void setWeatherOn(boolean on) {
+        textVersion++;
         weatherOn = on;
         if (!on && glanceFocus == Cards.WEATHER) glanceFocus = Cards.BIKES;
     }
 
     void setClock24(boolean on) {
+        textVersion++;
         cards.h24 = on;
     }
 
@@ -288,40 +572,90 @@ final class Scene {
         ambientAfter = ms;
     }
 
+    /** How long without a button press before the screen dims, 0 for never. */
+    void setDimAfter(long ms) {
+        dimAfter = ms;
+    }
+
     /** Glass materialises: called when the home screen comes back to the front. */
     void enter(long now) {
         lastInput = now;
+        enteredAt = now;
         ambient.snap(0);
+        dim.snap(0);
         if (!reduced) ui.snap(0);
         ui.to(1);
-        closeOverlays();
+        if (mode != ALARM && mode != ASK && mode != PAIR) closeOverlays();
     }
 
     /** HOME pressed while already home: back to the first app, overlays closed. */
     void reset(long now) {
-        lastInput = now;
-        ambient.to(0);
+        wake(now);
+        if (mode == ALARM) {
+            host.silenceAlarm();
+            return;
+        }
         closeOverlays();
         notice.to(0);
         zone = DOCK;
         focus = 0;
     }
 
+    /** Anything worth seeing happened: the screen brightens and the dock comes back. */
+    private void wake(long now) {
+        lastInput = now;
+        ambient.to(0);
+        dim.to(0);
+    }
+
+    /** Whether the screen is dimmed for idling (the host may let the TV sleep at bedtime then). */
+    boolean dimmed() {
+        return dim.target > 0.5f;
+    }
+
+    long idleFor(long now) {
+        return now - lastInput;
+    }
+
     /** The label of whatever has focus, for the system's screen reader. */
     String focusedLabel() {
         if (mode == SETTINGS && row < options.size()) return options.get(row).title + ", " + options.get(row).name();
         if (mode == PANEL) return Cards.name(panelKind);
+        if (mode == ALARM) return "E-bike ready. Press OK to stop the alarm.";
+        if (mode == ASK) return "Allow " + askName + " to use the control center? OK to allow, Back to refuse.";
         if (zone == DOCK && focus < apps.size()) return apps.get(focus).label;
         if (zone == GLANCE) return Cards.name(glanceFocus);
-        return zone == TOP ? (topFocus == T_GEAR ? "Settings" : "Sound") : "";
+        return zone == TOP ? TOP_NAMES[topFocus] : "";
     }
 
     // ---- Keys --------------------------------------------------------------------------------
 
     boolean key(int k, long now) {
+        boolean wasDim = dim.target > 0.5f || ambient.target > 0.5f;
         lastInput = now;
-        if (ambient.target > 0.5f) {
+        // The alarm takes every button: any press stops it.
+        if (mode == ALARM) {
+            host.sound(true);
+            host.silenceAlarm();
+            return true;
+        }
+        if (wasDim) {
             ambient.to(0);
+            dim.to(0);
+            if (mode != ASK && mode != NOTE) return true;
+        }
+        // Media keys work wherever focus is.
+        if (k == PLAY) {
+            host.media(MEDIA_TOGGLE);
+            button.kick(-6f);
+            return true;
+        }
+        if (k == REWIND || k == FORWARD) {
+            if (mode == PANEL && panelKind == Cards.MUSIC || cards.media.active && mode == NONE && zone == GLANCE && glanceFocus == Cards.MUSIC) {
+                host.media(k == FORWARD ? MEDIA_NEXT : MEDIA_PREV);
+            } else if (mode == NONE) {
+                host.wallpaper(k == FORWARD ? 1 : -1);
+            }
             return true;
         }
         if (notice.target > 0.5f && k == BACK && mode == NONE) {
@@ -344,6 +678,39 @@ final class Scene {
                 return true;
             case MOVE:
                 moveKey(k);
+                return true;
+            case PAIR:
+                if (k == BACK || k == OK || k == MENU) {
+                    host.pairing(false);
+                    mode = NONE;
+                    modal.to(0);
+                    host.sound(false);
+                }
+                return true;
+            case ASK:
+                if (k == OK || k == BACK) {
+                    host.sound(k == OK);
+                    host.decide(askId, k == OK);
+                    mode = NONE;
+                    modal.to(0);
+                }
+                return true;
+            case NOTE:
+                if (k == OK || k == BACK || k == MENU) {
+                    host.sound(false);
+                    mode = NONE;
+                    noteSpring.to(0);
+                }
+                return true;
+            case WIFI:
+                if (k == OK || k == BACK || k == MENU) {
+                    mode = NONE;
+                    modal.to(0);
+                    host.action("wifi-hide");
+                }
+                return true;
+            case MIRROR:
+                mirrorKey(k);
                 return true;
             default:
                 return homeKey(k);
@@ -394,7 +761,7 @@ final class Scene {
             case LEFT:
             case RIGHT: {
                 int next = topFocus + (k == LEFT ? -1 : 1);
-                if (next >= T_AUDIO && next <= T_GEAR) {
+                if (next >= 0 && next < T_COUNT) {
                     topFocus = next;
                     light.kick(k == LEFT ? -1.5f : 1.5f);
                     host.sound(false);
@@ -416,8 +783,25 @@ final class Scene {
                 return true;
             case OK:
                 host.sound(true);
-                if (topFocus == T_GEAR) openSheet();
-                else openPop();
+                switch (topFocus) {
+                    case T_GEAR:
+                        openSheet();
+                        break;
+                    case T_AUDIO:
+                        openPop();
+                        break;
+                    case T_PHONE:
+                        host.pairing(true);
+                        break;
+                    case T_MIRROR:
+                        mode = MIRROR;
+                        mirrorRow = 0;
+                        mirrorPill.snap(0);
+                        modal.to(1);
+                        break;
+                    default:
+                        host.amazonHome();
+                }
                 return true;
             case MENU:
                 openSheet();
@@ -466,6 +850,8 @@ final class Scene {
                     host.sound(true);
                     if (cards.finding()) host.stopFinding();
                     else host.findBike();
+                } else if (glanceFocus == Cards.MUSIC) {
+                    host.media(MEDIA_TOGGLE);
                 }
                 return true;
             case MENU:
@@ -491,7 +877,7 @@ final class Scene {
                     float[] size = cards.panelSize(panelKind);
                     panelW.to(size[0]);
                     panelH.to(size[1]);
-                    button.to(panelKind == Cards.BIKES ? 1 : 0);
+                    button.to(panelKind == Cards.BIKES || panelKind == Cards.MUSIC ? 1 : 0);
                     host.sound(false);
                 }
                 return;
@@ -501,6 +887,9 @@ final class Scene {
                 if (panelKind == Cards.BIKES) {
                     if (cards.finding()) host.stopFinding();
                     else host.findBike();
+                    button.kick(-6f);
+                } else if (panelKind == Cards.MUSIC) {
+                    host.media(MEDIA_TOGGLE);
                     button.kick(-6f);
                 } else {
                     closePanel();
@@ -512,6 +901,39 @@ final class Scene {
                 closePanel();
                 return;
             default:
+        }
+    }
+
+    private void mirrorKey(int k) {
+        switch (k) {
+            case UP:
+            case LEFT:
+                if (mirrorRow > 0) {
+                    mirrorRow--;
+                    host.sound(false);
+                }
+                break;
+            case DOWN:
+            case RIGHT:
+                if (mirrorRow < 1) {
+                    mirrorRow++;
+                    host.sound(false);
+                }
+                break;
+            case OK:
+                host.sound(true);
+                mode = NONE;
+                modal.to(0);
+                host.mirror(mirrorRow == 0);
+                break;
+            case BACK:
+            case MENU:
+                mode = NONE;
+                modal.to(0);
+                host.sound(false);
+                break;
+            default:
+                break;
         }
     }
 
@@ -591,6 +1013,12 @@ final class Scene {
         } else if ("amazon".equals(key)) {
             closeOverlays();
             host.amazonHome();
+        } else if ("pair".equals(key)) {
+            closeOverlays();
+            host.pairing(true);
+        } else {
+            closeOverlays();
+            host.action(key);
         }
     }
 
@@ -640,7 +1068,7 @@ final class Scene {
         if (k == OK) {
             closeOverlays();
             host.sound(true);
-            host.fireSettings();
+            host.action("bluetooth");
             return;
         }
         if (k == BACK || k == MENU || k == DOWN || k == LONG_OK) closeOverlays();
@@ -704,7 +1132,7 @@ final class Scene {
             panelH.to(size[1]);
         }
         button.snap(0);
-        button.to(kind == Cards.BIKES ? 1 : 0);
+        button.to(kind == Cards.BIKES || kind == Cards.MUSIC ? 1 : 0);
         panel.to(1);
     }
 
@@ -724,31 +1152,47 @@ final class Scene {
             for (Model.App a : apps) ids.add(a.id);
             host.order(ids);
         }
+        if (mode == PAIR) host.pairing(false);
         mode = NONE;
         hint = "";
         sheet.to(0);
         menu.to(0);
         pop.to(0);
         panel.to(0);
+        modal.to(0);
+        noteSpring.to(0);
     }
+
+    private final int[] kindsBuf = new int[Cards.COUNT];
+    private int[] kindsCache = new int[0];
 
     /** The subjects in the glance bar, left to right. */
     private int[] glanceKinds() {
         boolean w = weatherOn && weather != null && weather.ok;
         boolean s = skyOn && cards.sky != null && cards.sky.ok;
+        boolean p = cards.hasPlans();
+        boolean m = cards.media.active;
         if (s && !(mode == PANEL && panelKind == Cards.SKY)) {
             // Planes are the extra: they step aside when the bar would run past the dock.
-            float total = segWidth(Cards.BIKES) + segWidth(Cards.TRANSIT) + segWidth(Cards.SKY) + (w ? segWidth(Cards.WEATHER) : 0);
+            float total = segWidth(Cards.BIKES) + segWidth(Cards.TRANSIT) + segWidth(Cards.SKY) + (w ? segWidth(Cards.WEATHER) : 0)
+                    + (p ? segWidth(Cards.PLANS) : 0) + (m ? segWidth(Cards.MUSIC) : 0);
             if (total > dockR - barL) s = false;
         }
-        int n = 2 + (w ? 1 : 0) + (s ? 1 : 0);
-        int[] out = new int[n];
-        int i = 0;
-        if (w) out[i++] = Cards.WEATHER;
-        out[i++] = Cards.BIKES;
-        out[i++] = Cards.TRANSIT;
-        if (s) out[i] = Cards.SKY;
-        return out;
+        if (p && !(mode == PANEL && panelKind == Cards.PLANS)) {
+            float total = segWidth(Cards.BIKES) + segWidth(Cards.TRANSIT) + segWidth(Cards.PLANS) + (w ? segWidth(Cards.WEATHER) : 0)
+                    + (m ? segWidth(Cards.MUSIC) : 0);
+            if (total > dockR - barL) p = false;
+        }
+        int n = 0;
+        if (m) kindsBuf[n++] = Cards.MUSIC;
+        if (w) kindsBuf[n++] = Cards.WEATHER;
+        kindsBuf[n++] = Cards.BIKES;
+        kindsBuf[n++] = Cards.TRANSIT;
+        if (p) kindsBuf[n++] = Cards.PLANS;
+        if (s) kindsBuf[n++] = Cards.SKY;
+        if (kindsCache.length != n) kindsCache = new int[n];
+        System.arraycopy(kindsBuf, 0, kindsCache, 0, n);
+        return kindsCache;
     }
 
     private float segLeft(int kind) {
@@ -785,7 +1229,7 @@ final class Scene {
     private int nearestTop(float x) {
         int best = T_GEAR;
         float bestGap = Float.MAX_VALUE;
-        for (int id = T_AUDIO; id <= T_GEAR; id++) {
+        for (int id = 0; id < T_COUNT; id++) {
             float[] r = topRect(id, null);
             float gap = Math.abs((r[0] + r[2]) / 2 - x);
             if (gap < bestGap) {
@@ -824,13 +1268,29 @@ final class Scene {
         if (start < 0) start = now;
         cards.time = (now - start) / 1000f;
         if (wallSince < 0) wallSince = now;
-        if (mode == NONE && ambientAfter > 0 && now - lastInput > ambientAfter && notice.target < 0.5f) ambient.to(1);
+        boolean idleModes = mode == NONE && notice.target < 0.5f && !ringing;
+        if (idleModes && ambientAfter > 0 && now - lastInput > ambientAfter) ambient.to(1);
+        if (idleModes && dimAfter > 0 && now - lastInput > dimAfter + Math.max(0, ambientAfter)) dim.to(1);
         if (notice.target > 0.5f && now > noticeUntil) notice.to(0);
+        if (mode == NOTE && popNote != null && now - noteAt > 30000) {
+            mode = NONE;
+            noteSpring.to(0);
+        }
+        if (mode == PAIR && now > pairUntil) {
+            host.pairing(false);
+            mode = NONE;
+            modal.to(0);
+        }
+        if (mode == WIFI && now > wifiUntil) {
+            mode = NONE;
+            modal.to(0);
+        }
+        if (toastSpring.target > 0.5f && now - toastAt > 6000) toastSpring.to(0);
         for (int i = 0; i < tileFocus.size(); i++) {
             boolean on = zone == DOCK && i == focus && mode != SETTINGS && ambient.target < 0.5f;
             tileFocus.get(i).to(on ? 1 : 0);
         }
-        for (int id = 0; id < topSpring.length; id++) {
+        for (int id = 0; id < T_COUNT; id++) {
             topSpring[id].to(zone == TOP && topFocus == id && mode == NONE ? 1 : 0);
         }
         int[] kinds = glanceKinds();
@@ -838,7 +1298,7 @@ final class Scene {
         for (int k : kinds) shown |= k == glanceFocus;
         // A subject can leave the bar (weather switched off, planes out of room): focus moves to
         // its neighbour instead of resting on something invisible.
-        if (!shown && kinds.length > 0) glanceFocus = kinds[Math.min(kinds.length - 1, glanceFocus >= Cards.SKY ? kinds.length - 1 : 0)];
+        if (!shown && kinds.length > 0) glanceFocus = kinds[Math.min(kinds.length - 1, indexOf(kinds, Cards.BIKES))];
         for (int k = 0; k < Cards.COUNT; k++) {
             boolean on = zone == GLANCE && glanceFocus == k && (mode == NONE || mode == PANEL) && ambient.target < 0.5f;
             grow[k].to(on ? 1 : 0);
@@ -853,6 +1313,7 @@ final class Scene {
         glanceLight.to(0);
         sheetPill.to(row);
         menuPill.to(menuRow);
+        mirrorPill.to(mirrorRow);
         if (mode == SETTINGS) {
             float rowH = dp(58);
             float view = height - dp(34) * 2 - dp(128);
@@ -864,7 +1325,7 @@ final class Scene {
         }
         boolean moving = false;
         boolean instant = reduced;
-        for (Spring s : tileFocus) moving |= s.step(dt, false);
+        for (int i = 0; i < tileFocus.size(); i++) moving |= tileFocus.get(i).step(dt, false);
         for (Spring s : topSpring) moving |= s.step(dt, false);
         for (Spring s : grow) moving |= s.step(dt, false);
         moving |= scroll.step(dt, false);
@@ -873,6 +1334,7 @@ final class Scene {
         moving |= light.step(dt, instant);
         moving |= glanceLight.step(dt, instant);
         moving |= ambient.step(dt, false);
+        moving |= dim.step(dt, false);
         moving |= ui.step(dt, instant);
         moving |= sheet.step(dt, instant);
         moving |= menu.step(dt, instant);
@@ -886,21 +1348,39 @@ final class Scene {
         moving |= sheetScroll.step(dt, false);
         moving |= sheetPill.step(dt, false);
         moving |= menuPill.step(dt, false);
+        moving |= mirrorPill.step(dt, false);
         moving |= fade.step(dt, false);
+        moving |= look.step(dt, false);
+        moving |= noteSpring.step(dt, instant);
+        moving |= modal.step(dt, instant);
+        moving |= alarmSpring.step(dt, instant);
+        moving |= toastSpring.step(dt, instant);
+        moving |= pinSpring.step(dt, instant);
         if (!fade.moving() && oldWall != null) oldWall = null;
         // The found alert's rings and bounce play out at full frame rate.
         if (!reduced && notice.value > 0.01f && (now - noticeAt) / 1000f < Notice.PULSE_SECONDS) moving = true;
+        // A note writing itself, hearts rising, the alarm pulsing and the greeting arriving.
+        if (noteSpring.value > 0.01f && popNote != null && !reduced && (now - noteAt) / 1000f < Ink.seconds(popNote) + 1.5f) moving = true;
+        if (heartsActive(now)) moving = true;
+        if (alarmSpring.value > 0.01f) moving = true;
+        if (!reduced && now - enteredAt < 2200) moving = true;
+        if (pinSpring.value > 0.01f && pinnedInk != null && !pinnedInk.done()) moving = true;
         return moving;
     }
 
-    /** Whether something shows seconds (bike finder's timer), which needs a few frames a second. */
+    private boolean heartsActive(long now) {
+        float t = (now - heartsAt) / 1000f;
+        return t >= 0 && t < Pop.HEARTS_SECONDS;
+    }
+
+    /** Whether something shows seconds (bike finder's timer, music), which needs a few frames a second. */
     boolean ticking() {
-        return cards.finding() || notice.value > 0.01f;
+        return cards.finding() || notice.value > 0.01f || cards.media.playing || mode == PAIR || mode == WIFI;
     }
 
     /** Whether the wallpaper drifts, which needs slow continuous frames. */
     boolean drifting() {
-        return !reduced && wall != null;
+        return !reduced && !still && wall != null && dim.value < 0.99f;
     }
 
     // ---- Drawing -----------------------------------------------------------------------------
@@ -910,6 +1390,7 @@ final class Scene {
             cacheOwner = g;
             shadows.clear();
         }
+        Tone.use(look.value);
         if (start < 0) start = now;
         float t = (now - start) / 1000f;
         computeWallRect(t);
@@ -917,15 +1398,17 @@ final class Scene {
 
         float amb = ambient.value;
         float uiA = ui.value * (1 - amb);
-        drawClock(g, amb);
+        drawClock(g, amb, now);
         drawCaption(g, uiA, amb);
         drawTop(g, uiA, t);
+        drawPinned(g, uiA, t);
         drawDock(g, uiA, t);
         drawGlance(g, ui.value, t);
 
-        float modal = Math.max(sheet.value, Math.max(menu.value * 0.75f, Math.max(pop.value * 0.55f, panel.value * 0.6f)));
-        if (modal > 0.002f) {
-            g.fillRect(0, 0, width, height, Pixels.alpha(0xFF000000, 0.34f * modal));
+        float modalDim = Math.max(sheet.value, Math.max(menu.value * 0.75f, Math.max(pop.value * 0.55f, panel.value * 0.6f)));
+        modalDim = Math.max(modalDim, Math.max(modal.value * 0.7f, Math.max(noteSpring.value * 0.6f, alarmSpring.value * 0.45f)));
+        if (modalDim > 0.002f) {
+            g.fillRect(0, 0, width, height, Pixels.alpha(0xFF000000, 0.34f * modalDim));
             if (menu.value > 0.002f && focus < apps.size()) {
                 // The app the menu belongs to stays lit above the dimming.
                 drawTile(g, focus, tileX(focus), tileTop, 1f, 1f, false);
@@ -935,13 +1418,26 @@ final class Scene {
         drawSheet(g, t);
         drawMenu(g, t);
         drawPop(g, t);
+        drawMirror(g, t);
+        drawPair(g, t, now);
+        drawAsk(g, t);
+        drawWifi(g, t, now);
+        drawNote(g, t, now);
         drawNotice(g, now, t);
+        drawAlarm(g, now, t);
+        drawToast(g, t, now);
+        if (heartsActive(now)) Pop.hearts(g, heartKind, 0, 0, width, height, d, (now - heartsAt) / 1000f, heartSeed);
+        // Idle: the whole screen settles to a dim, quiet state, as a living-room lamp would.
+        float dimA = dim.value * (0.38f + 0.22f * (1 - look.value));
+        if (dimA > 0.002f) g.fillRect(0, 0, width, height, Pixels.alpha(0xFF000000, dimA));
     }
 
     private void computeWallRect(float t) {
-        float s = reduced ? 1.0f : 1.05f + 0.012f * (float) Math.sin(t * 2 * Math.PI / 173);
+        // Ken Burns at a walking pace: 3.5% bigger than the screen, drifting over minutes.
+        boolean calm = reduced || still;
+        float s = calm ? 1.0f : 1.05f + 0.012f * (float) Math.sin(t * 2 * Math.PI / 173);
         float cx = width / 2f, cy = height / 2f;
-        if (!reduced) {
+        if (!calm) {
             cx += width * 0.014f * (float) Math.sin(t * 2 * Math.PI / 97);
             cy += height * 0.011f * (float) Math.cos(t * 2 * Math.PI / 131);
         }
@@ -955,62 +1451,207 @@ final class Scene {
         float[] r = wallRect;
         if (wall == null || wall.full == null) {
             g.fillRectLinear(0, 0, width, height, 0, 0, width * 0.3f, height, FALLBACK_SKY, THREE_STOPS, 1f);
-            return;
-        }
-        if (oldWall != null && oldWall.full != null && fade.value < 1f) {
+        } else if (oldWall != null && oldWall.full != null && fade.value < 1f) {
             g.drawImage(oldWall.full, r[0], r[1], r[2], r[3], 255);
             g.drawImage(wall.full, r[0], r[1], r[2], r[3], Math.round(255 * fade.value));
         } else {
             g.drawImage(wall.full, r[0], r[1], r[2], r[3], 255);
         }
+        // Night: the photograph steps back and warms, so the room is not lit by the TV.
+        float night = 1 - look.value;
+        if (night > 0.003f) {
+            g.fillRect(0, 0, width, height, Pixels.alpha(0xFF0B0805, 0.24f * night));
+            g.fillRect(0, 0, width, height, Pixels.alpha(0xFF3A1E08, 0.07f * night));
+        }
     }
 
     /**
-     * The photo's name and place, right-aligned under the top controls; while moving an app the
-     * same line gives the instructions. In ambient mode it rises to where the controls were.
+     * The photo's name and place in small mono capitals, right-aligned under the top controls;
+     * while moving an app the same line gives the instructions. In ambient mode it rises to where
+     * the controls were.
      */
     private void drawCaption(Gfx g, float uiA, float amb) {
-        String text = hint.isEmpty() ? (wall == null ? "" : wall.title) : hint;
+        boolean instruct = !hint.isEmpty();
+        String text = instruct ? hint : wall == null ? "" : wall.title;
         if (text.isEmpty() || notice.value > 0.98f) return;
-        float a = (hint.isEmpty() ? 0.8f * Math.max(uiA, amb) : uiA) * (1 - notice.value);
-        float y = lerp(top + capH + dp(32), top + dp(28), amb);
+        float topLit = 0;
+        for (Spring sp : topSpring) topLit = Math.max(topLit, sp.value);
+        float a = (instruct ? uiA : 0.82f * Math.max(uiA, amb) * (1 - Math.min(1, topLit))) * (1 - notice.value) * (1 - alarmSpring.value);
+        if (a <= 0.003f) return;
+        float y = lerp(top + capH + dp(34), top + dp(26), amb);
         float r = width - side - dp(2);
-        float size = dp(14.5f);
-        float total = g.measure(text, Gfx.TEXT_MEDIUM, size, 0.01f);
-        if (hint.isEmpty() && wall != null && !wall.place.isEmpty()) {
-            total += g.measure(wall.place, Gfx.TEXT_REGULAR, size, 0.01f) + dp(9);
-        }
+        int face = instruct ? Gfx.TEXT_MEDIUM : Gfx.MONO;
+        float size = instruct ? dp(14.5f) : dp(11.5f);
+        float track = instruct ? 0.01f : 0.1f;
+        String main = instruct ? text : upper(text);
+        String place = !instruct && wall != null && !wall.place.isEmpty() ? upperPlace(wall.place) : "";
+        float total = g.measure(main, face, size, track) + (place.isEmpty() ? 0 : g.measure(place, face, size, track) + dp(22));
         // A feathered dim behind words on a photograph, as visionOS does, instead of a box.
-        float sh = dp(34), cy = y - g.capHeight(Gfx.TEXT_MEDIUM, size) / 2;
-        drawShadow(g, r - total - dp(8), cy - sh / 2, r + dp(8), cy + sh / 2, sh / 2, dp(22), 0, Math.round(255 * 0.85f * a));
-        if (hint.isEmpty() && wall != null && !wall.place.isEmpty()) {
-            g.text(wall.place, Gfx.TEXT_REGULAR, size, 0.01f, r, y, Pixels.white(a * 0.8f), Gfx.RIGHT, 0.8f);
-            r -= g.measure(wall.place, Gfx.TEXT_REGULAR, size, 0.01f) + dp(9);
+        float sh = dp(32), cy = y - g.capHeight(face, size) / 2;
+        drawShadow(g, r - total - dp(8), cy - sh / 2, r + dp(8), cy + sh / 2, sh / 2, dp(22), 0, Math.round(255 * 0.8f * a));
+        if (!place.isEmpty()) {
+            g.text(place, face, size, track, r, y, Pixels.alpha(ON_PHOTO, a * 0.66f), Gfx.RIGHT, 0.8f);
+            r -= g.measure(place, face, size, track) + dp(10);
+            g.fillCircle(r - dp(4), cy, dp(1.6f), Pixels.alpha(ON_PHOTO, a * 0.6f));
+            r -= dp(12);
         }
-        g.text(text, Gfx.TEXT_MEDIUM, size, 0.01f, r, y, Pixels.white(a), Gfx.RIGHT, 0.8f);
+        g.text(main, face, size, track, r, y, Pixels.alpha(ON_PHOTO, a), Gfx.RIGHT, 0.8f);
     }
 
-    private void drawClock(Gfx g, float amb) {
-        float size = dp(74) * (1 + 0.18f * amb);
-        float x = side;
-        float base = top + g.capHeight(Gfx.DISPLAY_LIGHT, size) + dp(4);
-        g.text(time, Gfx.DISPLAY_LIGHT, size, -0.015f, x, base, 0xFFFFFFFF, Gfx.LEFT, 0.45f);
-        if (!ampm.isEmpty()) {
-            float w = g.measure(time, Gfx.DISPLAY_LIGHT, size, -0.015f);
-            g.text(ampm, Gfx.TEXT_SEMIBOLD, size * 0.27f, 0.04f, x + w + dp(8), base, Pixels.white(0.82f), Gfx.LEFT, 0.45f);
+    private String upperFrom, upperTo, placeFrom, placeTo;
+
+    /** The caption in capitals, made again only when the caption changes. */
+    private String upper(String s) {
+        if (s != upperFrom) {
+            upperFrom = s;
+            upperTo = s.toUpperCase(Locale.US);
         }
-        g.text(date, Gfx.TEXT_MEDIUM, dp(19) * (1 + 0.1f * amb), 0.005f, x + dp(3), base + dp(36) * (1 + 0.12f * amb),
-                Pixels.white(0.86f), Gfx.LEFT, 0.45f);
+        return upperTo;
+    }
+
+    private String upperPlace(String s) {
+        if (s != placeFrom) {
+            placeFrom = s;
+            placeTo = s.toUpperCase(Locale.US);
+        }
+        return placeTo;
+    }
+
+    /** "Good evening", by the hour. */
+    private String greeting() {
+        if (hour >= 5 && hour < 12) return "Good morning";
+        if (hour >= 12 && hour < 17) return "Good afternoon";
+        if (hour >= 17 && hour < 22) return "Good evening";
+        return "Good night";
+    }
+
+    /**
+     * The editorial clock: a mono label (day, date, place), the time in large serif numerals, a
+     * short rule, and a line in serif italic with the greeting and the sky. In ambient mode it
+     * grows a little. Every few minutes the whole block moves by a few pixels, so nothing sits on
+     * the same pixels all day.
+     */
+    private void drawClock(Gfx g, float amb, long now) {
+        float shiftT = (now % (37 * 60000L)) / (37 * 60000f) * (float) Math.PI * 2;
+        float ox = dp(5) * (float) Math.sin(shiftT) * (0.4f + 0.6f * dim.value);
+        float oy = dp(4) * (float) Math.cos(shiftT * 1.3f) * (0.4f + 0.6f * dim.value);
+        float x = side + ox;
+        float a = 1 - 0.15f * dim.value;
+        int on = ON_PHOTO;
+        float label = dp(12.5f);
+        float y0 = top + dp(18) + oy;
+        words(now);
+        g.text(eyebrowText, Gfx.MONO, label, 0.1f, x + dp(3), y0, Pixels.alpha(on, 0.78f * a), Gfx.LEFT, 0.5f);
+        float size = dp(104) * (1 + 0.16f * amb);
+        float base = y0 + dp(14) + g.capHeight(Gfx.SERIF_LIGHT, size);
+        g.text(time, Gfx.SERIF_LIGHT, size, -0.025f, x - dp(3), base, Pixels.alpha(on, a), Gfx.LEFT, 0.5f);
+        if (!ampm.isEmpty()) {
+            float w = g.measure(time, Gfx.SERIF_LIGHT, size, -0.025f);
+            g.text(ampm, Gfx.MONO, size * 0.13f, 0.12f, x + w + dp(8), base - size * 0.02f, Pixels.alpha(on, 0.82f * a), Gfx.LEFT, 0.5f);
+        }
+        float ry = base + dp(18);
+        g.fillRectLinear(x, ry, x + dp(84), ry + Math.max(2, dp(1)), x, 0, x + dp(84), 0, RULE, THREE_STOPS, 0.9f * a);
+        // The standfirst: the greeting arrives word by word when the home screen comes back.
+        float sy = ry + dp(36);
+        String greet = greetText;
+        float gs = dp(25);
+        float appear = reduced ? 1 : Math.max(0, Math.min(1, (now - enteredAt - 250) / 700f));
+        float rise = (1 - easeOut(appear)) * dp(10);
+        g.text(greet, Gfx.SERIF_ITALIC, gs, 0, x, sy + rise, Pixels.alpha(on, a * appear), Gfx.LEFT, 0.6f);
+        float gx = x + g.measure(greet, Gfx.SERIF_ITALIC, gs, 0) + dp(9);
+        String sky = skyText;
+        if (!sky.isEmpty()) {
+            float appear2 = reduced ? 1 : Math.max(0, Math.min(1, (now - enteredAt - 550) / 700f));
+            g.text(sky, Gfx.SERIF, gs * 0.86f, 0, gx, sy + (1 - easeOut(appear2)) * dp(10), Pixels.alpha(on, 0.86f * a * appear2),
+                    Gfx.LEFT, 0.6f);
+        }
+        // A National Weather Service warning, in amber, until it ends.
+        Model.Alert serious = null;
+        for (int i = 0; i < alerts.size(); i++) {
+            Model.Alert x2 = alerts.get(i);
+            if (x2.serious() || "Moderate".equals(x2.severity)) {
+                serious = x2;
+                break;
+            }
+        }
+        float ay = sy + dp(30);
+        if (serious != null) {
+            g.fillCircle(x + dp(5), ay - dp(5), dp(4), Pixels.alpha(0xFFFFA040, a));
+            g.text(Text.fit(g, serious.event + (serious.area.isEmpty() ? "" : "  ·  NWS"), Gfx.TEXT_SEMIBOLD, dp(15), dp(560)),
+                    Gfx.TEXT_SEMIBOLD, dp(15), 0, x + dp(16), ay, Pixels.alpha(0xFFFFB866, a), Gfx.LEFT, 0.6f);
+            ay += dp(26);
+        }
+        // What is next on the shared calendar, today.
+        if (!nextText.isEmpty()) {
+            float appear3 = reduced ? 1 : Math.max(0, Math.min(1, (now - enteredAt - 850) / 700f));
+            g.fillCircle(x + dp(5), ay - dp(5), dp(3.5f), Pixels.alpha(Tone.ROSE, a * appear3));
+            g.text(nextText, Gfx.TEXT_SEMIBOLD, dp(15), 0, x + dp(16), ay, Pixels.alpha(on, 0.86f * a * appear3), Gfx.LEFT, 0.6f);
+        }
+    }
+
+    /** Rebuilds the clock's words when the minute, the weather, the calendar or the look changes. */
+    private void words(long now) {
+        long key = now / 20000 * 1000 + (textVersion & 999);
+        if (key == textKey) return;
+        textKey = key;
+        eyebrowText = (date + "  ·  " + city).toUpperCase(Locale.US);
+        greetText = greeting() + ".";
+        skyText = standfirst(now);
+        nextText = nextEvent(now);
+    }
+
+    /** "Now  ·  Seminar, until 3:30 PM" or "Next  ·  Dinner at 6:30 PM", for the coming eight hours. */
+    private String nextEvent(long now) {
+        List<Ical.Event> list = cards.events;
+        if (list == null) return "";
+        Ical.Event best = null;
+        for (Ical.Event e : list) {
+            if (e.allDay || e.end <= now || e.start - now > 8 * 3600000L) continue;
+            if (best == null || e.start < best.start) best = e;
+        }
+        if (best == null) return "";
+        java.text.SimpleDateFormat f = new java.text.SimpleDateFormat(cards.h24 ? "H:mm" : "h:mm a", Locale.US);
+        String title = best.title.isEmpty() ? "Busy" : best.title;
+        if (title.length() > 48) title = title.substring(0, 48).trim() + "…";
+        return best.start <= now ? "Now  ·  " + title + ", until " + f.format(new java.util.Date(best.end))
+                : "Next  ·  " + title + " at " + f.format(new java.util.Date(best.start));
+    }
+
+    /** "Clear, 54°. Sunset 5:41." with the moon at night. */
+    private String standfirst(long now) {
+        StringBuilder b = new StringBuilder();
+        Model.Weather w = weather;
+        if (weatherOn && w != null && w.ok) {
+            b.append(w.condition).append(", ").append(w.lead(w.tempC)).append('°').append('.');
+        }
+        if (sunset > 0) {
+            boolean beforeSunset = now < sunset && now > sunrise;
+            long at = beforeSunset ? sunset : sunrise + (now > sunset ? 86400000L : 0);
+            String when = new java.text.SimpleDateFormat(cards.h24 ? "H:mm" : "h:mm", Locale.US).format(new java.util.Date(at));
+            if (b.length() > 0) b.append(' ');
+            b.append(beforeSunset ? "Sunset " : "Sunrise ").append(when).append('.');
+        }
+        if (night() && moon > 0) {
+            if (b.length() > 0) b.append(' ');
+            b.append(Sun.moonName(moon)).append('.');
+        }
+        return b.toString();
+    }
+
+    private static float easeOut(float t) {
+        float u = 1 - Math.max(0, Math.min(1, t));
+        return 1 - u * u * u;
     }
 
     // ---- Glass -------------------------------------------------------------------------------
 
     /**
      * One pane of glass: a soft shadow, the blurred wallpaper slightly magnified (lensing),
-     * adaptive dimming from the luminance underneath, light from above, a refracting edge band
-     * and a specular rim whose light direction drifts and reacts to focus moves.
+     * adaptive dimming from the luminance underneath (or, by day, a frosted light tint), light
+     * from above, a refracting edge band and a specular rim whose light direction drifts and
+     * reacts to focus moves.
      */
-    private void glass(Gfx g, float l, float t, float r, float b, float rad, float strength, float extraDim, float time) {
+    void glass(Gfx g, float l, float t, float r, float b, float rad, float strength, float extraDim, float time) {
         if (strength <= 0.003f) return;
         glassBody(g, l, t, r, b, rad, strength, extraDim);
         glassRim(g, l, t, r, b, rad, strength, time);
@@ -1019,18 +1660,32 @@ final class Scene {
     private void glassBody(Gfx g, float l, float t, float r, float b, float rad, float strength, float extraDim) {
         int a = Math.round(255 * Math.min(1, strength));
         float pad = dp(24);
-        drawShadow(g, l, t, r, b, rad, pad, dp(10), Math.round(255 * 0.5f * strength));
+        drawShadow(g, l, t, r, b, rad, pad, dp(10), Math.round(255 * (0.5f - 0.22f * look.value) * strength));
         float cx = (l + r) / 2, cy = (t + b) / 2;
         backdrop(g, l, t, r, b, rad, cx, cy, a);
-        float lum = luminance(l, t, r, b);
-        float dim = glassDim(lum) + extraDim;
-        g.fillRoundRect(l, t, r, b, rad, Pixels.alpha(0xFF000000, dim * strength));
+        tint(g, l, t, r, b, rad, strength, extraDim, luminance(l, t, r, b));
         g.fillRoundRectLinear(l, t, r, b, rad, 0, t, 0, b, TOP_LIGHT, TOP_LIGHT_STOPS, strength);
         if (wall != null && wall.blur != null) {
             float lens = 1.18f;
             g.fillRingImage(wall.blur, cx + (wallRect[0] - cx) * lens, cy + (wallRect[1] - cy) * lens,
                     cx + (wallRect[2] - cx) * lens, cy + (wallRect[3] - cy) * lens,
                     l, t, r, b, rad, dp(3.5f), Math.round(a * 0.55f));
+        }
+    }
+
+    /**
+     * The glass's own tone. Night: darkened to suit the light behind it, a little more where it
+     * carries more text. Day: frosted with warm white, so dark ink reads on it.
+     */
+    private void tint(Gfx g, float l, float t, float r, float b, float rad, float strength, float extraDim, float lum) {
+        float day = look.value;
+        if (day < 0.999f) {
+            float dimA = (glassDim(lum) + extraDim + 0.06f) * (1 - day);
+            g.fillRoundRect(l, t, r, b, rad, Pixels.alpha(0xFF14120F, Math.min(0.85f, dimA) * strength));
+        }
+        if (day > 0.001f) {
+            float lightA = (0.5f + extraDim * 0.6f + Math.max(0, 0.3f - lum) * 0.5f) * day;
+            g.fillRoundRect(l, t, r, b, rad, Pixels.alpha(0xFFFAF7F2, Math.min(0.9f, lightA) * strength));
         }
     }
 
@@ -1072,38 +1727,51 @@ final class Scene {
     private void scrollEdge(Gfx g, float from, float to, float t, float b, float strength) {
         int strips = 16;
         float cx = (dockL + dockR) / 2, cy = (dockT + dockB) / 2;
-        float dim = glassDim(luminance(dockL, dockT, dockR, dockB));
+        float lum = luminance(dockL, dockT, dockR, dockB);
         for (int i = 0; i < strips; i++) {
             float x0 = from + (to - from) * i / strips, x1 = from + (to - from) * (i + 1) / strips;
             float l = Math.min(x0, x1), r = Math.max(x0, x1) + 0.5f;
             float a = strength * (1 - (i + 0.5f) / strips);
             a = a * a * (3 - 2 * a);
             backdrop(g, l, t, r, b, 0, cx, cy, Math.round(255 * a));
-            g.fillRect(l, t, r, b, Pixels.alpha(0xFF000000, dim * a));
+            tint(g, l, t, r, b, 0, a, 0, lum);
             g.fillRectLinear(l, t, r, b, 0, dockT, 0, dockB, TOP_LIGHT, TOP_LIGHT_STOPS, a);
         }
     }
 
+    private float lumKeyL = Float.NaN, lumKeyT, lumKeyR, lumKeyB, lumLast;
+    private final Map<LongKey, Float> lumCache = new HashMap<>();
+    private Object lumOwner;
+
+    /** Mean luminance of the blurred wallpaper under a rectangle, cached by 8 px cell. */
     private float luminance(float l, float t, float r, float b) {
         Model.Wall w = wall;
         if (w == null || w.blurPixels == null) return 0.15f;
-        String key = Math.round(l / 8) + ":" + Math.round(t / 8) + ":" + Math.round(r / 8) + ":" + Math.round(b / 8);
-        Map<String, Float> per = lumMap.get(w.blurPixels);
-        if (per == null) {
-            per = new HashMap<>();
-            lumMap.clear();
-            lumMap.put(w.blurPixels, per);
+        if (l == lumKeyL && t == lumKeyT && r == lumKeyR && b == lumKeyB && lumOwner == w.blurPixels) return lumLast;
+        if (lumOwner != w.blurPixels) {
+            lumCache.clear();
+            lumOwner = w.blurPixels;
         }
-        Float hit = per.get(key);
-        if (hit != null) return hit;
-        float fl = (l - wallRect[0]) / (wallRect[2] - wallRect[0]), fr = (r - wallRect[0]) / (wallRect[2] - wallRect[0]);
-        float ft = (t - wallRect[1]) / (wallRect[3] - wallRect[1]), fb = (b - wallRect[1]) / (wallRect[3] - wallRect[1]);
-        float lum = Pixels.luminance(w.blurPixels, w.blurW, w.blurH, fl, ft, fr, fb);
-        per.put(key, lum);
+        long key = ((long) Math.round(l / 8) & 0xFFFF) << 48 | ((long) Math.round(t / 8) & 0xFFFF) << 32
+                | ((long) Math.round(r / 8) & 0xFFFF) << 16 | ((long) Math.round(b / 8) & 0xFFFF);
+        Float hit = lumCache.get(probe.set(key));
+        float lum;
+        if (hit != null) {
+            lum = hit;
+        } else {
+            float fl = (l - wallRect[0]) / (wallRect[2] - wallRect[0]), fr = (r - wallRect[0]) / (wallRect[2] - wallRect[0]);
+            float ft = (t - wallRect[1]) / (wallRect[3] - wallRect[1]), fb = (b - wallRect[1]) / (wallRect[3] - wallRect[1]);
+            lum = Pixels.luminance(w.blurPixels, w.blurW, w.blurH, fl, ft, fr, fb);
+            if (lumCache.size() > 4096) lumCache.clear();
+            lumCache.put(new LongKey(key), lum);
+        }
+        lumKeyL = l;
+        lumKeyT = t;
+        lumKeyR = r;
+        lumKeyB = b;
+        lumLast = lum;
         return lum;
     }
-
-    private final Map<Object, Map<String, Float>> lumMap = new HashMap<>();
 
     private static final float SHADOW_SCALE = 0.25f;
 
@@ -1114,7 +1782,7 @@ final class Scene {
      * in the middle, so its image keeps the real height, rounded to 8 dp, and is sliced across
      * only. Either way a card changing shape every frame reuses a few images.
      */
-    private void drawShadow(Gfx g, float l, float t, float r, float b, float rad, float blur, float dy, int alpha) {
+    void drawShadow(Gfx g, float l, float t, float r, float b, float rad, float blur, float dy, int alpha) {
         if (alpha <= 0 || r <= l || b <= t) return;
         float q = dp(3);
         rad = Math.round(rad / q) * q;
@@ -1122,15 +1790,15 @@ final class Scene {
         boolean thin = b - t < side;
         float hq = dp(8);
         float baseH = thin ? Math.max(hq, Math.round((b - t) / hq) * hq) : side;
-        String key = Math.round(rad) + "b" + Math.round(blur) + (thin ? "h" + Math.round(baseH) : "");
-        Object img = shadows.get(key);
+        long key = (long) Math.round(rad) << 40 | (long) Math.round(blur) << 20 | (thin ? Math.round(baseH) + 1 : 0);
+        Object img = shadows.get(probe.set(key));
         if (img == null) {
             int[] px = Pixels.shadow(side, baseH, rad, blur, SHADOW_SCALE);
             int iw = px[0], ih = px[1];
             int[] pixels = new int[iw * ih];
             System.arraycopy(px, 2, pixels, 0, pixels.length);
             img = g.image(pixels, iw, ih);
-            shadows.put(key, img);
+            shadows.put(new LongKey(key), img);
         }
         int iw = g.imageWidth(img), ih = g.imageHeight(img);
         int cx = iw / 2, cy = ih / 2;
@@ -1140,32 +1808,44 @@ final class Scene {
             g.drawImage(img, L, T, R, B, alpha);
             return;
         }
-        float[] xs = {L, L + cw, R - cw, R};
-        int[] sx = {0, cx, cx + 1, iw};
+        float x1 = L + cw, x2 = R - cw;
         if (thin) {
-            for (int i = 0; i < 3; i++) g.drawImagePart(img, sx[i], 0, sx[i + 1], ih, xs[i], T, xs[i + 1], B, alpha);
+            g.drawImagePart(img, 0, 0, cx, ih, L, T, x1, B, alpha);
+            g.drawImagePart(img, cx, 0, cx + 1, ih, x1, T, x2, B, alpha);
+            g.drawImagePart(img, cx + 1, 0, iw, ih, x2, T, R, B, alpha);
             return;
         }
-        float[] ys = {T, T + ch, B - ch, B};
-        int[] sy = {0, cy, cy + 1, ih};
-        for (int j = 0; j < 3; j++) {
-            for (int i = 0; i < 3; i++) {
-                g.drawImagePart(img, sx[i], sy[j], sx[i + 1], sy[j + 1], xs[i], ys[j], xs[i + 1], ys[j + 1], alpha);
-            }
-        }
+        float y1 = T + ch, y2 = B - ch;
+        g.drawImagePart(img, 0, 0, cx, cy, L, T, x1, y1, alpha);
+        g.drawImagePart(img, cx, 0, cx + 1, cy, x1, T, x2, y1, alpha);
+        g.drawImagePart(img, cx + 1, 0, iw, cy, x2, T, R, y1, alpha);
+        g.drawImagePart(img, 0, cy, cx, cy + 1, L, y1, x1, y2, alpha);
+        g.drawImagePart(img, cx, cy, cx + 1, cy + 1, x1, y1, x2, y2, alpha);
+        g.drawImagePart(img, cx + 1, cy, iw, cy + 1, x2, y1, R, y2, alpha);
+        g.drawImagePart(img, 0, cy + 1, cx, ih, L, y2, x1, B, alpha);
+        g.drawImagePart(img, cx, cy + 1, cx + 1, ih, x1, y2, x2, B, alpha);
+        g.drawImagePart(img, cx + 1, cy + 1, iw, ih, x2, y2, R, B, alpha);
     }
 
     // ---- Top controls ------------------------------------------------------------------------
 
-    /** The rectangle of top control {@code id}; null Gfx means estimate widths (for focus math). */
+    /**
+     * The rectangle of top control {@code id}: circles for Fire TV home, mirroring, phone and
+     * settings, a pill for Sound that names the format. Null Gfx estimates widths (for focus math).
+     */
     private float[] topRect(int id, Gfx g) {
         float r = width - side;
         float y0 = top + dp(2), y1 = y0 + capH;
-        float gearW = capH;
+        float circle = capH;
         float audioW = capH + dp(10) + textWidth(g, audioLabel(), Gfx.TEXT_MEDIUM, dp(16)) + dp(20);
         float gap = dp(12);
-        if (id == T_GEAR) return new float[] {r - gearW, y0, r, y1};
-        return new float[] {r - gearW - gap - audioW, y0, r - gearW - gap, y1};
+        float x = r;
+        for (int i = T_COUNT - 1; i >= 0; i--) {
+            float w = i == T_AUDIO ? audioW : circle;
+            if (i == id) return new float[] {x - w, y0, x, y1};
+            x -= w + gap;
+        }
+        return new float[] {r - circle, y0, r, y1};
     }
 
     private float textWidth(Gfx g, String s, int face, float size) {
@@ -1174,13 +1854,14 @@ final class Scene {
     }
 
     private String audioLabel() {
+        if (audio != null && "Bluetooth".equals(audio.route)) return audio.device.isEmpty() ? "Headphones" : audio.device;
         return audio == null ? "Sound" : audio.headline;
     }
 
     private void drawTop(Gfx g, float uiA, float t) {
         if (uiA <= 0.003f) return;
         float rise = (1 - ui.value) * dp(-14);
-        for (int id = T_AUDIO; id <= T_GEAR; id++) {
+        for (int id = 0; id < T_COUNT; id++) {
             float[] r = topRect(id, g);
             float f = topSpring[id].value;
             float s = 1 + 0.1f * f;
@@ -1190,19 +1871,74 @@ final class Scene {
             g.scale(s, cx, cy);
             float rad = (r[3] - r[1]) / 2;
             glass(g, r[0], r[1], r[2], r[3], rad, uiA, 0, t);
-            if (f > 0.003f) g.fillRoundRect(r[0], r[1], r[2], r[3], rad, Pixels.white(0.93f * f * uiA));
-            int ink = Pixels.alpha(Pixels.lerp(Tone.TEXT, INK, f), uiA);
-            float iconC = r[0] + capH / 2;
+            if (f > 0.003f) g.fillRoundRect(r[0], r[1], r[2], r[3], rad, Tone.focus(0.93f * f * uiA));
+            int ink = Tone.onFocus(f, uiA);
             float mid = (r[1] + r[3]) / 2;
-            if (id == T_GEAR) {
-                Icons.gear(g, cx, mid, dp(24), ink);
-            } else {
-                Icons.sound(g, iconC + dp(4), mid, dp(22), ink);
-                g.text(audioLabel(), Gfx.TEXT_MEDIUM, dp(16), 0, iconC + capH / 2 + dp(2), mid + g.capHeight(Gfx.TEXT_MEDIUM, dp(16)) / 2,
-                        ink, Gfx.LEFT, 0);
+            switch (id) {
+                case T_GEAR:
+                    Icons.gear(g, cx, mid, dp(24), ink);
+                    break;
+                case T_PHONE:
+                    Icons.phone(g, cx, mid, dp(22), ink);
+                    break;
+                case T_MIRROR:
+                    Icons.mirror(g, cx, mid, dp(22), ink);
+                    break;
+                case T_EXIT:
+                    Icons.exit(g, cx, mid, dp(22), ink);
+                    break;
+                default: {
+                    float iconC = r[0] + capH / 2;
+                    boolean bt = audio != null && "Bluetooth".equals(audio.route);
+                    if (bt) Icons.earbuds(g, iconC + dp(4), mid, dp(22), ink);
+                    else Icons.sound(g, iconC + dp(4), mid, dp(22), ink);
+                    g.text(audioLabel(), Gfx.TEXT_MEDIUM, dp(16), 0, iconC + capH / 2 + dp(2),
+                            mid + g.capHeight(Gfx.TEXT_MEDIUM, dp(16)) / 2, ink, Gfx.LEFT, 0);
+                }
             }
             g.restore(save);
+            // The focused control names itself beneath, the way tvOS labels focused icons.
+            if (f > 0.02f && id != T_AUDIO) {
+                g.text(TOP_NAMES[id], Gfx.TEXT_MEDIUM, dp(13), 0.01f, cx, r[3] + dp(24) + rise, Pixels.alpha(ON_PHOTO, f * uiA),
+                        Gfx.CENTER, 0.8f);
+            }
         }
+    }
+
+    // ---- Pinned note ---------------------------------------------------------------------------
+
+    private final float[] sizeBuf = new float[2];
+
+    static final float NOTE_DRAW = 460, PIN_DRAW = 300, PIN_SCALE = 0.62f;
+
+    /** The popped-up note's scale: as large as fits, with room for the hint below it. */
+    private float noteScale(float[] size) {
+        return Math.min(1f, Math.min((height - dp(96)) / dp(size[1]), (width - dp(240)) / dp(size[0])));
+    }
+
+    /**
+     * The note kept on the home screen: a small card on the right, leaning back a few degrees as
+     * if propped against the glass. It writes itself once when it appears.
+     */
+    private void drawPinned(Gfx g, float uiA, float t) {
+        Notes.Note n = pinned;
+        float p = pinSpring.value;
+        if (n == null || p <= 0.003f || mode == NOTE) return;
+        float a = p * Math.max(0.55f, uiA) * (1 - modal.value) * (1 - notice.value);
+        if (a <= 0.003f) return;
+        // The card is the popped-up note at a smaller scale, sized to the room between the
+        // wallpaper's caption and the glance bar, so a drawing never runs under the bar.
+        float[] size = Pop.noteSize(n, PIN_DRAW, sizeBuf);
+        float tp = top + capH + dp(60);
+        float room = barB - barH - dp(18) - tp;
+        float k = Math.max(0.3f, Math.min(PIN_SCALE, room / dp(size[1])));
+        float w = dp(size[0]) * k, h = dp(size[1]) * k;
+        float r = width - side, l = r - w;
+        int save = g.save();
+        if (!reduced) g.tilt(1.5f, -6f + 1.2f * (float) Math.sin(t * 0.7), (l + r) / 2, tp + h / 2);
+        g.translate((1 - p) * dp(30), 0);
+        Pop.note(g, n, pinnedInk, l, tp, r, tp + h, d * k, Math.min(1, p * 1.2f), a, t, cards.h24);
+        g.restore(save);
     }
 
     // ---- Glance bar ----------------------------------------------------------------------------
@@ -1268,10 +2004,9 @@ final class Scene {
     }
 
     /** {@code extraDim} thickens the glass where it carries more text (Apple: thicker for more text). */
-    private void glassLifted(Gfx g, float l, float t, float r, float b, float rad, float alpha, float f, float time,
-            float extraDim) {
+    void glassLifted(Gfx g, float l, float t, float r, float b, float rad, float alpha, float f, float time, float extraDim) {
         float pad = dp(28);
-        drawShadow(g, l, t, r, b, rad, pad, dp(14) * f, Math.round(255 * 0.4f * f * alpha));
+        drawShadow(g, l, t, r, b, rad, pad, dp(14) * f, Math.round(255 * (0.4f - 0.18f * look.value) * f * alpha));
         glass(g, l, t, r, b, rad, alpha, extraDim, time);
         float half = dp(0.75f);
         g.strokeRoundRectLinear(l + half, t + half, r - half, b - half, rad - half, dp(1.5f), l, t, r, b, TILE_RIM, THREE_STOPS,
@@ -1288,7 +2023,7 @@ final class Scene {
         float tl = (width - pw) / 2, tt = (height - ph) / 2 - dp(6);
         float l = lerp(panelFrom[0], tl, p), top0 = lerp(panelFrom[1], tt, p);
         float r = lerp(panelFrom[2], tl + pw, p), b = lerp(panelFrom[3], tt + ph, p);
-        float rad = lerp(dp(30), dp(36), p);
+        float rad = lerp(dp(30), dp(40), p);
         glassLifted(g, l, top0, r, b, rad, 1f, 1f - 0.6f * p, t, lerp(0.06f, 0.16f, p));
         float cardA = clamp01(1 - p * 2.4f);
         if (cardA > 0.003f) cards.expanded(g, panelKind, l, top0, l + cards.expandedWidth(panelKind), top0 + dp(Cards.CARD_H), cardA);
@@ -1301,8 +2036,8 @@ final class Scene {
             cards.panel(g, panelPrev, l, top0, r, b, a * clamp01(1 - sw * 2), 0, rad);
         }
         cards.panel(g, panelKind, l, top0, r, b, a * clamp01(sw * 1.4f - 0.2f), button.value, rad);
-        dots(g, (l + r) / 2, b + dp(22), a);
         g.restore(clip);
+        dots(g, (l + r) / 2, b + dp(22), a);
     }
 
     /** Page dots under a panel: Left and Right move between the subjects. */
@@ -1312,12 +2047,12 @@ final class Scene {
         float x = cx - gap * (kinds.length - 1) / 2;
         for (int k : kinds) {
             boolean on = k == panelKind;
-            g.fillCircle(x, cy, dp(on ? 3.5f : 3f), Pixels.white((on ? 0.95f : 0.4f) * a));
+            g.fillCircle(x, cy, dp(on ? 3.5f : 3f), Pixels.alpha(ON_PHOTO, (on ? 0.95f : 0.4f) * a));
             x += gap;
         }
     }
 
-    // ---- Alerts --------------------------------------------------------------------------------
+    // ---- Alerts and moments ----------------------------------------------------------------------
 
     /** Bike finder's alert on the home screen: top right, on real glass, above everything. */
     private void drawNotice(Gfx g, long now, float t) {
@@ -1338,6 +2073,189 @@ final class Scene {
         g.restore(save);
     }
 
+    /** The bike alarm, top centre, on glass. Any button stops it. */
+    private void drawAlarm(Gfx g, long now, float t) {
+        float p = alarmSpring.value;
+        if (p <= 0.003f || alarmFinder == null) return;
+        float w = dp(Pop.ALARM_W), h = dp(Pop.ALARM_H);
+        float l = (width - w) / 2, tp = dp(48) - (1 - p) * dp(30);
+        int save = g.save();
+        g.scale(0.94f + 0.06f * p, width / 2f, tp);
+        glassLifted(g, l, tp, l + w, tp + h, dp(40), p, 1, t, 0.14f);
+        Pop.alarm(g, alarmFinder, alarmStation, l, tp, d, p, (now - alarmAt) / 1000f, true, reduced);
+        g.restore(save);
+    }
+
+    /** A new note, big in the middle of the screen, writing itself. */
+    private void drawNote(Gfx g, float t, long now) {
+        float p = noteSpring.value;
+        Notes.Note n = popNote;
+        if (p <= 0.003f || n == null) return;
+        float[] size = Pop.noteSize(n, NOTE_DRAW, sizeBuf);
+        float k = noteScale(size);
+        float w = dp(size[0]) * k, h = dp(size[1]) * k;
+        float l = (width - w) / 2, tp = (height - h) / 2 - dp(18);
+        float since = (now - noteAt) / 1000f;
+        float progress = reduced ? 1 : Math.max(0, Math.min(1, (since - 0.45f) / Ink.seconds(n)));
+        int save = g.save();
+        g.scale(0.86f + 0.14f * p, width / 2f, height / 2f);
+        if (!reduced) g.tilt((1 - p) * 10f, 0, width / 2f, tp + h);
+        Pop.note(g, n, popInk, l, tp, l + w, tp + h, d * k, progress, Math.min(1, p), since, cards.h24);
+        g.restore(save);
+        if (p > 0.6f) {
+            g.text("OK or Back to close", Gfx.TEXT_MEDIUM, dp(14), 0.01f, width / 2f, tp + h + dp(32),
+                    Pixels.alpha(ON_PHOTO, 0.7f * p), Gfx.CENTER, 0.6f);
+        }
+    }
+
+    /** A short pill at the top centre: headphones connected, a photo arrived. */
+    private void drawToast(Gfx g, float t, long now) {
+        float p = toastSpring.value;
+        if (p <= 0.003f || toastTitle.isEmpty()) return;
+        float h = dp(64);
+        float tw = Math.max(g.measure(toastTitle, Gfx.TEXT_SEMIBOLD, dp(17), 0), g.measure(toastDetail, Gfx.TEXT_MEDIUM, dp(14), 0));
+        float w = dp(84) + tw + dp(28);
+        // Bottom left, above the glance bar: clear of the clock, the top controls and the pinned note.
+        float l = side - dp(8), tp = barB - barH - dp(22) - h + (1 - p) * dp(24);
+        glassLifted(g, l, tp, l + w, tp + h, h / 2, p, 1, t, 0.1f);
+        float ix = l + dp(38), iy = tp + h / 2;
+        g.fillCircle(ix, iy, dp(22), Tone.focus(0.9f * p));
+        int ink = Tone.onFocus(1, p);
+        switch (toastIcon) {
+            case TOAST_EARBUDS:
+                Icons.earbuds(g, ix, iy, dp(24), ink);
+                break;
+            case TOAST_SOUNDBAR:
+                Icons.sound(g, ix, iy, dp(22), ink);
+                break;
+            case TOAST_PHOTO:
+                Icons.calendar(g, ix, iy, dp(22), ink, Tone.ROSE);
+                break;
+            case TOAST_PHONE:
+                Icons.phone(g, ix, iy, dp(22), ink);
+                break;
+            default:
+                Icons.check(g, ix, iy, dp(20), ink);
+        }
+        float tx = l + dp(72);
+        g.text(toastTitle, Gfx.TEXT_SEMIBOLD, dp(17), 0, tx, tp + dp(28), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        g.text(toastDetail, Gfx.TEXT_MEDIUM, dp(14), 0, tx, tp + dp(48), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+    }
+
+    // ---- Modal sheets: pairing, asking, Wi-Fi, mirroring ----------------------------------------------
+
+    /** A QR code as a crisp image (one pixel per module): drawn scaled without smoothing. */
+    private Object qrImage(Gfx g, boolean[][] m) {
+        int n = m.length, q = 4, s = n + 2 * q;
+        int[] px = new int[s * s];
+        for (int i = 0; i < px.length; i++) px[i] = 0xFFFFFFFF;
+        for (int y = 0; y < n; y++) for (int x = 0; x < n; x++) if (m[y][x]) px[(y + q) * s + x + q] = 0xFF111111;
+        return g.image(px, s, s);
+    }
+
+    private void sheetFrame(Gfx g, float l, float tp, float w, float h, float p, float t) {
+        int save = g.save();
+        g.scale(0.94f + 0.06f * p, l + w / 2, tp + h / 2);
+        glassLifted(g, l, tp, l + w, tp + h, dp(40), p, 1, t, 0.16f);
+        g.restore(save);
+    }
+
+    private void drawPair(Gfx g, float t, long now) {
+        float p = mode == PAIR ? modal.value : 0;
+        if (p <= 0.003f || pairWindow == null) return;
+        float w = dp(780), h = dp(420), l = (width - w) / 2, tp = (height - h) / 2;
+        sheetFrame(g, l, tp, w, h, p, t);
+        float q = dp(300), qx = l + dp(40), qy = tp + (h - q) / 2;
+        g.fillRoundRect(qx - dp(10), qy - dp(10), qx + q + dp(10), qy + q + dp(10), dp(22), Pixels.alpha(0xFFFFFFFF, p));
+        if (pairQr != null) g.drawImage(pairQr, qx, qy, qx + q, qy + q, Math.round(255 * p));
+        float x = qx + q + dp(48), right = l + w - dp(40);
+        g.text("PHONE CONTROL", Gfx.MONO, dp(12.5f), 0.1f, x, tp + dp(70), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        g.text("Scan with your phone", Gfx.SERIF, dp(36), -0.01f, x, tp + dp(116), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        Pop.lines(g, "Your phone opens Lucent's control center. Then press OK on the remote to let it in.", Gfx.TEXT_MEDIUM, dp(16), x,
+                tp + dp(152), right - x, dp(23), 3, Tone.text(Tone.SECONDARY, p));
+        g.text("OR TYPE THIS CODE AT", Gfx.MONO, dp(11.5f), 0.1f, x, tp + dp(242), Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
+        g.text(Text.fit(g, pairWindow[2], Gfx.TEXT_SEMIBOLD, dp(17), right - x), Gfx.TEXT_SEMIBOLD, dp(17), 0, x, tp + dp(268),
+                Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        String pin = pairWindow[1];
+        String shown = pin.length() == 6 ? pin.substring(0, 3) + " " + pin.substring(3) : pin;
+        g.text(shown, Gfx.SERIF_LIGHT, dp(64), 0.04f, x - dp(2), tp + dp(338), Pixels.alpha(Tone.ACCENT, p), Gfx.LEFT, 0);
+        long left = Math.max(0, pairUntil - now);
+        float frac = left / (float) Keys.WINDOW_MS;
+        float cx = right - dp(22), cy = tp + dp(66);
+        g.strokeCircle(cx, cy, dp(16), dp(3), Tone.text(0.16f, p));
+        g.arc(cx, cy, dp(16), -90, -360 * frac, dp(3), Tone.text(Tone.PRIMARY, p));
+        g.text("Back to cancel", Gfx.TEXT_MEDIUM, dp(13.5f), 0, x, tp + h - dp(30), Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
+    }
+
+    private void drawAsk(Gfx g, float t) {
+        float p = mode == ASK ? modal.value : 0;
+        if (p <= 0.003f) return;
+        float w = dp(640), h = dp(260), l = (width - w) / 2, tp = (height - h) / 2;
+        sheetFrame(g, l, tp, w, h, p, t);
+        float cx = l + dp(70), cy = tp + dp(96);
+        g.fillCircle(cx, cy, dp(36), Tone.focus(0.9f * p));
+        Icons.phone(g, cx, cy, dp(36), Tone.onFocus(1, p));
+        float x = l + dp(132), right = l + w - dp(40);
+        g.text("ALLOW THIS DEVICE?", Gfx.MONO, dp(12.5f), 0.1f, x, tp + dp(72), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        float ns = Pop.fitSize(g, askName, Gfx.SERIF, dp(36), dp(24), right - x, d);
+        g.text(Text.fit(g, askName, Gfx.SERIF, ns, right - x), Gfx.SERIF, ns, -0.01f, x, tp + dp(116), Tone.text(Tone.PRIMARY, p),
+                Gfx.LEFT, 0);
+        Pop.lines(g, "It will see what is on the home screen, send notes and photos, and change Lucent's settings.", Gfx.TEXT_MEDIUM, dp(15.5f),
+                x, tp + dp(150), right - x, dp(22), 2, Tone.text(Tone.SECONDARY, p));
+        float by = tp + h - dp(44);
+        float kw = Icons.keycap(g, x, by, dp(26), "OK", Tone.text(Tone.PRIMARY, p));
+        g.text("Allow", Gfx.TEXT_SEMIBOLD, dp(17), 0, x + kw + dp(10), by + dp(6), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        float bx = x + kw + dp(90);
+        float bw = Icons.keycap(g, bx, by, dp(26), "Back", Tone.text(Tone.SECONDARY, p));
+        g.text("Refuse", Gfx.TEXT_SEMIBOLD, dp(17), 0, bx + bw + dp(10), by + dp(6), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+    }
+
+    private void drawWifi(Gfx g, float t, long now) {
+        float p = mode == WIFI ? modal.value : 0;
+        if (p <= 0.003f || wifiQr == null) return;
+        float w = dp(640), h = dp(380), l = (width - w) / 2, tp = (height - h) / 2;
+        sheetFrame(g, l, tp, w, h, p, t);
+        float q = dp(280), qx = l + dp(40), qy = tp + (h - q) / 2;
+        g.fillRoundRect(qx - dp(10), qy - dp(10), qx + q + dp(10), qy + q + dp(10), dp(22), Pixels.alpha(0xFFFFFFFF, p));
+        g.drawImage(wifiQr, qx, qy, qx + q, qy + q, Math.round(255 * p));
+        float x = qx + q + dp(44), right = l + w - dp(36);
+        Icons.wifi(g, x + dp(18), tp + dp(70), dp(34), Pixels.alpha(Tone.ACCENT, p));
+        g.text("GUEST WI-FI", Gfx.MONO, dp(12.5f), 0.1f, x, tp + dp(124), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        float ss = Pop.fitSize(g, wifiSsid, Gfx.SERIF, dp(34), dp(22), right - x, d);
+        g.text(Text.fit(g, wifiSsid, Gfx.SERIF, ss, right - x), Gfx.SERIF, ss, -0.01f, x, tp + dp(166), Tone.text(Tone.PRIMARY, p),
+                Gfx.LEFT, 0);
+        Pop.lines(g, "Point a phone's camera at the code to join.", Gfx.TEXT_MEDIUM, dp(16), x, tp + dp(206), right - x, dp(23), 3,
+                Tone.text(Tone.SECONDARY, p));
+        g.text("Closes by itself in " + Math.max(1, (wifiUntil - now + 999) / 1000) + " s", Gfx.TEXT_MEDIUM, dp(13.5f), 0, x, tp + h - dp(36),
+                Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
+    }
+
+    private void drawMirror(Gfx g, float t) {
+        float p = mode == MIRROR ? modal.value : 0;
+        if (p <= 0.003f) return;
+        float w = dp(700), h = dp(360), l = (width - w) / 2, tp = (height - h) / 2;
+        sheetFrame(g, l, tp, w, h, p, t);
+        float x = l + dp(36), right = l + w - dp(36);
+        g.text("MIRROR A SCREEN", Gfx.MONO, dp(12.5f), 0.1f, x, tp + dp(54), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        g.text("Show a phone or laptop here", Gfx.SERIF, dp(34), -0.01f, x, tp + dp(98), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        float rowH = dp(92), y0 = tp + dp(126);
+        float py = y0 + mirrorPill.value * (rowH + dp(10));
+        g.fillRoundRect(x - dp(12), py, right + dp(12), py + rowH, dp(24), Tone.focus(0.93f * p));
+        String[] titles = {"iPhone, iPad or Mac", "Android phone or Windows PC"};
+        String[] details = {mirrorApp != null ? "Opens " + mirrorApp + ", then pick it under Screen Mirroring."
+                : "Needs AirReceiver or AirScreen from the Appstore first.",
+            "Opens Fire TV's mirroring. On Windows, press Win and K."};
+        for (int i = 0; i < 2; i++) {
+            float y = y0 + i * (rowH + dp(10));
+            float near = clamp01(1 - Math.abs(mirrorPill.value - i));
+            int ink = Tone.onFocus(near, p);
+            Icons.mirror(g, x + dp(28), y + rowH / 2, dp(34), ink);
+            g.text(titles[i], Gfx.TEXT_SEMIBOLD, dp(19), 0, x + dp(66), y + dp(38), ink, Gfx.LEFT, 0);
+            g.text(Text.fit(g, details[i], Gfx.TEXT_MEDIUM, dp(14), right - x - dp(70)), Gfx.TEXT_MEDIUM, dp(14), 0, x + dp(66), y + dp(64),
+                    Pixels.alpha(ink, 0.72f * p), Gfx.LEFT, 0);
+        }
+    }
+
     // ---- Dock --------------------------------------------------------------------------------
 
     private float tileX(int i) {
@@ -1352,7 +2270,7 @@ final class Scene {
         glassBody(g, dockL, dockT, dockR, dockB, dockRad, uiA, 0);
         if (apps.isEmpty()) {
             g.text("Your apps will appear here", Gfx.TEXT_MEDIUM, dp(17), 0, (dockL + dockR) / 2,
-                    (dockT + dockB) / 2 + dp(6), Pixels.white(0.7f * uiA), Gfx.CENTER, 0);
+                    (dockT + dockB) / 2 + dp(6), Tone.text(0.7f, uiA), Gfx.CENTER, 0);
             glassRim(g, dockL, dockT, dockR, dockB, dockRad, uiA, t);
             g.restore(save);
             return;
@@ -1402,7 +2320,7 @@ final class Scene {
         float cx = x + tileW / 2, cy = y + tileH / 2;
         int save = g.save();
         g.scale(s, cx, cy);
-        if (f > 0.01f && !reduced) g.tilt(tiltY.value * 4f * f, -tiltX.value * 6f * f, cx, cy);
+        if (f > 0.01f && !reduced) g.tilt(tiltY.value * 4f * f, -tiltX.value * 5f * f, cx, cy);
         if (f > 0.01f) {
             float pad = dp(18);
             drawShadow(g, x, y, x + tileW, y + tileH, tileRad, pad, dp(10) * f, Math.round(255 * 0.62f * f * alpha));
@@ -1439,7 +2357,7 @@ final class Scene {
         if (label && f > 0.02f) {
             String name = fit(g, app.label, Gfx.TEXT_MEDIUM, dp(15), tileW + dp(40));
             g.text(name, Gfx.TEXT_MEDIUM, dp(15), 0.005f, cx, b + dp(24) + (s - 1) * tileH / 2,
-                    Pixels.white(0.95f * f * alpha), Gfx.CENTER, 0.3f);
+                    Tone.text(0.95f * f, alpha), Gfx.CENTER, 0.3f * (1 - look.value));
         }
     }
 
@@ -1448,13 +2366,13 @@ final class Scene {
     private void drawSheet(Gfx g, float t) {
         float p = sheet.value;
         if (p <= 0.003f) return;
-        float r = width - dp(40) + (1 - p) * dp(70), l = r - dp(430);
+        float r = width - dp(40) + (1 - p) * dp(70), l = r - dp(460);
         float top0 = dp(34), bot = height - dp(34);
         float rad = dp(34);
         glass(g, l, top0, r, bot, rad, p, 0.1f, t);
-        float ink = p;
-        g.text("Lucent", Gfx.DISPLAY_SEMIBOLD, dp(30), -0.01f, l + dp(30), top0 + dp(58), Pixels.white(ink), Gfx.LEFT, 0);
-        g.text("Home screen settings", Gfx.TEXT_REGULAR, dp(15), 0, l + dp(31), top0 + dp(84), Pixels.white(0.62f * ink), Gfx.LEFT, 0);
+        g.text("Lucent", Gfx.SERIF, dp(34), -0.01f, l + dp(30), top0 + dp(58), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        g.text(("Version " + BuildInfo.VERSION + "  ·  " + (night() ? "Night" : "Day")).toUpperCase(Locale.US), Gfx.MONO, dp(11.5f), 0.1f,
+                l + dp(31), top0 + dp(86), Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
 
         float areaT = top0 + dp(110), areaB = bot - dp(18);
         float rowH = dp(54), stepH = dp(58);
@@ -1462,7 +2380,7 @@ final class Scene {
         g.clipRect(l, areaT - dp(6), r, areaB);
         float py = areaT + sheetPill.value * stepH - sheetScroll.value;
         float inset = dp(14);
-        g.fillRoundRect(l + inset, py, r - inset, py + rowH, rad - inset, Pixels.white(0.93f * p));
+        g.fillRoundRect(l + inset, py, r - inset, py + rowH, rad - inset, Tone.focus(0.93f * p));
         for (int i = 0; i < options.size(); i++) {
             Model.Option o = options.get(i);
             float y = areaT + i * stepH - sheetScroll.value;
@@ -1470,7 +2388,7 @@ final class Scene {
             float near = clamp01(1 - Math.abs(sheetPill.value - i));
             // Rows dissolve into the sheet's edges instead of being cut (a soft scroll edge).
             float edgeFade = Math.min(clamp01((areaB - (y + rowH)) / dp(36) + 1), clamp01((y - areaT) / dp(36) + 1));
-            int ink2 = Pixels.alpha(Pixels.lerp(0xFFFFFFFF, INK, near), p * edgeFade);
+            int ink2 = Tone.onFocus(near, p * edgeFade);
             float base = y + rowH / 2 + g.capHeight(Gfx.TEXT_MEDIUM, dp(17)) / 2;
             g.text(o.title, Gfx.TEXT_MEDIUM, dp(17), 0, l + dp(32), base, ink2, Gfx.LEFT, 0);
             String value = o.name();
@@ -1509,14 +2427,14 @@ final class Scene {
         float rad = dp(26);
         glass(g, l, top0, l + w, bottom, rad, p, 0.08f, t);
         Model.App app = apps.get(focus);
-        g.text(fit(g, app.label, Gfx.TEXT_SEMIBOLD, dp(14), w - dp(40)), Gfx.TEXT_SEMIBOLD, dp(14), 0.02f,
-                l + dp(22), top0 + dp(29), Pixels.white(0.6f * p), Gfx.LEFT, 0);
+        g.text(fit(g, app.label.toUpperCase(Locale.US), Gfx.MONO, dp(12), w - dp(40)), Gfx.MONO, dp(12), 0.08f,
+                l + dp(22), top0 + dp(29), Tone.text(0.6f, p), Gfx.LEFT, 0);
         float py = top0 + head + menuPill.value * rowH;
-        g.fillRoundRect(l + pad, py, l + w - pad, py + rowH - dp(4), rad - pad, Pixels.white(0.93f * p));
+        g.fillRoundRect(l + pad, py, l + w - pad, py + rowH - dp(4), rad - pad, Tone.focus(0.93f * p));
         for (int i = 0; i < MENU_ROWS.length; i++) {
             float y = top0 + head + i * rowH;
             float near = clamp01(1 - Math.abs(menuPill.value - i));
-            int ink = Pixels.alpha(Pixels.lerp(0xFFFFFFFF, INK, near), p);
+            int ink = Tone.onFocus(near, p);
             g.text(MENU_ROWS[i], Gfx.TEXT_MEDIUM, dp(17), 0, l + dp(24), y + (rowH - dp(4)) / 2 + g.capHeight(Gfx.TEXT_MEDIUM, dp(17)) / 2,
                     ink, Gfx.LEFT, 0);
         }
@@ -1529,7 +2447,7 @@ final class Scene {
         float p = pop.value;
         if (p <= 0.003f) return;
         float[] anchor = topRect(T_AUDIO, g);
-        float w = dp(430);
+        float w = dp(460);
         float r = Math.min(width - dp(40), Math.max(anchor[2], dp(40) + w));
         float l = r - w;
         float top0 = anchor[3] + dp(14);
@@ -1537,40 +2455,44 @@ final class Scene {
         int save = g.save();
         g.scale(0.9f + 0.1f * p, (anchor[0] + anchor[2]) / 2, anchor[3]);
         float rad = dp(30);
-        glass(g, l, top0, r, top0 + h, rad, p, 0.08f, t);
+        glass(g, l, top0, r, top0 + h, rad, p, 0.1f, t);
         drawAudio(g, l, top0, r, p, rad);
         g.restore(save);
     }
 
     private float audioHeight() {
         int n = audio == null ? 0 : audio.formats.size();
-        return dp(212) + Math.max(1, n) * dp(30);
+        return dp(250) + Math.max(1, n) * dp(30);
     }
 
     private void drawAudio(Gfx g, float l, float top0, float r, float p, float rad) {
         Model.Audio a = audio;
-        int white = Pixels.white(p);
-        g.text("Sound", Gfx.DISPLAY_SEMIBOLD, dp(26), -0.01f, l + dp(26), top0 + dp(46), white, Gfx.LEFT, 0);
-        String sub = a == null || !a.known ? "Your TV did not report its audio formats"
+        boolean bt = a != null && "Bluetooth".equals(a.route);
+        g.text("Sound", Gfx.SERIF, dp(30), -0.01f, l + dp(26), top0 + dp(48), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        String sub = bt ? "Playing on " + (a.device.isEmpty() ? "Bluetooth headphones" : a.device)
+                : a == null || !a.known ? "Your TV did not report its audio formats"
                 : (a.atmos ? "Dolby Atmos ready" : a.headline) + (a.channels > 0 ? "  ·  up to " + channels(a.channels) : "");
-        g.text(sub, Gfx.TEXT_REGULAR, dp(15), 0, l + dp(27), top0 + dp(70), Pixels.white(0.72f * p), Gfx.LEFT, 0);
-        g.text("ACCEPTED OVER HDMI", Gfx.TEXT_SEMIBOLD, dp(11), 0.12f, l + dp(27), top0 + dp(104), Pixels.white(0.5f * p), Gfx.LEFT, 0);
-        float y = top0 + dp(132);
+        g.text(sub, Gfx.TEXT_REGULAR, dp(15), 0, l + dp(27), top0 + dp(74), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        g.text("ACCEPTED OVER HDMI", Gfx.MONO, dp(11), 0.1f, l + dp(27), top0 + dp(108), Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
+        float y = top0 + dp(136);
         if (a != null) {
             for (String f : a.formats) {
-                Icons.check(g, l + dp(36), y - dp(5), dp(14), Pixels.white(0.9f * p));
-                g.text(f, Gfx.TEXT_MEDIUM, dp(16), 0, l + dp(54), y, white, Gfx.LEFT, 0);
+                Icons.check(g, l + dp(36), y - dp(5), dp(14), Tone.text(0.9f, p));
+                g.text(f, Gfx.TEXT_MEDIUM, dp(16), 0, l + dp(54), y, Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
                 y += dp(30);
             }
         }
         y += dp(6);
-        g.text("Tip: Display & Sounds \u203A Audio \u203A Surround Sound: Best Available", Gfx.TEXT_REGULAR, dp(13), 0, l + dp(27), y, Pixels.white(0.6f * p),
-                Gfx.LEFT, 0);
-        float bt = y + dp(18), bb = bt + dp(48);
+        g.text(bt ? "Headphones play in stereo, the soundbar rests." : "For music: soundbar Music mode, Virtual:X on, surround up.",
+                Gfx.TEXT_REGULAR, dp(13), 0, l + dp(27), y, Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        g.text(bt ? "Two pairs at once: an iPhone's Share Audio, or a dual transmitter." : "Atmos music: Amazon Music Unlimited.",
+                Gfx.TEXT_REGULAR, dp(13), 0, l + dp(27), y + dp(19), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        float bt0 = y + dp(36), bb = bt0 + dp(48);
         float inset = dp(14);
-        g.fillRoundRect(l + inset, bt, r - inset, bb, rad - inset, Pixels.white(0.93f * p));
-        g.text("Open Fire TV Settings", Gfx.TEXT_MEDIUM, dp(17), 0, (l + r) / 2, (bt + bb) / 2 + g.capHeight(Gfx.TEXT_MEDIUM, dp(17)) / 2,
-                Pixels.alpha(INK, p), Gfx.CENTER, 0);
+        g.fillRoundRect(l + inset, bt0, r - inset, bb, rad - inset, Tone.focus(0.93f * p));
+        Icons.earbuds(g, l + dp(48), (bt0 + bb) / 2, dp(22), Tone.onFocus(1, p));
+        g.text("Bluetooth Headphones", Gfx.TEXT_MEDIUM, dp(17), 0, (l + r) / 2 + dp(14), (bt0 + bb) / 2 + g.capHeight(Gfx.TEXT_MEDIUM, dp(17)) / 2,
+                Tone.onFocus(1, p), Gfx.CENTER, 0);
     }
 
     private static String channels(int n) {
@@ -1585,7 +2507,7 @@ final class Scene {
         return Text.fit(g, s, face, size, max);
     }
 
-    private float dp(float v) {
+    float dp(float v) {
         return v * d;
     }
 

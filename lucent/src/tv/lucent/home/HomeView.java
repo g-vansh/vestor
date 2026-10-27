@@ -8,8 +8,9 @@ import android.view.SoundEffectConstants;
 import android.view.View;
 
 /**
- * The single view the home screen is drawn in. It maps remote keys to {@link Scene} keys,
- * runs the frame loop (60 fps while something springs, 30 fps for the slow wallpaper drift,
+ * The single view the home screen is drawn in. It maps remote keys to {@link Scene} keys (the
+ * D-pad, OK, Back, Menu and the three media keys: Home, the microphone, volume and the app
+ * buttons never reach an app on Fire TV), runs the frame loop (60 fps while something springs, 30 fps for the slow wallpaper drift,
  * nothing when the screen is hidden).
  */
 final class HomeView extends View {
@@ -20,7 +21,7 @@ final class HomeView extends View {
     private boolean running;
     private long lastFrame;
     private long okDown;
-    private boolean okHeld, longFired;
+    private boolean okHeld, longFired, drawn;
 
     HomeView(Context c, Scene scene) {
         super(c);
@@ -42,6 +43,11 @@ final class HomeView extends View {
     void stop() {
         running = false;
         removeCallbacks(frame);
+    }
+
+    /** The drawing surface's Gfx, for images the scene makes once (QR codes). */
+    Gfx gfx() {
+        return gfx;
     }
 
     void kick() {
@@ -68,9 +74,14 @@ final class HomeView extends View {
         long now = SystemClock.uptimeMillis();
         float dt = lastFrame == 0 ? 1 / 60f : Math.min(0.1f, (now - lastFrame) / 1000f);
         lastFrame = now;
+        scene.setUptime(SystemClock.elapsedRealtime());
         boolean moving = scene.step(dt, System.currentTimeMillis());
         gfx.begin(canvas);
         scene.draw(gfx, System.currentTimeMillis());
+        if (!drawn) {
+            drawn = true;
+            Crash.drawn(getContext());
+        }
         removeCallbacks(frame);
         if (!running) return;
         if (moving) {
@@ -102,6 +113,16 @@ final class HomeView extends View {
                 return Scene.BACK;
             case KeyEvent.KEYCODE_MENU:
                 return Scene.MENU;
+            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+            case KeyEvent.KEYCODE_MEDIA_PLAY:
+            case KeyEvent.KEYCODE_MEDIA_PAUSE:
+                return Scene.PLAY;
+            case KeyEvent.KEYCODE_MEDIA_REWIND:
+            case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                return Scene.REWIND;
+            case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD:
+            case KeyEvent.KEYCODE_MEDIA_NEXT:
+                return Scene.FORWARD;
             default:
                 return 0;
         }
@@ -123,6 +144,8 @@ final class HomeView extends View {
             }
             return true;
         }
+        // Held media keys repeat; one press is one track or one photo.
+        if ((k == Scene.PLAY || k == Scene.REWIND || k == Scene.FORWARD) && e.getRepeatCount() > 0) return true;
         send(k);
         return true;
     }

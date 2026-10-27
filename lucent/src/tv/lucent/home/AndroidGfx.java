@@ -26,7 +26,7 @@ import java.util.Map;
  */
 final class AndroidGfx implements Gfx {
     private Canvas c;
-    private final Typeface[] faces = new Typeface[5];
+    private final Typeface[] faces;
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint flat = new Paint();
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -55,14 +55,26 @@ final class AndroidGfx implements Gfx {
     private final Rect bounds = new Rect();
 
     AndroidGfx(AssetManager assets) {
-        String[] files = {"InterDisplay-Light.ttf", "InterDisplay-SemiBold.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf"};
-        for (int i = 0; i < files.length; i++) {
+        faces = new Typeface[FACES];
+        for (int i = 0; i < FACES; i++) {
             try {
-                faces[i] = Typeface.createFromAsset(assets, "fonts/" + files[i]);
+                faces[i] = Typeface.createFromAsset(assets, "fonts/" + FONT_FILES[i]);
             } catch (RuntimeException e) {
-                faces[i] = Typeface.create("sans-serif", i == 0 ? Typeface.NORMAL : Typeface.BOLD);
+                faces[i] = Typeface.create(i >= SERIF_LIGHT && i <= SERIF_ITALIC ? "serif" : i == MONO ? "monospace" : "sans-serif",
+                        i == 0 || i == SERIF_LIGHT ? Typeface.NORMAL : Typeface.BOLD);
             }
         }
+        setup();
+    }
+
+    /** A Gfx for an offscreen bitmap, sharing the typefaces already loaded. */
+    private AndroidGfx(Typeface[] shared, Canvas canvas) {
+        faces = shared;
+        c = canvas;
+        setup();
+    }
+
+    private void setup() {
         ring.setStyle(Paint.Style.STROKE);
         stroke.setStyle(Paint.Style.STROKE);
         stroke.setStrokeCap(Paint.Cap.ROUND);
@@ -70,7 +82,23 @@ final class AndroidGfx implements Gfx {
         fill.setDither(true);
         flat.setDither(true);
         image.setDither(true);
-        camera.setLocation(0, 0, -14);
+        camera.setLocation(0, 0, -9.72f);
+        text.setFontFeatureSettings("tnum, lnum");
+    }
+
+    @Override
+    public Object offscreen(int w, int h) {
+        return Bitmap.createBitmap(Math.max(1, w), Math.max(1, h), Bitmap.Config.ARGB_8888);
+    }
+
+    @Override
+    public Gfx into(Object offscreen) {
+        return new AndroidGfx(faces, new Canvas((Bitmap) offscreen));
+    }
+
+    @Override
+    public void clear(Object offscreen) {
+        ((Bitmap) offscreen).eraseColor(0);
     }
 
     void begin(Canvas canvas) {
@@ -134,6 +162,8 @@ final class AndroidGfx implements Gfx {
         LinearGradient g = gradients.get(colors);
         if (g == null) {
             g = new LinearGradient(0, 0, 1, 0, colors, stops, Shader.TileMode.CLAMP);
+            // Colour arrays are constants, so this stays small. A bound keeps a slip from leaking.
+            if (gradients.size() > 256) gradients.clear();
             gradients.put(colors, g);
         }
         float dx = x1 - x0, dy = y1 - y0;

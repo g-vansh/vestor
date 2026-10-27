@@ -10,8 +10,17 @@ package tv.lucent.home;
 interface Gfx {
     int LEFT = 0, CENTER = 1, RIGHT = 2;
 
-    /** Font faces bundled in assets/fonts. */
-    int DISPLAY_LIGHT = 0, DISPLAY_SEMIBOLD = 1, TEXT_REGULAR = 2, TEXT_MEDIUM = 3, TEXT_SEMIBOLD = 4;
+    /**
+     * Font faces bundled in assets/fonts: Inter and Inter Display for the interface, Newsreader
+     * Display (an editorial serif) for big numerals, titles and accents, Geist Mono for small
+     * labels.
+     */
+    int DISPLAY_LIGHT = 0, DISPLAY_SEMIBOLD = 1, TEXT_REGULAR = 2, TEXT_MEDIUM = 3, TEXT_SEMIBOLD = 4,
+            SERIF_LIGHT = 5, SERIF = 6, SERIF_ITALIC = 7, MONO = 8;
+    int FACES = 9;
+    String[] FONT_FILES = {"InterDisplay-Light.ttf", "InterDisplay-SemiBold.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf",
+        "Inter-SemiBold.ttf", "NewsreaderDisplay-Light.ttf", "NewsreaderDisplay-Regular.ttf", "NewsreaderDisplay-Italic.ttf",
+        "GeistMono-Medium.ttf"};
 
     int save();
 
@@ -86,6 +95,15 @@ interface Gfx {
     /** A circle filled with a linear gradient (constant colour array, as above). */
     void fillCircleLinear(float cx, float cy, float rad, float x0, float y0, float x1, float y1,
             int[] colors, float[] stops, float alpha);
+
+    /** A transparent image of w x h pixels that can be drawn into with {@link #into}. */
+    Object offscreen(int w, int h);
+
+    /** A Gfx whose drawing lands in {@code offscreen} (from {@link #offscreen}). */
+    Gfx into(Object offscreen);
+
+    /** Makes an offscreen image fully transparent again. */
+    void clear(Object offscreen);
 
     /** Creates an image from ARGB pixels (used for pre-rendered shadows). */
     Object image(int[] argb, int w, int h);

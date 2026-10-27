@@ -32,7 +32,7 @@ final class AwtGfx implements Gfx {
     private final Graphics2D g;
     private final List<AffineTransform> transforms = new ArrayList<>();
     private final List<Shape> clips = new ArrayList<>();
-    private final Font[] faces = new Font[5];
+    private final Font[] faces;
     private final Map<String, Font> sized = new HashMap<>();
 
     AwtGfx(Graphics2D g, File fonts) throws Exception {
@@ -43,8 +43,38 @@ final class AwtGfx implements Gfx {
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
         g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
-        String[] files = {"InterDisplay-Light.ttf", "InterDisplay-SemiBold.ttf", "Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf"};
-        for (int i = 0; i < files.length; i++) faces[i] = Font.createFont(Font.TRUETYPE_FONT, new File(fonts, files[i]));
+        faces = new Font[FACES];
+        for (int i = 0; i < FACES; i++) faces[i] = Font.createFont(Font.TRUETYPE_FONT, new File(fonts, FONT_FILES[i]));
+    }
+
+    private AwtGfx(Graphics2D g, Font[] shared) {
+        this.g = g;
+        faces = shared;
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+        g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+    }
+
+    @Override
+    public Object offscreen(int w, int h) {
+        return new BufferedImage(Math.max(1, w), Math.max(1, h), BufferedImage.TYPE_INT_ARGB);
+    }
+
+    @Override
+    public Gfx into(Object offscreen) {
+        return new AwtGfx(((BufferedImage) offscreen).createGraphics(), faces);
+    }
+
+    @Override
+    public void clear(Object offscreen) {
+        BufferedImage b = (BufferedImage) offscreen;
+        Graphics2D c = b.createGraphics();
+        c.setComposite(AlphaComposite.Clear);
+        c.fillRect(0, 0, b.getWidth(), b.getHeight());
+        c.dispose();
     }
 
     private static Color color(int argb) {

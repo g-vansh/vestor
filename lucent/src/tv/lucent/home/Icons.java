@@ -112,15 +112,12 @@ final class Icons {
             }
             case STORM: {
                 cloud(g, cx, cy - s * 0.12f, s * 0.86f, cloudC);
-                float u = s;
-                g.fillPolygon(new float[] {
-                    cx + u * 0.03f, cy + u * 0.08f,
-                    cx - u * 0.1f, cy + u * 0.27f,
-                    cx - u * 0.01f, cy + u * 0.27f,
-                    cx - u * 0.06f, cy + u * 0.42f,
-                    cx + u * 0.1f, cy + u * 0.2f,
-                    cx + u * 0.01f, cy + u * 0.2f,
-                    cx + u * 0.06f, cy + u * 0.08f}, boltC);
+                float[] p = scratch(STORM_BOLT.length);
+                for (int k = 0; k < p.length; k += 2) {
+                    p[k] = cx + STORM_BOLT[k] * s;
+                    p[k + 1] = cy + STORM_BOLT[k + 1] * s;
+                }
+                g.fillPolygon(p, boltC);
                 break;
             }
             default:
@@ -295,8 +292,21 @@ final class Icons {
 
     /** A gear outline with eight teeth. */
     static void gear(Gfx g, float cx, float cy, float s, int color) {
+        float[] p = scratch(GEAR.length);
+        for (int k = 0; k < GEAR.length; k += 2) {
+            p[k] = cx + GEAR[k] * s;
+            p[k + 1] = cy + GEAR[k + 1] * s;
+        }
+        g.strokePolygon(p, s * 0.075f, color);
+        g.strokeCircle(cx, cy, s * 0.12f, s * 0.075f, color);
+    }
+
+    /** The gear's outline for a size of 1: eight teeth, four points each. */
+    private static final float[] GEAR = gearOutline();
+
+    private static float[] gearOutline() {
         int teeth = 8;
-        float ro = s * 0.4f, ri = s * 0.31f;
+        float ro = 0.4f, ri = 0.31f;
         float[] p = new float[teeth * 4 * 2];
         int k = 0;
         for (int i = 0; i < teeth; i++) {
@@ -305,17 +315,18 @@ final class Icons {
             double[] angles = {base - half * 0.62, base - half * 0.36, base + half * 0.36, base + half * 0.62};
             float[] radii = {ri, ro, ro, ri};
             for (int j = 0; j < 4; j++) {
-                p[k++] = cx + (float) Math.cos(angles[j]) * radii[j];
-                p[k++] = cy + (float) Math.sin(angles[j]) * radii[j];
+                p[k++] = (float) Math.cos(angles[j]) * radii[j];
+                p[k++] = (float) Math.sin(angles[j]) * radii[j];
             }
         }
-        g.strokePolygon(p, s * 0.075f, color);
-        g.strokeCircle(cx, cy, s * 0.12f, s * 0.075f, color);
+        return p;
     }
 
     /** A waveform: five rounded bars, the sign for sound. */
+    private static final float[] SOUND_BARS = {0.28f, 0.56f, 0.82f, 0.5f, 0.3f};
+
     static void sound(Gfx g, float cx, float cy, float s, int color) {
-        float[] h = {0.28f, 0.56f, 0.82f, 0.5f, 0.3f};
+        float[] h = SOUND_BARS;
         float w = s * 0.1f, step = s * 0.17f;
         for (int i = 0; i < h.length; i++) {
             float x = cx + (i - 2) * step;
@@ -346,8 +357,44 @@ final class Icons {
         return cy + (y - 12f) * s / 24f;
     }
 
-    private static float[] grid(float cx, float cy, float s, float... xy) {
-        float[] out = new float[xy.length];
+    // Glyph outlines on the 24-unit grid, kept as constants so drawing a glyph allocates nothing.
+    private static final float[] BIKE_1 = {5.5f, 15f, 11.5f, 15f, 9.5f, 8.5f, 15.5f, 8.5f, 11.5f, 15f};
+    private static final float[] BIKE_2 = {18.5f, 15f, 15.5f, 8.5f, 15f, 6f, 17f, 6f};
+    private static final float[] BOLT_1 = {14f, 2f, 5.5f, 13f, 11.5f, 13f, 10f, 22f, 18.5f, 11f, 12.5f, 11f};
+    private static final float[] EBIKE_1 = {5f, 1.2f, 1.8f, 5.6f, 3.9f, 5.6f, 3.3f, 9f, 6.2f, 4.4f, 4.2f, 4.4f};
+    private static final float[] DOCK_1 = {5f, 6f, 5f, 18.5f, 19f, 18.5f, 19f, 6f};
+    private static final float[] DOCK_2 = {10f, 18.5f, 10f, 12.5f, 14f, 12.5f, 14f, 18.5f};
+    private static final float[] EXIT_1 = {13f, 4f, 5f, 4f, 5f, 20f, 13f, 20f};
+    private static final float[] EXIT_2 = {17f, 8.5f, 20.5f, 12f, 17f, 15.5f};
+    private static final float[] MIRROR_1 = {3f, 9f, 3f, 5f, 21f, 5f, 21f, 19f, 13f, 19f};
+
+    /** Scratch arrays by length: the Gfx turns a polygon into a path at once, so one per length is enough. */
+    private static final float[][] SCRATCH = new float[129][];
+
+    private static float[] scratch(int n) {
+        if (n >= SCRATCH.length) return new float[n];
+        float[] a = SCRATCH[n];
+        if (a == null) a = SCRATCH[n] = new float[n];
+        return a;
+    }
+
+    private static void tri(Gfx g, float x0, float y0, float x1, float y1, float x2, float y2, int color) {
+        float[] p = scratch(6);
+        p[0] = x0;
+        p[1] = y0;
+        p[2] = x1;
+        p[3] = y1;
+        p[4] = x2;
+        p[5] = y2;
+        g.fillPolygon(p, color);
+    }
+
+    /** The storm cloud's bolt, for a size of 1, from the cloud's centre. */
+    private static final float[] STORM_BOLT = {0.03f, 0.08f, -0.1f, 0.27f, -0.01f, 0.27f, -0.06f, 0.42f, 0.1f, 0.2f, 0.01f, 0.2f,
+        0.06f, 0.08f};
+
+    private static float[] grid(float cx, float cy, float s, float[] xy) {
+        float[] out = scratch(xy.length);
         for (int i = 0; i + 1 < xy.length; i += 2) {
             out[i] = gx(cx, s, xy[i]);
             out[i + 1] = gy(cy, s, xy[i + 1]);
@@ -365,12 +412,12 @@ final class Icons {
         g.strokeCircle(gx(cx, s, 18.5f), gy(cy, s, 15f), r, w, color);
         // rear axle, bottom bracket, seat cluster, head, bottom bracket: chain stay, seat tube,
         // top tube and down tube as one stroke
-        g.polyline(grid(cx, cy, s, 5.5f, 15f, 11.5f, 15f, 9.5f, 8.5f, 15.5f, 8.5f, 11.5f, 15f), w, color);
+        g.polyline(grid(cx, cy, s, BIKE_1), w, color);
         // seatpost on the seat tube's line, and the saddle
         g.line(gx(cx, s, 9.5f), gy(cy, s, 8.5f), gx(cx, s, 8.8f), gy(cy, s, 6.1f), w, color);
         g.line(gx(cx, s, 7.5f), gy(cy, s, 6f), gx(cx, s, 10.3f), gy(cy, s, 6f), w, color);
         // fork to the front axle, stem and bar
-        g.polyline(grid(cx, cy, s, 18.5f, 15f, 15.5f, 8.5f, 15f, 6f, 17f, 6f), w, color);
+        g.polyline(grid(cx, cy, s, BIKE_2), w, color);
     }
 
     /** Stroke weight: 2 units, 1.75 from 48 px up, never thinner than a pixel and a half. */
@@ -380,20 +427,20 @@ final class Icons {
 
     /** A lightning bolt, filled, leaning about 11 degrees: the mark for electric assist. */
     static void bolt(Gfx g, float cx, float cy, float s, int color) {
-        g.fillPolygon(grid(cx, cy, s, 14f, 2f, 5.5f, 13f, 11.5f, 13f, 10f, 22f, 18.5f, 11f, 12.5f, 11f), color);
+        g.fillPolygon(grid(cx, cy, s, BOLT_1), color);
     }
 
     /** The bike with a bolt above its rear wheel: an e-bike, recognisable by shape alone. */
     static void ebike(Gfx g, float cx, float cy, float s, int color, int badge) {
         bike(g, cx, cy, s, color);
-        g.fillPolygon(grid(cx, cy, s, 5f, 1.2f, 1.8f, 5.6f, 3.9f, 5.6f, 3.3f, 9f, 6.2f, 4.4f, 4.2f, 4.4f), badge);
+        g.fillPolygon(grid(cx, cy, s, EBIKE_1), badge);
     }
 
     /** An open dock: an empty bay with its stand, for "room to return a bike". */
     static void dock(Gfx g, float cx, float cy, float s, int color) {
         float w = stroke(s);
-        g.polyline(grid(cx, cy, s, 5f, 6f, 5f, 18.5f, 19f, 18.5f, 19f, 6f), w, color);
-        g.polyline(grid(cx, cy, s, 10f, 18.5f, 10f, 12.5f, 14f, 12.5f, 14f, 18.5f), w, color);
+        g.polyline(grid(cx, cy, s, DOCK_1), w, color);
+        g.polyline(grid(cx, cy, s, DOCK_2), w, color);
     }
 
     /** A shuttle seen head-on: body, tinted windscreen, lamps and wheels. */
@@ -443,8 +490,8 @@ final class Icons {
                 float fade = 0.45f * (1 - i / (float) slices);
                 double r0 = Math.toRadians(a0), r1 = Math.toRadians(a1);
                 float rad = 10.2f * u;
-                g.fillPolygon(new float[] {cx, cy, cx + (float) Math.cos(r0) * rad, cy + (float) Math.sin(r0) * rad,
-                    cx + (float) Math.cos(r1) * rad, cy + (float) Math.sin(r1) * rad}, Pixels.alpha(accent, fade));
+                tri(g, cx, cy, cx + (float) Math.cos(r0) * rad, cy + (float) Math.sin(r0) * rad, cx + (float) Math.cos(r1) * rad,
+                        cy + (float) Math.sin(r1) * rad, Pixels.alpha(accent, fade));
             }
             for (int i = 0; i < 3; i++) {
                 float phase = (float) (((t - i * 0.53) / 1.6) % 1.0);
@@ -489,5 +536,130 @@ final class Icons {
         g.text(label, Gfx.TEXT_SEMIBOLD, size, 0.04f, l + w / 2, cy + g.capHeight(Gfx.TEXT_SEMIBOLD, size) / 2, color,
                 Gfx.CENTER, 0);
         return w;
+    }
+
+    // ---- Added in 2.0 ---------------------------------------------------------------------------
+
+    /** A desk calendar: rings, a page and one day marked in {@code accent}. */
+    static void calendar(Gfx g, float cx, float cy, float s, int color, int accent) {
+        float w = stroke(s), u = s / 24f;
+        g.strokeRoundRect(gx(cx, s, 4f), gy(cy, s, 5f), gx(cx, s, 20f), gy(cy, s, 20.5f), u * 3f, w, color);
+        g.line(gx(cx, s, 4.5f), gy(cy, s, 9.5f), gx(cx, s, 19.5f), gy(cy, s, 9.5f), w, color);
+        g.line(gx(cx, s, 8.5f), gy(cy, s, 3f), gx(cx, s, 8.5f), gy(cy, s, 6.5f), w, color);
+        g.line(gx(cx, s, 15.5f), gy(cy, s, 3f), gx(cx, s, 15.5f), gy(cy, s, 6.5f), w, color);
+        g.fillRoundRect(gx(cx, s, 13f), gy(cy, s, 13f), gx(cx, s, 17f), gy(cy, s, 17f), u * 1.2f, accent);
+    }
+
+    /** Four bars rising and falling while music plays; still when {@code t} is negative. */
+    static void bars(Gfx g, float cx, float cy, float s, float t, int color) {
+        float w = s * 0.16f, step = s * 0.26f;
+        for (int i = 0; i < 4; i++) {
+            float h = t < 0 ? 0.35f + 0.15f * (i % 2) : 0.25f + 0.75f * (0.5f + 0.5f * (float) Math.sin(t * (5.1 + i * 1.7) + i * 1.3));
+            float x = cx + (i - 1.5f) * step, half = s * h / 2;
+            g.line(x, cy + s / 2 - w / 2 - half * 2 + w, x, cy + s / 2 - w / 2, w, color);
+        }
+    }
+
+    /** A pair of quavers: music. */
+    static void note(Gfx g, float cx, float cy, float s, int color) {
+        float w = stroke(s), u = s / 24f;
+        g.fillCircle(gx(cx, s, 7f), gy(cy, s, 18f), u * 3.2f, color);
+        g.fillCircle(gx(cx, s, 17f), gy(cy, s, 16f), u * 3.2f, color);
+        g.line(gx(cx, s, 9.8f), gy(cy, s, 18f), gx(cx, s, 9.8f), gy(cy, s, 5.5f), w, color);
+        g.line(gx(cx, s, 19.8f), gy(cy, s, 16f), gx(cx, s, 19.8f), gy(cy, s, 3.5f), w, color);
+        g.line(gx(cx, s, 9.8f), gy(cy, s, 5.5f), gx(cx, s, 19.8f), gy(cy, s, 3.5f), w * 1.4f, color);
+    }
+
+    /** A checkbox, ticked when done. */
+    static void box(Gfx g, float cx, float cy, float s, boolean done, int color) {
+        g.strokeRoundRect(cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2, s * 0.25f, Math.max(1.2f, s * 0.1f), color);
+        if (done) check(g, cx, cy, s * 0.8f, color);
+    }
+
+    /** Play (a triangle) or pause (two bars). */
+    static void play(Gfx g, float cx, float cy, float s, boolean playing, int color) {
+        if (playing) {
+            float w = s * 0.22f, h = s * 0.62f;
+            g.fillRoundRect(cx - s * 0.28f, cy - h / 2, cx - s * 0.28f + w, cy + h / 2, w * 0.3f, color);
+            g.fillRoundRect(cx + s * 0.06f, cy - h / 2, cx + s * 0.06f + w, cy + h / 2, w * 0.3f, color);
+        } else {
+            tri(g, cx - s * 0.22f, cy - s * 0.34f, cx + s * 0.36f, cy, cx - s * 0.22f, cy + s * 0.34f, color);
+        }
+    }
+
+    /** Skip: two triangles and a bar, forward or back. */
+    static void skip(Gfx g, float cx, float cy, float s, boolean forward, int color) {
+        float d = forward ? 1 : -1, h = s * 0.3f;
+        for (int i = 0; i < 2; i++) {
+            float x0 = cx + d * (-s * 0.34f + i * s * 0.26f);
+            tri(g, x0, cy - h, x0 + d * s * 0.3f, cy, x0, cy + h, color);
+        }
+        float bx = cx + d * s * 0.26f;
+        g.line(bx, cy - h, bx, cy + h, s * 0.08f, color);
+    }
+
+    /** Leaving: a door frame with an arrow out of it, for "back to Fire TV". */
+    static void exit(Gfx g, float cx, float cy, float s, int color) {
+        float w = stroke(s);
+        g.polyline(grid(cx, cy, s, EXIT_1), w, color);
+        g.line(gx(cx, s, 10f), gy(cy, s, 12f), gx(cx, s, 20.5f), gy(cy, s, 12f), w, color);
+        g.polyline(grid(cx, cy, s, EXIT_2), w, color);
+    }
+
+    /** Mirroring: a screen with signal arcs rising from its lower left corner. */
+    static void mirror(Gfx g, float cx, float cy, float s, int color) {
+        float w = stroke(s), u = s / 24f;
+        g.polyline(grid(cx, cy, s, MIRROR_1), w, color);
+        g.arc(gx(cx, s, 3f), gy(cy, s, 19f), u * 4f, -90, 90, w, color);
+        g.arc(gx(cx, s, 3f), gy(cy, s, 19f), u * 8f, -90, 90, w, color);
+        g.fillCircle(gx(cx, s, 3.6f), gy(cy, s, 18.4f), u * 1.4f, color);
+    }
+
+    /** A phone, for the control center. */
+    static void phone(Gfx g, float cx, float cy, float s, int color) {
+        float w = stroke(s), u = s / 24f;
+        g.strokeRoundRect(gx(cx, s, 7f), gy(cy, s, 2.5f), gx(cx, s, 17f), gy(cy, s, 21.5f), u * 2.6f, w, color);
+        g.line(gx(cx, s, 10.5f), gy(cy, s, 18.2f), gx(cx, s, 13.5f), gy(cy, s, 18.2f), w, color);
+    }
+
+    /** Two earbuds, for Bluetooth headphones. */
+    static void earbuds(Gfx g, float cx, float cy, float s, int color) {
+        float w = stroke(s), u = s / 24f;
+        for (int side = -1; side <= 1; side += 2) {
+            float ox = side * 4.5f;
+            g.fillCircle(gx(cx, s, 12f + ox), gy(cy, s, 8.5f), u * 3.4f, color);
+            g.line(gx(cx, s, 12f + ox + side * 1.2f), gy(cy, s, 10f), gx(cx, s, 12f + ox + side * 1.2f), gy(cy, s, 20f), w * 1.2f, color);
+        }
+    }
+
+    /** Wi-Fi: three arcs over a dot. */
+    static void wifi(Gfx g, float cx, float cy, float s, int color) {
+        float w = stroke(s), u = s / 24f;
+        float ox = gx(cx, s, 12f), oy = gy(cy, s, 19f);
+        for (int i = 1; i <= 3; i++) g.arc(ox, oy, u * (4f + 4.5f * i), -135, 90, w, color);
+        g.fillCircle(ox, oy, u * 1.8f, color);
+    }
+
+    /** The moon at {@code lit} (0 new, 1 full), waxing when {@code waxing}: a disc and its shadow. */
+    static void moonPhase(Gfx g, float cx, float cy, float s, double phase, int color, int shade) {
+        float r = s * 0.42f;
+        g.fillCircle(cx, cy, r, shade);
+        // The lit part: a half disc plus an ellipse, as the terminator moves across.
+        int n = 24;
+        float[] p = new float[(n + 1) * 4];
+        double k = Math.cos(phase * 2 * Math.PI);
+        boolean waxing = phase < 0.5;
+        int i = 0;
+        for (int j = 0; j <= n; j++) {
+            double a = -Math.PI / 2 + Math.PI * j / n;
+            p[i++] = cx + (float) (Math.cos(a) * r * (waxing ? 1 : -1));
+            p[i++] = cy + (float) (Math.sin(a) * r);
+        }
+        for (int j = n; j >= 0; j--) {
+            double a = -Math.PI / 2 + Math.PI * j / n;
+            p[i++] = cx + (float) (Math.cos(a) * r * k * (waxing ? 1 : -1));
+            p[i++] = cy + (float) (Math.sin(a) * r);
+        }
+        g.fillPolygon(p, color);
     }
 }

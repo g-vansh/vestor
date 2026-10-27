@@ -5,8 +5,16 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <!-- Public feeds only: weather, Bluebikes, MIT shuttles, the MBTA, aircraft. See README. -->
+    <!-- Public feeds (weather, Bluebikes, MIT shuttles, the MBTA, aircraft, your calendar links)
+         and the control center on your home network. See README. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Waking the screen for Alexa's "find an e-bike" and, if chosen, for a new note. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Starting the control center at boot, and putting the HOME service back after an update. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Never granted by installing: only install.sh grants it, once, over ADB, and its undo takes
+         it back. Used for nothing but re-enabling Lucent's own HOME service (see Boot.java). -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <application
         android:label="@string/app_name"
@@ -55,5 +63,33 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/guard" />
         </service>
+
+        <!-- Photos are decoded here: a separate, isolated process with no permissions, no network
+             and no files of its own, so a booby-trapped picture cannot reach Lucent's data. -->
+        <service
+            android:name=".Decoder"
+            android:process=":decode"
+            android:isolatedProcess="true"
+            android:exported="false" />
+
+        <!-- Only for seeing which app is playing (Now Playing). Reads no notifications. -->
+        <service
+            android:name=".Listener"
+            android:label="@string/listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".Boot"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
