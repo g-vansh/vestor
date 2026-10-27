@@ -906,6 +906,11 @@ from `VESTOR_KEYPASS`, the macOS Keychain (`security add-generic-password -s ves
 vestor -w`), or `release.keystore.pass` beside the key. The build refuses to invent a new key
 unless `VESTOR_NEW_KEY=1`, because the TV would refuse updates signed by it.
 
+`scripts/tv.sh` gives a session at the TV its eyes and hands over ADB: exact screenshots of the
+Fire TV, photos from the laptop camera, remote keys and the system screens' buttons.
+`SETUP_HANDOFF.md` walks such a session through installing, the update test, Video Calls and the
+AirPods.
+
 `preview/` renders the real scene code on a desktop JVM from recorded feed fixtures, which is how
 the screenshots were made. `preview/tests` checks every feed parser, the calendar reader and the
 QR encoder, feeds them hostile input and fuzzes the remote. `assets/web` is the control center's
