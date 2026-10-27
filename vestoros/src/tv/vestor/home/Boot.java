@@ -33,6 +33,21 @@ public final class Boot extends BroadcastReceiver {
         } catch (RuntimeException ignored) {
             // the next HOME press starts it
         }
+        // Updated from the TV a moment ago: Android closed Vestor to replace it, so it comes back.
+        if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) {
+            Prefs p = new Prefs(c);
+            long at;
+            try {
+                at = Long.parseLong(p.get(Prefs.UPDATE_AT, "0"));
+            } catch (NumberFormatException e) {
+                at = 0;
+            }
+            long ago = System.currentTimeMillis() - at;
+            if (at > 0 && ago >= 0 && ago < 20 * 60000L) {
+                p.put(Prefs.UPDATE_AT, "0");
+                Guard.wake(c, true);
+            }
+        }
     }
 
     /** Whether Vestor may write secure settings (granted by install.sh). */

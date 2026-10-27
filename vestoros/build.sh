@@ -10,8 +10,10 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 unset JAVA_TOOL_OPTIONS
 
-VERSION_CODE=${VERSION_CODE:-3}
-VERSION_NAME=${VERSION_NAME:-2.0}
+# The version comes from BuildInfo.java, so the app and the APK can never disagree.
+VERSION_CODE=$(sed -n 's/.*static final int CODE = \([0-9][0-9]*\);.*/\1/p' src/tv/vestor/home/BuildInfo.java)
+VERSION_NAME=$(sed -n 's/.*static final String VERSION = "\([0-9][0-9A-Za-z.]*\)";.*/\1/p' src/tv/vestor/home/BuildInfo.java)
+[[ -n $VERSION_CODE && -n $VERSION_NAME ]] || { echo "error: no version in BuildInfo.java" >&2; exit 1; }
 MIN_SDK=28
 TARGET_SDK=28
 

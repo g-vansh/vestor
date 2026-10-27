@@ -1524,6 +1524,35 @@ add airline branding.
   Samsung camera app; if not, the webcam goes on the Fire TV stick with an OTG cable.
 - Next: on the TV, Video Calls, Menu, both checks with the webcam plugged in.
 
+### 2026-10-27: VestorOS 2.1, AirPods in calls, and updates from the TV
+- Did: Video Calls routes call audio for AirPods. Android 11's audio policy (its source, read
+  for this) sends no sound to stereo-only Bluetooth headphones in call mode, and the web engine
+  (Chromium's own Android audio code, also read) turns call mode on whenever the device has an
+  echo canceller, picking a USB microphone over a Bluetooth headset. So with AirPods whose
+  microphone Fire OS offers (the hands-free profile), Vestor opens their call link before
+  WhatsApp gets the microphone and holds call mode, so they carry both ways. With AirPods for
+  listening only, it keeps Android out of call mode and off the speakerphone, so the call plays
+  in them and the voice comes from the webcam. A Menu check says which this Fire TV offers, a
+  setting chooses the webcam even when the AirPods' microphone is there, and everything goes back
+  when the call ends. New permission: Bluetooth (install-time).
+- Did: updates over the air. publish.sh builds, checks (signer, package, version, no secrets)
+  and replaces the public `ota` branch with update.json, this APK and the one before. The TV
+  reads update.json every six hours (or on Check Now, or six minutes after an ntfy nudge),
+  downloads into private storage, checks size, SHA-256, package, version and that the signer
+  is the running app's own, then offers it. Install goes through Fire OS's confirmation screen,
+  and Vestor comes back to the front after. install.sh allows "Install unknown apps" for Vestor
+  and --undo takes it back. Version now comes from BuildInfo.java only: 2.1, code 4.
+- Verified: CallingTest 67 (routes, lines, the check), UpdateTest 60 (forged and malformed
+  update.json, file names, sizes, numbers as text, hosts), all 14 suites green, -Werror build
+  against Android 11. publish.sh refuses a one-byte-tampered APK. The TV's parser offers code 4
+  to a 2.0 TV and nothing to a 2.1 TV, from the update.json publish.sh wrote.
+- Changed from brief: whether Fire OS offers the AirPods' microphone could not be settled
+  without the hardware (Amazon lists Bluetooth 5.2 with no profiles). The code handles both
+  answers and the Menu check reports it. One confirmation press per update stays: Android 11
+  has no silent self-update for ordinary apps.
+- Next: install 2.1 once with install.sh (2.0 has no updater). After that, updates come from
+  the TV.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

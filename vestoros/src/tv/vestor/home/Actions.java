@@ -128,6 +128,16 @@ final class Actions {
                 }
                 throw new Http.Refused(404, "device");
             }
+            case "update": {
+                // Check now, or install the ready update: Fire OS then asks on the TV to confirm.
+                String what = Json.str(body, "do", "");
+                String said;
+                if ("check".equals(what)) said = h.updater.check(true);
+                else if ("install".equals(what)) said = h.updater.install();
+                else throw new Http.Refused(400, "update");
+                if ("install".equals(what) && h.updater.state == Update.INSTALLING) Guard.wake(h.app, false);
+                return new Jw().obj().put("ok", true).put("note", said).end().toString();
+            }
             case "refresh":
                 h.live.wake(120000);
                 h.live.refreshBikes();

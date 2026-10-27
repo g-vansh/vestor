@@ -109,11 +109,13 @@ gracefully.
 
 ```json
 {
-  "tv": {"name": "Vestor", "version": "2.0", "front": true, "mode": "night", "modeSetting": "auto",
+  "tv": {"name": "Vestor", "version": "2.1", "front": true, "mode": "night", "modeSetting": "auto",
          "nextChange": 1793170000000, "sunrise": 1793100000000, "sunset": 1793140000000,
          "moon": "Waxing crescent", "moonLit": 0.31, "urls": ["http://192.168.1.23:8686"],
          "access": "lan", "now": 1793124300000, "dim": false, "ringing": false},
   "me": {"name": "Alex's iPhone", "id": "Ab3d"},
+  "update": {"state": "ready", "version": "2.2", "notes": "What changed, from the checked APK", "problem": "",
+             "checkedAt": 1793124000000, "allowed": true},
   "weather": {"ok": true, "city": "Cambridge", "tempF": 53, "tempC": 11.6, "feelsF": 49, "hiF": 56, "loF": 41,
               "condition": "Partly cloudy", "code": 2, "day": true, "humidity": 58, "windMph": 9, "windDir": "W",
               "updated": "1:56 PM",
@@ -297,6 +299,7 @@ Notes on the newer fields (all optional, the page renders without them):
 | `assistant` | `{"do": "ruledel", "id"}`, `{"do": "ruleon", "id", "on": bool}` | Delete an automation, or turn it off and on |
 | `volume` | `{"do": "up"\|"down"\|"mute"}` | The Fire TV's own volume keys. Fire OS sends them over HDMI-CEC to whatever plays the sound (the VIZIO soundbar here), so this works with no Samsung setup at all. The page's Volume buttons send this |
 | `push` | `{"do": "test"}` | Send a test notification to subscribed phones. 409 `{"error": "…"}` when phone alerts are off |
+| `update` | `{"do": "check"\|"install"}` | Look for a new VestorOS now (at most once a minute), or install the ready one: Fire OS shows its confirmation on the TV. Reply `{"ok": true, "note": "<a sentence for the page>"}`. `update.state` is idle, checking, current, downloading, ready, installing or failed. `version` and `notes` come from the downloaded APK after its checks. `allowed` false means "Install unknown apps" is off for Vestor |
 
 Setting keys for `set` (anything else is refused): `units` f/c/off, `clock` auto/12/24,
 `rotate` 1m/5m/10m/hour/day/off, `album` nature/ours/both, `motion` full/reduced, `ambient`
@@ -312,7 +315,8 @@ invalidates the old ones; when on, state.alexa has the links and `commands`), `a
 bike alarm rings before it gives up by itself), `quality` motion/still (motion is the slow drifting wallpaper,
 still shows the photo pixel for pixel), `pictureFollow` on/off (the Samsung picture follows day and night),
 `dayMode`, `nightMode` and `glareMode` (each one of `samsung.modes`), `push` on/off/new (new makes a fresh topic,
-and phones must subscribe again).
+and phones must subscribe again), `callVoice` headset/webcam (in Video Calls, your voice through the headphones'
+microphone when Fire OS offers it, or through the webcam).
 
 Calendars round trip: state.calendar.feeds[].url is masked like "https://calendar.google.com/…". When saving the
 list with `set calendars`, send unchanged feeds back with that exact masked url and the TV keeps the saved

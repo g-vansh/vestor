@@ -245,10 +245,12 @@ if [[ $mode != install ]]; then
   fi
   set_futurity off
   sh_ dumpsys deviceidle whitelist -$PKG >/dev/null 2>&1 || true
-  # The two grants this script gave: re-enabling its own HOME service after updates, and seeing
-  # what is playing. Without them nothing can switch HOME back on behind your back.
+  # The grants this script gave: re-enabling its own HOME service after updates, seeing what is
+  # playing, and offering its own updates. Without them nothing can switch HOME back on behind
+  # your back, and Vestor can no longer start an update.
   sh_ pm revoke $PKG android.permission.WRITE_SECURE_SETTINGS >/dev/null 2>&1 || true
   sh_ cmd notification disallow_listener "$LISTENER" >/dev/null 2>&1 || true
+  sh_ appops set $PKG REQUEST_INSTALL_PACKAGES default >/dev/null 2>&1 || true
   sh_ input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
   sh_ am start -a android.intent.action.MAIN -c android.intent.category.HOME >/dev/null 2>&1 || true
   if [[ $mode == remove ]]; then
@@ -406,10 +408,12 @@ if [[ $bound == 0 ]]; then
   exit 1
 fi
 
-# Two one-time grants Fire OS has no screen for. The first lets Vestor put its own HOME service
-# back after a Fire OS update or a restart switches it off (Boot.java, nothing else). The second
-# lets it see which app is playing for Now Playing and the remote's play key; it reads no
-# notifications. --undo takes both back.
+# One-time grants. The first lets Vestor put its own HOME service back after a Fire OS update or
+# a restart switches it off (Boot.java, nothing else). The second lets it see which app is
+# playing for Now Playing and the remote's play key; it reads no notifications. The third is
+# "Install unknown apps" for Vestor, so it can hand its own updates to Fire OS's installer
+# (Updater.java); each update still asks you to confirm, and Android installs only one signed
+# with Vestor's key. --undo takes all three back.
 if sh_ pm grant $PKG android.permission.WRITE_SECURE_SETTINGS >/dev/null 2>&1; then
   echo "granted: Vestor can switch its HOME service back on after a Fire OS update"
 else
@@ -419,6 +423,11 @@ if sh_ cmd notification allow_listener "$LISTENER" >/dev/null 2>&1; then
   echo "granted: Now Playing (Vestor sees which app plays music, not your notifications)"
 else
   echo "note: Now Playing was not granted, so the music card stays hidden. Everything else works."
+fi
+if sh_ appops set $PKG REQUEST_INSTALL_PACKAGES allow >/dev/null 2>&1; then
+  echo "granted: updates from the TV (Vestor offers new versions, you confirm each with Install)"
+else
+  echo "note: to update from the TV, allow it once: Settings, My Fire TV, Developer Options, Install Unknown Apps, Vestor."
 fi
 
 if [[ -n ${VESTOR_CLAUDE_KEY:-} ]]; then claude_key "$VESTOR_CLAUDE_KEY" || true; fi

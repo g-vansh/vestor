@@ -2,7 +2,7 @@ package tv.vestor.home;
 
 import java.util.Map;
 
-/** Video Calls: the engine check, where the screen may go, who gets the camera, the pointer, the Samsung's report. */
+/** Video Calls: the engine check, where the screen may go, who gets the camera, the pointer, the Samsung's report, call audio. */
 public final class CallingTest {
     private static int failures, checks;
 
@@ -63,8 +63,78 @@ public final class CallingTest {
                 && !hostile.contains("Pwned") && !hostile.contains("<b>"));
         eq("nothing", "", Calling.camReport(null));
 
+        // Call audio: where the sound and your voice go
+        CallAudio.Facts none = new CallAudio.Facts();
+        eq("nothing connected: the TV", CallAudio.TV, CallAudio.route(none, CallAudio.HEADSET));
+        eq("no mic, no AirPods: told", "No microphone found. For your voice, plug a USB webcam into the Fire TV.",
+                CallAudio.line(CallAudio.TV, none, false));
+        CallAudio.Facts cam = facts(false, false, true, false);
+        eq("webcam alone: the TV, said nothing", "", CallAudio.line(CallAudio.route(cam, CallAudio.HEADSET), cam, false));
+
+        // The likely Fire TV: AirPods for listening only (no hands-free profile)
+        CallAudio.Facts ears = facts(false, true, true, true);
+        eq("AirPods for sound, webcam for voice", CallAudio.EARS, CallAudio.route(ears, CallAudio.HEADSET));
+        eq("said plainly", "Call sound plays in your AirPods and your voice goes through the webcam.",
+                CallAudio.line(CallAudio.EARS, ears, false));
+        CallAudio.Facts earsNoMic = facts(false, true, false, true);
+        eq("AirPods for sound, no webcam", CallAudio.EARS, CallAudio.route(earsNoMic, CallAudio.HEADSET));
+        ok("asks for a webcam", CallAudio.line(CallAudio.EARS, earsNoMic, false).contains("listening only")
+                && CallAudio.line(CallAudio.EARS, earsNoMic, false).contains("plug a USB webcam"));
+
+        // AirPods whose microphone Fire OS offers
+        CallAudio.Facts both = facts(true, true, false, true);
+        eq("AirPods both ways", CallAudio.BOTH, CallAudio.route(both, CallAudio.HEADSET));
+        eq("said", "Call sound and your voice go through your AirPods.", CallAudio.line(CallAudio.BOTH, both, false));
+        CallAudio.Facts bothCam = facts(true, true, true, true);
+        eq("AirPods mic wanted over the webcam", CallAudio.BOTH, CallAudio.route(bothCam, CallAudio.HEADSET));
+        eq("webcam wanted: AirPods keep full sound", CallAudio.EARS, CallAudio.route(bothCam, CallAudio.WEBCAM));
+        eq("webcam wanted but none: the AirPods mic anyway", CallAudio.BOTH, CallAudio.route(both, CallAudio.WEBCAM));
+        eq("an unknown setting is the default", CallAudio.BOTH, CallAudio.route(bothCam, "weird"));
+        CallAudio.Facts noOffCall = facts(true, true, true, true);
+        noOffCall.offCall = false;
+        eq("Fire OS keeps the mic for phone calls: listening only", CallAudio.EARS, CallAudio.route(noOffCall, CallAudio.HEADSET));
+        CallAudio.Facts hfpOnly = facts(true, false, true, true);
+        eq("hands-free only, webcam wanted: the TV plays", CallAudio.TV, CallAudio.route(hfpOnly, CallAudio.WEBCAM));
+
+        // The link tried and failed, or dropped
+        eq("failed, webcam", "The microphone in your AirPods did not start. Call sound plays in your AirPods and your voice goes through "
+                + "the webcam.", CallAudio.line(CallAudio.EARS, ears, true));
+        eq("failed, no webcam", "The microphone in your AirPods did not start. Call sound plays in them. For your voice, plug a USB "
+                + "webcam into the Fire TV.", CallAudio.line(CallAudio.EARS, earsNoMic, true));
+        eq("dropped to the TV", "Your AirPods disconnected, so call sound plays on the TV.", CallAudio.dropped(CallAudio.TV, ears));
+        eq("dropped mic, sound stays", "The microphone in your AirPods stopped. Call sound stays in them and your voice goes through the "
+                + "webcam.", CallAudio.dropped(CallAudio.EARS, ears));
+
+        // Names and the check
+        ok("AirPods by name", CallAudio.airpods("Vansh\u2019s AirPods Pro") && CallAudio.airpods("AIRPODS MAX"));
+        ok("not AirPods", !CallAudio.airpods("WH-1000XM5") && !CallAudio.airpods(null));
+        CallAudio.Facts other = facts(false, true, false, false);
+        ok("other headphones named generically", CallAudio.line(CallAudio.EARS, other, false).startsWith("Call sound plays in your Bluetooth headphones."));
+        eq("check, listening only", "Your AirPods are connected for listening. Fire OS does not offer their microphone, so calls play in "
+                + "your AirPods and your voice needs another microphone. A webcam or USB microphone is plugged in.",
+                CallAudio.describe(ears, CallAudio.HEADSET));
+        eq("check, both ways", "Your AirPods are connected and Fire OS offers their microphone. Calls use your AirPods both ways, at "
+                + "phone-call sound quality. No USB microphone is plugged in.", CallAudio.describe(both, CallAudio.HEADSET));
+        eq("check, webcam chosen", "Your AirPods are connected and Fire OS offers their microphone. Calls take your voice from the webcam "
+                + "and play in your AirPods in full sound. A webcam or USB microphone is plugged in.", CallAudio.describe(bothCam, CallAudio.WEBCAM));
+        eq("check, nothing", "No Bluetooth headphones are connected, so calls play on the TV. No USB microphone is plugged in.",
+                CallAudio.describe(none, CallAudio.HEADSET));
+        for (String t : new String[] {CallAudio.line(CallAudio.EARS, earsNoMic, false), CallAudio.line(CallAudio.EARS, earsNoMic, true),
+                CallAudio.describe(noOffCall, CallAudio.HEADSET), CallAudio.describe(bothCam, CallAudio.WEBCAM), CallAudio.dropped(CallAudio.EARS, earsNoMic)}) {
+            ok("house style: " + t, t.indexOf(';') < 0 && t.indexOf('\u2014') < 0);
+        }
+
         System.out.println(checks + " checks, " + failures + " failures");
         System.exit(failures > 0 ? 1 : 0);
+    }
+
+    private static CallAudio.Facts facts(boolean headset, boolean headphones, boolean mic, boolean airpods) {
+        CallAudio.Facts f = new CallAudio.Facts();
+        f.headset = headset;
+        f.headphones = headphones;
+        f.mic = mic;
+        f.airpods = airpods;
+        return f;
     }
 
     private static Map<String, Object> m(String json) {

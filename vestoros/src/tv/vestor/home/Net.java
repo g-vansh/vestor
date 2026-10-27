@@ -1,12 +1,16 @@
 package tv.vestor.home;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,7 +58,7 @@ final class Net {
             "gbfs.lyft.com", "passio3.com", "api-v3.mbta.com",
             "api.adsb.lol", "api.airplanes.live", "opendata.adsb.fi", "hexdb.io", "api.adsbdb.com",
             "calendar.google.com", "outlook.office365.com", "outlook.live.com", "ntfy.sh", "api.smartthings.com",
-            "api.anthropic.com"));
+            "api.anthropic.com", "raw.githubusercontent.com"));
 
     /** Whether {@code host} is one Vestor may contact. iCloud serves published calendars from pNN-caldav or pNN-calendars. */
     static boolean allowedHost(String host) {
@@ -313,6 +317,77 @@ final class Net {
             alarm.cancel(false);
             cut.conn = null;
             if (conn != null) conn.disconnect();
+        }
+    }
+
+    /**
+     * Streams a large file (an update) into {@code to}, under the rules of {@link #get}: the
+     * allowlist, the governor, a deadline for the whole download ({@code totalMs}), no redirects.
+     * True only when exactly {@code size} bytes came and their SHA-256 is {@code sha256}; else
+     * {@code to} is deleted.
+     */
+    static boolean download(String url, File to, long size, String sha256, int timeoutMs, long totalMs) {
+        if (!allowed(url) || size <= 0) return false;
+        HttpURLConnection conn = null;
+        Cut cut = new Cut();
+        ScheduledFuture<?> alarm;
+        try {
+            alarm = WATCHDOG.schedule(cut, totalMs, TimeUnit.MILLISECONDS);
+        } catch (RuntimeException e) {
+            return false;
+        }
+        String host = "";
+        boolean ok = false;
+        FileOutputStream out = null;
+        try {
+            URL target = new URL(url);
+            host = target.getHost();
+            if (!Pace.take(host, System.currentTimeMillis())) return false;
+            conn = (HttpURLConnection) target.openConnection();
+            cut.conn = conn;
+            conn.setInstanceFollowRedirects(false);
+            conn.setConnectTimeout(timeoutMs);
+            conn.setReadTimeout(timeoutMs);
+            conn.setUseCaches(false);
+            conn.setRequestProperty("User-Agent", AGENT);
+            conn.setRequestProperty("Accept", "*/*");
+            // The bytes as published, so the length and hash are of the file itself.
+            conn.setRequestProperty("Accept-Encoding", "identity");
+            int code = conn.getResponseCode();
+            Pace.answered(host, code, conn.getHeaderField("Retry-After"), System.currentTimeMillis());
+            if (code != HttpURLConnection.HTTP_OK) return false;
+            long declared = conn.getContentLengthLong();
+            if (declared >= 0 && declared != size) return false;
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            InputStream in = conn.getInputStream();
+            out = new FileOutputStream(to);
+            byte[] buf = new byte[64 * 1024];
+            long n = 0;
+            int r;
+            while ((r = in.read(buf)) > 0) {
+                n += r;
+                if (n > size) return false;
+                md.update(buf, 0, r);
+                out.write(buf, 0, r);
+            }
+            out.getFD().sync();
+            ok = n == size && !cut.fired && Update.hex(md.digest()).equals(sha256);
+            return ok;
+        } catch (IOException | RuntimeException | NoSuchAlgorithmException e) {
+            if (!host.isEmpty()) Pace.unreachable(host, System.currentTimeMillis());
+            return false;
+        } finally {
+            alarm.cancel(false);
+            cut.conn = null;
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException ignored) {
+                    // the file is checked or deleted either way
+                }
+            }
+            if (conn != null) conn.disconnect();
+            if (!ok) to.delete();
         }
     }
 

@@ -46,6 +46,10 @@ final class Prefs {
             NIGHT_MODE = "night_mode", GLARE_MODE = "glare_mode", GLARE = "glare", GLARE_BACK = "glare_back";
     /** The second dock bike finder watches: "auto" for Erie St (outside Flour), "none", or a station id. */
     static final String STATION2 = "bike_station2";
+    /** Video Calls: your voice through the headphones' microphone when Fire OS offers it, or the webcam's. */
+    static final String CALL_VOICE = "call_voice";
+    /** When this TV last handed an update to Fire OS's installer, so the new version comes back to the front. */
+    static final String UPDATE_AT = "update_at";
 
     /** Every setting the control center may change, with its allowed values (null: free text checked elsewhere). */
     static final String[][] CHOICES = {
@@ -63,12 +67,14 @@ final class Prefs {
         {WAKE_NOTES, "never", "day", "always"},
         {QUALITY, "motion", "still"},
         {PICTURE_FOLLOW, "off", "on"},
+        {CALL_VOICE, CallAudio.HEADSET, CallAudio.WEBCAM},
     };
 
     /** Names the control center uses where they differ from the stored key. */
     private static final String[][] API = {
         {"findFor", FIND_FOR}, {"wakeForNotes", WAKE_NOTES}, {"alarmFor", ALARM_FOR}, {"quality", QUALITY},
         {"pictureFollow", PICTURE_FOLLOW}, {"dayMode", DAY_MODE}, {"nightMode", NIGHT_MODE}, {"glareMode", GLARE_MODE},
+        {"callVoice", CALL_VOICE},
     };
 
     static String api(String key) {

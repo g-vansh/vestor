@@ -47,6 +47,10 @@ final class State {
         for (String u : h.console.urls()) w.val(u);
         w.endArr().end();
         w.key("me").obj().put("name", me.name).put("id", me.selector.substring(0, 4)).end();
+        Updater u = h.updater;
+        w.key("update").obj().put("state", Update.STATES[u.state]).put("version", u.version).put("notes", u.notes)
+                .put("problem", u.problem).put("checkedAt", u.checkedAt).put("allowed", h.app.getPackageManager().canRequestPackageInstalls())
+                .end();
         weather(w, h.weather);
         Model.Air a = h.air;
         if (a != null && a.ok) {

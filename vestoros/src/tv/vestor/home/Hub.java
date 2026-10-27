@@ -49,7 +49,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
 
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
-            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24;
+            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24, UPDATE = 25;
 
     private static Hub instance;
 
@@ -70,6 +70,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     final Samsung samsung;
     final SamsungRemote remote;
     final Assistant assistant;
+    final Updater updater;
     private Ntfy ntfy;
     /**
      * The Samsung remote's own thread and a short queue: waiting for Allow on the TV can take half
@@ -163,6 +164,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
             }
         });
         assistant = new Assistant(this);
+        updater = new Updater(this);
         Finder.get().listen(this);
         Alarm.listen(this);
         applySettings();
@@ -175,6 +177,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         importShared();
         main.postDelayed(tick, 30000);
         main.postDelayed(watch, 3000);
+        updater.start();
     }
 
     private boolean pinShown = true;
@@ -675,6 +678,9 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                     post(WIFI, null);
                 } else if ("hearts".equals(word)) {
                     hearts("hearts", "Alexa");
+                } else if ("update".equals(word)) {
+                    // publish.sh's nudge: look in a few minutes rather than within six hours. Installing still waits for you.
+                    updater.checkSoon();
                 }
             }
         });

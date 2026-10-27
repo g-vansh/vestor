@@ -6,6 +6,15 @@ notes from each other and your own photos on it. You run it from the remote, or 
 through a control center the TV serves itself. Built for a Fire TV Stick 4K (2nd generation) on
 Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
 
+## What 2.1 adds
+
+- **AirPods in video calls.** Call sound plays in your AirPods. When Fire OS offers their
+  microphone, your voice goes through them too, and otherwise through the webcam. Menu in Video
+  Calls says which your Fire TV allows.
+- **Updates from the TV.** When a new VestorOS is published, the TV says so. Menu, Updates, then
+  Install on the confirmation screen, and it updates in place with everything kept. No computer,
+  no ADB. See [Updates from the TV](#updates-from-the-tv).
+
 ## What 2.0 adds
 
 - **A dashboard that rests.** The home screen is the clock, today and an info bar along the
@@ -504,6 +513,27 @@ Other ways that work: start the call on the iPhone and AirPlay its screen to the
 phone is the camera, the sound may stay on the phone), or a computer on the TV. For FaceTime, an
 Apple TV 4K uses the iPhone as its camera.
 
+**With AirPods.** Connect them to the Fire TV first (Settings, Bluetooth Headphones, Pair or
+Switch). Bluetooth headphones carry sound in stereo, and their microphone only over a second,
+phone-call link (the hands-free profile), which a Fire TV may or may not offer. Video Calls handles
+both cases:
+
+- **Fire OS offers the AirPods' microphone:** when a call starts, Vestor opens the AirPods' call
+  link before WhatsApp opens the microphone, so you hear and talk through them. The sound is
+  phone-call quality, as on any phone call with AirPods.
+- **Fire OS offers them for listening only** (the likely case on a Fire TV stick): the call plays in
+  the AirPods and your voice goes through the webcam's microphone. Android normally pulls call
+  sound away from stereo-only headphones during a call, so Vestor keeps Android out of call mode
+  while the call runs. Your ears hear the call, the webcam hears you, and there is no echo.
+- **You choose:** Menu, "Talk through the webcam" keeps the AirPods in full stereo sound even when
+  their microphone is available. The phone's Settings, Video calls has the same choice.
+- Menu, **Check the AirPods and microphones** says what your Fire TV offers right now. If the
+  AirPods' microphone does not start within four seconds, the call goes on with them for sound and
+  says so. When the call ends, everything goes back as it was.
+
+The Fire TV stick has no microphone of its own, and the remote's microphone belongs to Alexa. So a
+call needs either AirPods whose microphone Fire OS offers, or a webcam (most have a microphone).
+
 **Privacy.** WhatsApp's own end-to-end encryption applies, and Vestor sees nothing of it. The
 screen loads web.whatsapp.com only (WhatsApp's own servers carry the page and calls), opens no
 other site, and gives the camera and microphone to WhatsApp Web alone, after Fire OS asks you
@@ -627,9 +657,11 @@ answer is empty and costs almost nothing. Connections are kept open between requ
 | Alexa signal | ntfy.sh | One open connection, only while Alexa is on |
 | Phone alerts | ntfy.sh | Only when bike finder finds a bike |
 | Samsung picture | api.smartthings.com | Only when Glare or the day and night picture changes, and a sign-in renewal every 20 days |
+| Ask Vestor | api.anthropic.com | Only when you ask |
+| Updates | raw.githubusercontent.com | update.json every six hours, the APK only when there is a new version |
 
 Everything runs while the home screen is up or a phone has the control center open. Behind a
-film nothing is fetched except bike finder and the Alexa signal. The phone page's health list
+film nothing is fetched except bike finder, the Alexa signal and the six-hourly update check. The phone page's health list
 shows, per service, how many requests went out, how many came back unchanged, and whether any
 was ever told to slow down. Vestor's LED wall uses the same approach for its flight tracker.
 
@@ -646,6 +678,40 @@ and Vestor still opens from Your Apps. Running `./install.sh` again is the first
 **Leaving Vestor:** the first button on the top row opens Amazon's home until you open an app.
 Settings › Vestor Opens on HOME › No hands HOME back to Amazon for good, until you open Vestor
 from Your Apps and switch it back on.
+
+## Updates from the TV
+
+From 2.1, VestorOS updates itself. The TV looks for a new version every six hours. When it finds
+one, it downloads it in the background, checks it, and says "VestorOS 2.2 is ready". Choose
+Menu, **Updates**, and confirm with **Install** on the Fire TV's own screen (Android 11 asks every
+app to confirm its updates, so this one press stays). Vestor closes, updates, and comes back with
+everything kept: settings, notes, photos, paired phones, the Claude key and the WhatsApp sign-in.
+The phone's Settings, About has the same Check and Install buttons, and the TV then shows the
+confirmation.
+
+**Publishing an update** (on your computer, with the signing key in `~/.vestor/`):
+
+1. Raise `CODE` (and `VERSION`) in `src/tv/vestor/home/BuildInfo.java`, and say what changed in
+   `res/values/strings.xml`, `update_notes`. The TV shows that line.
+2. Run `./publish.sh`. It builds and signs the APK, checks it, and puts it on the `ota` branch of
+   this repository. Every Vestor TV sees it within six hours, or at once with Updates, Check Now.
+   If Alexa commands are on, setting `VESTOR_NTFY_TOPIC` to the random name in their addresses
+   (Settings › Alexa on the phone, the part after `ntfy.sh/`) makes the TV look again in about six
+   minutes. `./publish.sh --dry-run` does everything but the push.
+
+**Why it is safe.** Fire OS installs an update only when it is signed with the same key as the
+app already installed. That key never leaves your computer, so nobody who gets hold of the
+repository, the network or GitHub can install anything on the TV. At most they could hold an
+update back. Before Vestor even offers an update, it checks that the download has the exact size
+and SHA-256 that update.json names, that it is `tv.vestor.home` at a higher version, and that it is
+signed by the very key that signed the running app. Everything the TV shows about an update is
+read from the checked APK, so nobody can put words of their own on your screen. Fire OS never
+installs an older version over a newer one. Updating needs "Install unknown apps" allowed for
+Vestor alone, which `install.sh` sets and `--undo` takes back.
+
+**Going back a version.** The `ota` branch keeps the version before the current one. With ADB on:
+`git fetch origin ota`, `git show origin/ota:vestoros/vestoros-3.apk > old.apk` (the number is the
+version code), then `adb install -r -d old.apk`. Settings and data are kept.
 
 ## Install or update (about 10 minutes, once)
 
@@ -666,13 +732,13 @@ You need a computer on the same Wi-Fi as the TV.
    ./install.sh
    ```
 
-   It installs the app, gives it the HOME button and the two one-time permissions below, and
+   It installs the app, gives it the HOME button and the three one-time permissions below, and
    opens it. Press HOME on the remote to check. It prints the control center's address.
 
 5. **Turn ADB off.** The installer offers to at the end. Later, `./install.sh --adb-off` does
    the same. ADB is the one way into the TV from your network, so leave it off and turn it on in
-   Developer Options only to update or undo. Updating is the same `./install.sh`, and everything
-   you set up is kept.
+   Developer Options only to undo. From 2.1 updates come over the air (see Updates from the TV),
+   and `./install.sh` again also updates, keeping everything you set up.
 
 **Coming from Lucent.** VestorOS is Lucent under its new name, so Android sees a new app and it
 starts fresh. The installer copies any wallpapers and app banners you pushed for Lucent, then
@@ -685,7 +751,7 @@ tv.lucent.home` removes it for good, and `adb shell pm enable tv.lucent.home` tu
 ## Undo
 
 ```
-./install.sh --undo      # HOME goes back to Amazon, the two permissions are taken back. Vestor stays installed
+./install.sh --undo      # HOME goes back to Amazon, the three permissions are taken back. Vestor stays installed
 ./install.sh --remove    # the same, and Vestor is uninstalled with its notes and photos
 ```
 
@@ -699,18 +765,22 @@ apps, so it is the last resort.
 ## What it changes, exactly
 
 - Installs one app, `tv.vestor.home`. Its permissions: internet, keeping the screen awake (for a
-  note or Alexa), starting at boot, and the camera and microphone, which Fire OS asks you about the
-  first time a WhatsApp call in Video Calls needs them.
+  note or Alexa), starting at boot, the camera and microphone (Fire OS asks you the first time a
+  WhatsApp call in Video Calls needs them), Bluetooth (to see whether connected headphones offer a
+  microphone for a call), and asking to install packages (its own updates, each confirmed by you).
 - Turns on one accessibility service, "Vestor home button". It looks only at which app and screen
   a new window belongs to, to spot Amazon's home, and it draws the bike alarm, notes and hearts
   over other apps. It is declared unable to read screen content, press keys, read the remote,
   make gestures or take screenshots. Other services, such as VoiceView, stay on throughout.
-- Grants two permissions Fire OS has no screen for:
+- Grants three permissions (two of them have no screen in Fire OS):
   - **Write secure settings**, used for one thing only: putting Vestor's own HOME service back
     in the enabled list after an update or restart switched it off. Every other service in the
     list is kept as it was.
   - **Media session access** (as a notification listener), used only to see which app is
     playing and to pause it or skip a track. Vestor reads no notifications.
+  - **Install unknown apps**, for Vestor only, so it can hand its own updates to Fire OS's
+    installer. Each one still asks you to confirm, and Fire OS installs only what Vestor's key
+    signed. It is the same switch as Developer Options, Install Unknown Apps, Vestor.
 - Sets `min_futurity=0` in `alarm_manager_constants`, so the HOME switch is instant. A previous
   value is saved and restored by `--undo`.
 - Exempts the app from Doze, so the switch works after the stick has idled.
@@ -720,7 +790,9 @@ apps, so it is the last resort.
 - Opens the control center on port 8686, on your home network's address and, if Tailscale runs
   on the TV, its Tailscale address. Never on any other network.
 
-It does not root anything, disable Amazon apps, block updates or change audio settings.
+It does not root anything, disable Amazon apps or block updates. It changes audio settings only
+during a call in Video Calls (call mode and the AirPods' call link, see With AirPods), and puts
+them back when the call ends.
 
 ## Security
 
@@ -788,6 +860,10 @@ device you approved on the TV with the remote, and nothing anyone sends it can t
 - **It cannot trap the TV.** Amazon's home stays the system's HOME underneath. If Vestor crashes
   three times in three minutes (including crashes in native code), HOME goes back to Amazon's home
   by itself for a while, and Vestor still opens from Your Apps.
+- **Updates from the TV cannot be hijacked.** Fire OS installs an update only if it is signed by
+  Vestor's key, which never leaves your computer. Vestor checks size, SHA-256, package, version
+  and signer before it offers one, shows only what the checked APK says, and you confirm each
+  install on the TV. See Updates from the TV.
 - **Only you can update it.** Android installs an update over Vestor only if it carries the same
   signature. The installer also checks the APK's certificate before installing and refuses to
   hand the HOME button to anything signed by another key. The key comes as its own file,
@@ -795,7 +871,7 @@ device you approved on the TV with the remote, and nothing anyone sends it can t
   an encrypted drive, never in a repository or shared folder.
 - **ADB is the real door.** While ADB Debugging is on, any computer on your Wi-Fi can ask to
   connect. Turn it off with `./install.sh --adb-off` once HOME works.
-- **On the TV:** leave Install unknown apps off for every app, and keep Fire OS updates on. They
+- **On the TV:** leave Install unknown apps off for every app but Vestor, and keep Fire OS updates on. They
   carry Android's security fixes, and Vestor never blocks them. Vestor draws other apps' own
   tile art, so an app you install could in theory carry a booby-trapped picture aimed at an
   unpatched image decoder, which is one more reason to keep updates on.

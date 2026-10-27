@@ -3794,6 +3794,7 @@
     alarm: [['ring', 'Ring'], ['chime', 'Chime']],
     alarmFor: [['2', '2 min'], ['5', '5 min'], ['10', '10 min'], ['30', '30 min']],
     wakeForNotes: [['always', 'Always'], ['day', 'Daytime'], ['never', 'Never']],
+    callVoice: [['headset', 'AirPods'], ['webcam', 'Webcam']],
     sky: [['on', 'Show'], ['off', 'Hide']],
     album: [['nature', 'Nature'], ['ours', 'Ours'], ['both', 'Both']],
     rotate: [['1m', 'Every min'], ['5m', '5 min'], ['10m', '10 min'], ['hour', 'Hourly'], ['day', 'Daily'], ['off', 'Never']]
@@ -3902,6 +3903,11 @@
         row('sky', 'Planes overhead')
       ]);
 
+      const calls = card(16, 'Video calls', 'card-set');
+      fill(calls.body, [
+        row('callVoice', 'Your voice goes through', 'AirPods uses their microphone when Fire OS offers it, at phone-call sound. Webcam keeps the AirPods in full sound for listening.')
+      ]);
+
       const photos = card(8, 'Photos', 'card-set');
       fill(photos.body, [row('album', 'Which photos'), row('rotate', 'Change the photo')]);
 
@@ -4000,14 +4006,22 @@
       this.aboutBody = h('div', { class: 'about' });
       const refresh = h('button', { class: 'btn btn-block', type: 'button' }, icon('refresh'), 'Fetch fresh data now');
       refresh.addEventListener('click', function () { act('refresh', {}).then(function () { toast('The TV is fetching fresh data'); }).catch(function (e) { toast(e.message, 'alert'); }); });
-      fill(about.body, [this.aboutBody, refresh]);
+      this.updLine = h('p', { class: 'set-help', role: 'status' });
+      this.updBtn = h('button', { class: 'btn btn-block', type: 'button' }, 'Check for updates');
+      this.updBtn.addEventListener('click', function () {
+        const install = str(obj(S.update).state) === 'ready';
+        act('update', { do: install ? 'install' : 'check' }).then(function (d) {
+          toast(str(obj(d).note) || (install ? 'Confirm on the TV with Install' : 'Checking for updates'));
+        }).catch(function (e) { toast(serverError(e), 'alert'); });
+      });
+      fill(about.body, [this.aboutBody, this.updLine, this.updBtn, refresh]);
 
       const samsung = this.buildSamsung();
       const remote = this.buildRemote();
       const push = this.buildPush();
       const claude = this.buildClaude();
       const left = h('div', { class: 'set-col' }, look.el, samsung.el, remote.el, quiet.el, bikes.el, push.el, notes.el, photos.el);
-      const right = h('div', { class: 'set-col' }, claude.el, cals.el, wifi.el, alexa.el, devices.el, health.el, about.el);
+      const right = h('div', { class: 'set-col' }, claude.el, cals.el, wifi.el, alexa.el, devices.el, health.el, about.el, calls.el);
       const cols = h('div', { class: 'set-cols' }, left, right);
       stagger(cols);
       fill(v, [this.head.el, cols]);
@@ -4029,6 +4043,7 @@
       this.renderDevices();
       this.renderHealth();
       this.renderAbout();
+      this.renderUpdate();
     },
     buildSamsung: function () {
       const self = this;
@@ -4793,6 +4808,26 @@
             return h('span', { class: 'h-num' + (p[0] === 'limited' && p[1] > 0 ? ' warn' : p[0] === 'failed' && p[1] > 0 ? ' alert' : '') }, h('span', { class: 'h-n', text: fmtInt(p[1]) }), ' ' + p[0]);
           }), num(x.perMinute) !== null ? h('span', { class: 'h-num' }, h('span', { class: 'h-n', text: String(x.perMinute) }), ' / min') : null));
       }));
+    },
+    // Updates over the air: what the TV found, and one button that checks or installs.
+    renderUpdate: function () {
+      const u = obj(S.update);
+      if (!changed('s.update', [u.state, u.version, u.notes, u.problem, u.allowed, u.checkedAt])) return;
+      const st = str(u.state), v = str(u.version);
+      const lines = {
+        checking: 'Checking for a new VestorOS.',
+        downloading: 'Downloading a new VestorOS.',
+        ready: 'VestorOS ' + v + ' is ready.' + (str(u.notes) ? ' ' + str(u.notes) : ''),
+        installing: 'Waiting for Install on the TV.',
+        failed: str(u.problem) ? str(u.problem) + '.' : 'The last check failed.',
+        current: 'Up to date.'
+      };
+      let line = lines[st] || 'The TV checks every six hours.';
+      if (st === 'ready' && str(u.problem)) line += ' Last try: ' + str(u.problem) + '.';
+      if (u.allowed === false) line += ' First allow installs on the TV: Fire TV Settings, My Fire TV, Developer Options, Install Unknown Apps, Vestor.';
+      this.updLine.textContent = line;
+      this.updBtn.textContent = st === 'ready' ? 'Install on the TV' : 'Check for updates';
+      this.updBtn.disabled = st === 'checking' || st === 'downloading' || st === 'installing';
     },
     renderAbout: function () {
       const tv = obj(S.tv);

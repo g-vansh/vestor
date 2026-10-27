@@ -21,6 +21,7 @@ import java.util.Map;
  * - vestor, firetv: bring Vestor to the front, or open Fire TV's own home
  * - wifi, wifi-hide: show the guest Wi-Fi code on the TV, or put it away
  * - hearts: hearts float up the screen
+ * - update: look for a VestorOS update now (publish.sh can send it); installing still waits for you
  *
  * The same relay also carries alerts the other way, to phones running the ntfy app, on a
  * second topic of their own ({@link #pushUrl}).
@@ -31,7 +32,7 @@ final class Ntfy {
     }
 
     static final String[] WORDS = {"find-ebike", "stop-ebike", "night", "day", "auto", "glare-on", "glare-off", "vestor",
-        "firetv", "wifi", "wifi-hide", "hearts"};
+        "firetv", "wifi", "wifi-hide", "hearts", "update"};
 
     /** The commands an Alexa URL switch can send, as {name, what to say, word for on, word for off}. */
     static final String[][] SWITCHES = {

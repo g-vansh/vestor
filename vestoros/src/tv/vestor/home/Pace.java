@@ -83,6 +83,8 @@ final class Pace {
         set("api.smartthings.com", 1500, 12);
         // Claude: a question is a few requests (searches, an action, the answer). Its own limits are far higher.
         set("api.anthropic.com", 250, 30);
+        // VestorOS updates: update.json every six hours, and the APK when there is a new one.
+        set("raw.githubusercontent.com", 5000, 6);
     }
 
     private static void set(String host, long gapMs, int perMinute) {

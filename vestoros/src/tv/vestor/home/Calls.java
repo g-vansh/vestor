@@ -72,6 +72,9 @@ public final class Calls extends Activity implements Hub.Listener {
     private long lastBack, statusUntil;
     private PermissionRequest pending;
     private String[] pendingResources;
+    /** The grant waiting for the AirPods' call link (see {@link CallRouter#beforeMic}). */
+    private PermissionRequest granting;
+    private CallRouter router;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -191,6 +194,7 @@ public final class Calls extends Activity implements Hub.Listener {
             @Override
             public void onPermissionRequestCanceled(PermissionRequest request) {
                 if (pending == request) pending = null;
+                if (granting == request) granting = null;
             }
 
             @Override
@@ -205,7 +209,13 @@ public final class Calls extends Activity implements Hub.Listener {
         addStatus(w);
         web.loadUrl(Calling.HOME);
         web.requestFocus();
-        say("Arrows move the pointer, OK clicks. Menu has camera checks and sign out. Back twice leaves.", false);
+        say("Arrows move the pointer, OK clicks. Menu has the AirPods and camera checks. Back twice leaves.", false);
+        router = new CallRouter(this, hub.prefs, main, new CallRouter.Out() {
+            @Override
+            public void say(String text) {
+                Calls.this.say(text, false);
+            }
+        });
         hub.listen(this);
     }
 
@@ -260,7 +270,7 @@ public final class Calls extends Activity implements Hub.Listener {
             return;
         }
         if (need.isEmpty()) {
-            request.grant(take.toArray(new String[0]));
+            grant(request, take.toArray(new String[0]));
             return;
         }
         if (pending != null) pending.deny();
@@ -278,9 +288,31 @@ public final class Calls extends Activity implements Hub.Listener {
             if (checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED) ok.add(r);
         }
         if (ok.isEmpty()) pending.deny();
-        else pending.grant(ok.toArray(new String[0]));
+        else grant(pending, ok.toArray(new String[0]));
         pending = null;
         pendingResources = null;
+    }
+
+    /**
+     * Grants WhatsApp what Android allowed. With the microphone in it, the call's sound and voice
+     * are routed first (the AirPods' call link has to be up before the microphone opens).
+     */
+    private void grant(final PermissionRequest request, final String[] resources) {
+        boolean mic = false;
+        for (String r : resources) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) mic = true;
+        if (!mic || router == null) {
+            request.grant(resources);
+            return;
+        }
+        granting = request;
+        router.beforeMic(new Runnable() {
+            @Override
+            public void run() {
+                if (granting != request) return;
+                granting = null;
+                request.grant(resources);
+            }
+        });
     }
 
     /** What the Fire TV itself offers a call: cameras Android can open, microphones, and USB devices of either kind. */
@@ -459,22 +491,33 @@ public final class Calls extends Activity implements Hub.Listener {
     }
 
     private void menu() {
-        final String[] items = {"Check for a webcam on the Fire TV", "Check for a webcam on the Samsung", "Reload WhatsApp",
+        final boolean webcamVoice = CallAudio.WEBCAM.equals(hub.prefs.choice(Prefs.CALL_VOICE));
+        final String[] items = {"Check the AirPods and microphones",
+                webcamVoice ? "Talk through the AirPods when they offer a microphone" : "Talk through the webcam, keep AirPods for listening",
+                "Check for a webcam on the Fire TV", "Check for a webcam on the Samsung", "Reload WhatsApp",
                 "Sign out of WhatsApp on this TV", "Leave"};
         new AlertDialog.Builder(this).setTitle("Video Calls").setItems(items, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface d, int which) {
                 switch (which) {
                     case 0:
-                        say(fireTvDevices(Calls.this), true);
+                        say(router.check(), true);
                         break;
                     case 1:
-                        say(hub.startCamCheck(System.currentTimeMillis()), true);
+                        hub.prefs.put(Prefs.CALL_VOICE, webcamVoice ? CallAudio.HEADSET : CallAudio.WEBCAM);
+                        say(webcamVoice ? "From the next call, your voice goes through the AirPods when Fire OS offers their microphone."
+                                : "From the next call, your voice goes through the webcam and the AirPods stay in full sound.", false);
                         break;
                     case 2:
-                        web.reload();
+                        say(fireTvDevices(Calls.this), true);
                         break;
                     case 3:
+                        say(hub.startCamCheck(System.currentTimeMillis()), true);
+                        break;
+                    case 4:
+                        web.reload();
+                        break;
+                    case 5:
                         signOut();
                         break;
                     default:
@@ -507,6 +550,8 @@ public final class Calls extends Activity implements Hub.Listener {
     protected void onDestroy() {
         hub.unlisten(this);
         if (pending != null) pending.deny();
+        granting = null;
+        if (router != null) router.close();
         if (web != null) {
             CookieManager.getInstance().flush();
             web.stopLoading();

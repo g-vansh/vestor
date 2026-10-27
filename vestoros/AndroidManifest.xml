@@ -21,6 +21,15 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Video Calls with AirPods: whether Bluetooth headphones offer their microphone (the
+         hands-free profile), so a call can talk through them. The web engine needs it too, to
+         open the headphones' call link itself. Granted by installing; nothing else uses it. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <!-- Updates over the air: hands a new VestorOS, checked first (see Update.java), to Fire OS's
+         installer, which asks you to confirm. Works once "Install unknown apps" is allowed for
+         Vestor, which install.sh sets and its undo takes back. Android installs only an APK
+         signed with the same key as this app. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
@@ -105,6 +114,10 @@
             android:name=".KeyDrop"
             android:authorities="tv.vestor.home.key"
             android:exported="true" />
+        <!-- Where the installer reports back on an update. Not exported: only Vestor's own pending intent reaches it. -->
+        <receiver
+            android:name=".Updater$Result"
+            android:exported="false" />
         <receiver
             android:name=".Boot"
             android:exported="true">

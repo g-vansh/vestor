@@ -369,6 +369,9 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             case Hub.CAMCHECK:
                 if (detail instanceof String) scene.toast("Camera check", (String) detail, Scene.TOAST_INFO, now);
                 break;
+            case Hub.UPDATE:
+                updated(now);
+                break;
             case Hub.ANSWER:
                 if (detail instanceof Claude.Answer) {
                     Claude.Answer a = (Claude.Answer) detail;
@@ -402,6 +405,25 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 return;
         }
         view.kick();
+    }
+
+    /** The version an "is ready" notice was shown for, and the last problem shown, so each shows once. */
+    private String toldReady = "", toldProblem = "";
+
+    private void updated(long now) {
+        Updater u = hub.updater;
+        options();
+        if (u.state == Update.READY && !u.version.equals(toldReady)) {
+            toldReady = u.version;
+            scene.toast("VestorOS " + u.version + " is ready", "Menu, then Updates, installs it", Scene.TOAST_INFO, now);
+        }
+        boolean shown = u.state == Update.FAILED || u.state == Update.READY;
+        if (shown && !u.problem.isEmpty() && !u.problem.equals(toldProblem)) {
+            toldProblem = u.problem;
+            scene.toast("Update", u.problem, Scene.TOAST_INFO, now);
+        } else if (u.problem.isEmpty()) {
+            toldProblem = "";
+        }
     }
 
     private boolean interactive() {
@@ -890,6 +912,8 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
         list.add(new Model.Option("sleep", "Sleep", null, new String[] {"Turn Off the TV Now"}));
         list.add(new Model.Option("fire", "Fire TV Settings", null, new String[] {""}));
         list.add(new Model.Option("amazon", "Fire TV Home", null, new String[] {"Until You Open an App"}));
+        Updater u = hub.updater;
+        list.add(new Model.Option("update", "Updates", null, new String[] {Update.row(u.state, u.version, u.problem)}));
         list.add(new Model.Option("about", "Vestor " + BuildInfo.VERSION, null, new String[] {"Remote Help"}));
         scene.setOptions(list);
     }
@@ -1214,6 +1238,15 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             case "glarehelp":
                 scene.toast("Glare needs the Samsung connected", "On your phone: Settings, Samsung Picture", Scene.TOAST_INFO, now);
                 break;
+            case "update": {
+                Updater u = hub.updater;
+                String said = u.install();
+                boolean installing = u.state == Update.INSTALLING;
+                scene.toast(installing ? "Installing VestorOS " + u.version : "Updates",
+                        installing && !u.notes.isEmpty() ? u.notes : said, Scene.TOAST_INFO, now);
+                options();
+                break;
+            }
             case "about":
                 scene.toast("Play/Pause plays music, Rewind and Fast Forward change the photo",
                         "Hold OK for more  ·  Menu for Settings  ·  Back to dismiss", Scene.TOAST_INFO, now);
