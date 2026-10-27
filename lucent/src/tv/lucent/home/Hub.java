@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
 import android.text.format.DateFormat;
 
 import java.io.File;
@@ -18,10 +19,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -43,7 +48,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
 
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
-            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21;
+            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22;
 
     private static Hub instance;
 
@@ -62,7 +67,21 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     final Media media;
     final Console console;
     final Samsung samsung;
+    final SamsungRemote remote;
     private Ntfy ntfy;
+    /**
+     * The Samsung remote's own thread and a short queue: waiting for Allow on the TV can take half
+     * a minute, and keys must not wait behind SmartThings or photos. A full queue answers busy.
+     */
+    private final ThreadPoolExecutor tvq = new ThreadPoolExecutor(1, 1, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(8),
+            new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "tv-remote");
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService work = Executors.newSingleThreadExecutor();
     private final List<Listener> listeners = new ArrayList<>();
@@ -128,6 +147,17 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
             @Override
             public Net.Reply call(String method, String url, String[] headers, String contentType, byte[] body) {
                 return Net.call(method, url, 10000, Net.LIMIT_SMALL, headers, contentType, body);
+            }
+        });
+        remote = new SamsungRemote(new SamsungRemote.Store() {
+            @Override
+            public String get(String key) {
+                return prefs.get(key, "");
+            }
+
+            @Override
+            public void put(String key, String value) {
+                prefs.putNow(key, value);
             }
         });
         Finder.get().listen(this);
@@ -278,6 +308,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
 
     void applySettings() {
         live.setStation(prefs.station());
+        live.setStation2(prefs.station2());
         live.setSky(!"off".equals(prefs.choice(Prefs.SKY)), Gbfs.WESTGATE_LAT, Gbfs.WESTGATE_LON);
         live.setPlace(prefs.lat, prefs.lon);
         live.setClock24(is24h());
@@ -376,6 +407,91 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     public void bikes(Model.Bikes b) {
         bikes = b;
         post(BIKES, b);
+        forecast(b, false);
+    }
+
+    // ---- E-bike forecast -----------------------------------------------------------------------
+
+    private Forecast model;
+    private boolean modelTried;
+    private long forecastAt;
+    private int lastV = -2, lastE = -2;
+    private volatile boolean forecasting;
+    volatile Forecast.Result bikeForecast;
+
+    /** The model shipped in assets/bikes_model.json, read once. Null if it cannot be read. */
+    private synchronized Forecast model() {
+        if (!modelTried) {
+            modelTried = true;
+            byte[] b = asset("bikes_model.json");
+            try {
+                model = b == null ? null : Forecast.parse(new String(b, StandardCharsets.UTF_8));
+            } catch (RuntimeException e) {
+                model = null;
+            }
+        }
+        return model;
+    }
+
+    /**
+     * A fresh forecast when the counts at the two docks change, and every two minutes otherwise, on
+     * the worker thread (a few hundred milliseconds on the stick).
+     */
+    void forecast(Model.Bikes b, boolean force) {
+        if (b == null || b.main() == null || !b.main().live || forecasting) return;
+        final int v = b.main().rentableEbikes();
+        Model.Station a = b.alt();
+        final int e = a == null ? -1 : a.rentableEbikes();
+        long now = System.currentTimeMillis();
+        if (!force && v == lastV && e == lastE && now - forecastAt < 120000L) return;
+        lastV = v;
+        lastE = e;
+        forecastAt = now;
+        forecasting = true;
+        final Model.Weather w = weather;
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                // A few hundred milliseconds of arithmetic: at background priority, so the home
+                // screen's frames always come first.
+                int priority = Process.getThreadPriority(Process.myTid());
+                try {
+                    Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                    Forecast f = model();
+                    if (f == null) return;
+                    double[] rain = null, temp = null;
+                    if (w != null && w.ok) {
+                        rain = new double[w.hourRain.size()];
+                        for (int i = 0; i < rain.length; i++) rain[i] = w.hourRain.get(i) < 0 ? -1 : w.hourRain.get(i) / 100.0;
+                        temp = new double[w.hourC.size()];
+                        for (int i = 0; i < temp.length; i++) temp[i] = w.hourC.get(i);
+                    }
+                    long t = System.currentTimeMillis();
+                    Forecast.Result r = f.predict(t, v, e, TimeZone.getDefault(), rain, temp, morningAt(t, TimeZone.getDefault()));
+                    bikeForecast = r;
+                    post(FORECAST, r);
+                } catch (RuntimeException | OutOfMemoryError ignored) {
+                    // no forecast this time; the counts still show
+                } finally {
+                    forecasting = false;
+                    Process.setThreadPriority(priority);
+                }
+            }
+        });
+    }
+
+    /** In the evening and at night, the coming 7:30 am, for "tomorrow at 7:30"; otherwise 0. */
+    static long morningAt(long now, TimeZone zone) {
+        java.util.Calendar c = java.util.Calendar.getInstance(zone);
+        c.setTimeInMillis(now);
+        int h = c.get(java.util.Calendar.HOUR_OF_DAY);
+        if (h >= 6 && h < 17) return 0;
+        if (h >= 17) c.add(java.util.Calendar.DAY_OF_MONTH, 1);
+        c.set(java.util.Calendar.HOUR_OF_DAY, 7);
+        c.set(java.util.Calendar.MINUTE, 30);
+        c.set(java.util.Calendar.SECOND, 0);
+        c.set(java.util.Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis();
     }
 
     @Override
@@ -463,7 +579,8 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         }
         Alarm.silence();
         String label = "auto".equals(prefs.station()) ? "Westgate" : Gbfs.shortName(s, false);
-        Finder.get().start(s, label, prefs.findForMs());
+        Model.Station second = b.alt();
+        Finder.get().start(s, label, second, second == null ? "" : b.altLabel, prefs.findForMs());
         return true;
     }
 
@@ -550,6 +667,24 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                 }
             }
         });
+    }
+
+    // ---- Volume --------------------------------------------------------------------------------
+
+    /**
+     * The Fire TV's own volume keys: Fire OS sends them over HDMI-CEC to whatever plays the sound
+     * (the soundbar through the Samsung's eARC). No exact level: CEC has none.
+     */
+    void systemVolume(String what) {
+        android.media.AudioManager am = (android.media.AudioManager) app.getSystemService(Context.AUDIO_SERVICE);
+        if (am == null) return;
+        int dir = "up".equals(what) ? android.media.AudioManager.ADJUST_RAISE : "down".equals(what)
+                ? android.media.AudioManager.ADJUST_LOWER : android.media.AudioManager.ADJUST_TOGGLE_MUTE;
+        try {
+            am.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, dir, android.media.AudioManager.FLAG_SHOW_UI);
+        } catch (RuntimeException ignored) {
+            // some builds refuse; the TV remote over the network still works
+        }
     }
 
     // ---- Phone alerts (ntfy) ---------------------------------------------------------------------
@@ -786,15 +921,23 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                 return Actions.run(Hub.this, d, action, body);
             }
         });
-        // Steps that wait on another server run on the worker thread, never the screen's.
+        // Steps that wait on another server run on the worker thread, never the screen's, and the
+        // TV remote on its own.
         boolean slow = "samsung".equals(action) || "push".equals(action);
-        if (slow || "photodel".equals(action) || "photocap".equals(action)) {
+        boolean tv = "remote".equals(action);
+        if (tv) {
+            try {
+                tvq.execute(task);
+            } catch (RejectedExecutionException e) {
+                throw new Http.Refused(503, "busy");
+            }
+        } else if (slow || "photodel".equals(action) || "photocap".equals(action)) {
             work.execute(task);
         } else {
             main.post(task);
         }
         try {
-            return task.get(slow ? 50 : 20, TimeUnit.SECONDS);
+            return task.get(tv ? ("pair".equals(Json.str(body, "do", "")) ? 45 : 12) : slow ? 50 : 20, TimeUnit.SECONDS);
         } catch (java.util.concurrent.ExecutionException e) {
             Throwable c = e.getCause();
             if (c instanceof Http.Refused) throw (Http.Refused) c;

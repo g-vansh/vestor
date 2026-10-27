@@ -79,7 +79,7 @@ final class Live {
     private final ExecutorService slow = Executors.newSingleThreadExecutor();
     private boolean on;
     private long remoteUntil;
-    private volatile String stationChoice = "auto";
+    private volatile String stationChoice = "auto", station2Choice = "auto";
     private volatile double skyLat = Gbfs.WESTGATE_LAT, skyLon = Gbfs.WESTGATE_LON;
     private volatile double queryLat = coarse(Gbfs.WESTGATE_LAT), queryLon = coarse(Gbfs.WESTGATE_LON);
     private volatile double placeLat = Gbfs.WESTGATE_LAT, placeLon = Gbfs.WESTGATE_LON;
@@ -220,6 +220,11 @@ final class Live {
 
     void setStation(String choice) {
         stationChoice = choice == null || choice.isEmpty() ? "auto" : choice;
+    }
+
+    /** The second watched dock: "auto" (Erie St), "none", or a station id. */
+    void setStation2(String choice) {
+        station2Choice = choice == null || choice.isEmpty() ? "auto" : choice;
     }
 
     void setClock24(boolean on) {
@@ -406,7 +411,10 @@ final class Live {
         String choice = stationChoice;
         String main = "auto".equals(choice) ? Gbfs.westgate(allStations) : choice;
         if (Gbfs.find(allStations, main) == null) main = Gbfs.westgate(allStations);
-        List<Model.Station> follow = Gbfs.follow(allStations, main, 3);
+        String choice2 = station2Choice;
+        String alt = "none".equals(choice2) ? null : "auto".equals(choice2) ? Gbfs.erie(allStations) : choice2;
+        if (alt != null && (Gbfs.find(allStations, alt) == null || alt.equals(main))) alt = null;
+        List<Model.Station> follow = Gbfs.follow(allStations, main, alt, 3);
         // Bike finder reads the same file every 5 s: within 2 s, its copy is used instead.
         String status = Net.text(Gbfs.STATUS, TIMEOUT, true, Net.LIMIT_FEED, null, 2000);
         if (status == null || !Gbfs.fresh(status)) return null;
@@ -418,6 +426,10 @@ final class Live {
         }
         b.stations.addAll(follow);
         b.label = "auto".equals(choice) ? "Westgate" : Gbfs.shortName(follow.get(0), false);
+        if (alt != null && follow.size() > 1 && follow.get(1).id.equals(alt)) {
+            b.altId = alt;
+            b.altLabel = "auto".equals(choice2) ? "Erie St" : Gbfs.shortName(follow.get(1), false);
+        }
         for (int i = 0; i < allStations.size() && i < 8; i++) b.nearby.add(Gbfs.copy(allStations.get(i)));
         b.published = Gbfs.lastUpdated(status) * 1000L;
         b.fetched = now;

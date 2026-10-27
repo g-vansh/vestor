@@ -363,6 +363,9 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             case Hub.MEDIA:
                 scene.setMedia((Model.Media) detail);
                 break;
+            case Hub.FORECAST:
+                scene.setForecast((Forecast.Result) detail, now);
+                break;
             case Hub.PAIR:
                 if (detail instanceof Keys.Pending) {
                     Keys.Pending p = (Keys.Pending) detail;
@@ -902,6 +905,25 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                     ? Gbfs.shortName(bikes.main(), false) : "Chosen Station");
         }
         list.add(option(Prefs.STATION, "Bike Station", values.toArray(new String[0]), names.toArray(new String[0]), current));
+        // The second dock: bike finder rings for whichever of the two gets an e-bike first.
+        List<String> v2 = new ArrayList<>(), n2 = new ArrayList<>();
+        v2.add("auto");
+        n2.add("Erie St, by Flour");
+        String second = prefs.station2();
+        if (bikes != null) {
+            for (Model.Station s : bikes.nearby) {
+                if (s.id.equals(bikes.altId) && "auto".equals(second) || v2.contains(s.id)) continue;
+                v2.add(s.id);
+                n2.add(Gbfs.shortName(s, false));
+            }
+        }
+        if (!v2.contains(second) && !"none".equals(second)) {
+            v2.add(second);
+            n2.add("Chosen Station");
+        }
+        v2.add("none");
+        n2.add("None, Only the First");
+        list.add(option(Prefs.STATION2, "Also Watch", v2.toArray(new String[0]), n2.toArray(new String[0]), second));
     }
 
     private Model.Option choice(String key, String title, String[] values, String[] names) {
@@ -1024,9 +1046,10 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
         } else if (Prefs.WALL.equals(key)) {
             prefs.putLong(Prefs.WALL_AT, System.currentTimeMillis());
             showWall(Walls.indexOf(walls, value), null);
-        } else if (Prefs.STATION.equals(key)) {
+        } else if (Prefs.STATION.equals(key) || Prefs.STATION2.equals(key)) {
             prefs.put(key, value);
             hub.live.setStation(prefs.station());
+            hub.live.setStation2(prefs.station2());
             hub.live.refreshBikes();
         } else if (Prefs.allowed(key, value)) {
             prefs.put(key, value);

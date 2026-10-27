@@ -134,6 +134,15 @@ final class Actions {
                 return OK;
             case "samsung":
                 return samsung(h, Json.str(body, "do", ""), body);
+            case "remote":
+                return remote(h, Json.str(body, "do", ""), body);
+            case "volume": {
+                // The Fire TV's own volume: HDMI-CEC carries it to the TV or the soundbar.
+                String what = Json.str(body, "do", "");
+                if (!"up".equals(what) && !"down".equals(what) && !"mute".equals(what)) throw new Http.Refused(400, "volume");
+                h.systemVolume(what);
+                return OK;
+            }
             case "push": {
                 if (!"test".equals(Json.str(body, "do", ""))) throw new Http.Refused(400, "push");
                 if (!h.pushOn()) throw new Http.Refused(409, "phone alerts are off");
@@ -169,6 +178,11 @@ final class Actions {
             if (v == null || !v.matches("[A-Za-z0-9_-]{1,64}")) throw new Http.Refused(400, "station");
             p.put(Prefs.STATION, v);
             h.live.setStation(p.station());
+            h.live.refreshBikes();
+        } else if ("station2".equals(apiKey)) {
+            if (v == null || !v.matches("[A-Za-z0-9_-]{1,64}")) throw new Http.Refused(400, "station");
+            p.put(Prefs.STATION2, v);
+            h.live.setStation2(p.station2());
             h.live.refreshBikes();
         } else if ("mbtaKey".equals(apiKey)) {
             if (v == null || !(v.isEmpty() || v.matches("[0-9a-fA-F]{32}"))) throw new Http.Refused(400, "key");
@@ -249,11 +263,73 @@ final class Actions {
             } else if ("mode".equals(what)) {
                 s.setMode(Json.str(body, "mode", ""));
                 h.post(Hub.SETTINGS, "picture");
+            } else if ("read".equals(what)) {
+                s.readAll();
+            } else if ("power".equals(what)) {
+                boolean on = Json.bool(body, "on", false);
+                s.power(on);
+                // The stick waking also wakes the TV through HDMI-CEC, if SmartThings cannot.
+                if (on) Guard.wake(h.app, false);
+            } else if ("volume".equals(what)) {
+                s.setVolume((int) Json.num(body, "level", -1));
+            } else if ("volumeStep".equals(what)) {
+                s.volumeStep(Json.bool(body, "up", true));
+            } else if ("mute".equals(what)) {
+                s.mute(Json.bool(body, "on", true));
+            } else if ("input".equals(what)) {
+                s.setInput(Json.str(body, "id", ""));
+            } else if ("sound".equals(what)) {
+                s.setSound(Json.str(body, "mode", ""));
+            } else if ("launch".equals(what)) {
+                s.launch(Json.str(body, "app", ""));
+            } else if ("cloudKey".equals(what)) {
+                s.key(Json.str(body, "key", ""));
             } else {
                 throw new Http.Refused(400, "samsung");
             }
             return OK;
         } catch (Samsung.Failed f) {
+            throw new Http.Refused(f.status, f.getMessage());
+        }
+    }
+
+    /**
+     * The Samsung's own remote over the home network (see {@link SamsungRemote}), on its own
+     * thread. Keys come from a fixed list, and only a home address is ever dialled.
+     */
+    private static String remote(Hub h, String what, Map<String, Object> body) throws Http.Refused {
+        SamsungRemote r = h.remote;
+        try {
+            if ("address".equals(what)) {
+                r.setAddress(Json.str(body, "ip", ""));
+                SamsungRemote.Info info = r.probe();
+                h.post(Hub.SETTINGS, "remote");
+                return new Jw().obj().put("ok", true).put("label", info.name).put("model", info.modelName.isEmpty() ? info.model : info.modelName)
+                        .put("power", info.power).end().toString();
+            }
+            if ("pair".equals(what)) {
+                r.connect();
+            } else if ("key".equals(what)) {
+                r.key(Json.str(body, "key", ""));
+            } else if ("hold".equals(what)) {
+                r.hold(Json.str(body, "key", ""), (int) Json.num(body, "ms", 1000));
+            } else if ("launch".equals(what)) {
+                r.launch(Json.str(body, "app", ""), Json.bool(body, "deepLink", true));
+            } else if ("wake".equals(what)) {
+                r.wake();
+            } else if ("close".equals(what)) {
+                r.close();
+            } else if ("trust".equals(what)) {
+                r.trustAgain();
+            } else if ("forget".equals(what)) {
+                r.forget();
+            } else {
+                throw new Http.Refused(400, "remote");
+            }
+            h.post(Hub.SETTINGS, "remote");
+            return OK;
+        } catch (Samsung.Failed f) {
+            h.post(Hub.SETTINGS, "remote");
             throw new Http.Refused(f.status, f.getMessage());
         }
     }

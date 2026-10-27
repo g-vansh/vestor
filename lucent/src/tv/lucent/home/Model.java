@@ -118,12 +118,25 @@ final class Model {
         long published;
         /** What the followed station is called on screen: "Westgate" unless another was chosen. */
         String label = "Westgate";
+        /** The second watched dock's id ("" for none) and its name on screen ("Erie St"). */
+        String altId = "", altLabel = "";
         final List<Station> stations = new ArrayList<>();
         /** The docks nearest Westgate, for choosing which one to follow. */
         final List<Station> nearby = new ArrayList<>();
 
         Station main() {
             return stations.isEmpty() ? null : stations.get(0);
+        }
+
+        /** The second watched dock, or null when only one is watched. */
+        Station alt() {
+            return stations.size() > 1 && !altId.isEmpty() && stations.get(1).id.equals(altId) ? stations.get(1) : null;
+        }
+
+        /** E-bikes that can be taken now at the watched docks together. */
+        int watchedEbikes() {
+            Station m = main(), a = alt();
+            return (m == null ? 0 : m.rentableEbikes()) + (a == null ? 0 : a.rentableEbikes());
         }
     }
 
@@ -133,7 +146,10 @@ final class Model {
         int state = IDLE;
         long started, deadline, ended, lastCheck;
         int checks, failures, ebikes, classic;
+        /** Where the e-bike was found ("Westgate", "Erie St"); while searching, the docks watched. */
         String station = "";
+        /** E-bikes at the second watched dock at the last check, -1 when only one is watched. */
+        int ebikes2 = -1;
         boolean offline;
 
         boolean active() {
@@ -152,6 +168,7 @@ final class Model {
             f.ebikes = ebikes;
             f.classic = classic;
             f.station = station;
+            f.ebikes2 = ebikes2;
             f.offline = offline;
             return f;
         }

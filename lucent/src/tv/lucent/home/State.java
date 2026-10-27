@@ -39,6 +39,7 @@ final class State {
         }
         w.endArr();
         bikes(w, h.bikes);
+        forecast(w, h.bikeForecast);
         finder(w);
         transit(w, h.transit, now);
         sky(w, h.sky);
@@ -54,6 +55,12 @@ final class State {
         settings(w, h);
         w.key("stations").arr().obj().put("id", "auto").put("name", "Westgate").end();
         Model.Bikes b = h.bikes;
+        if (b != null) {
+            for (Model.Station s : b.nearby) w.obj().put("id", s.id).put("name", Gbfs.shortName(s, false)).end();
+        }
+        w.endArr();
+        // The second dock bike finder watches: Erie St by default, or none, or another nearby.
+        w.key("stations2").arr().obj().put("id", "auto").put("name", "Erie St").end().obj().put("id", "none").put("name", "None").end();
         if (b != null) {
             for (Model.Station s : b.nearby) w.obj().put("id", s.id).put("name", Gbfs.shortName(s, false)).end();
         }
@@ -110,7 +117,23 @@ final class State {
         w.endArr().put("mode", connected ? s.mode() : "").put("glare", connected && h.glare())
                 .put("follow", p.choice(Prefs.PICTURE_FOLLOW)).put("dayMode", connected ? h.picked(Prefs.DAY_MODE) : "")
                 .put("nightMode", connected ? h.picked(Prefs.NIGHT_MODE) : "").put("glareMode", connected ? h.picked(Prefs.GLARE_MODE) : "")
-                .put("error", s.error()).put("setup", s.begun() ? "begun" : "none").end();
+                .put("error", s.error()).put("setup", s.begun() ? "begun" : "none");
+        if (connected) {
+            w.put("power", s.power()).put("volume", s.volume()).put("muted", s.muted()).put("input", s.input()).key("inputs").arr();
+            for (String[] in : s.inputs()) w.obj().put("id", in[0]).put("name", in[1]).end();
+            w.endArr().put("sound", s.sound()).key("sounds").arr();
+            for (String m : s.sounds()) w.val(m);
+            w.endArr().key("can").obj().put("power", s.reports("switch")).put("volume", s.reports("audioVolume"))
+                    .put("mute", s.reports("audioMute"))
+                    .put("input", s.reports("samsungvd.mediaInputSource") || s.reports("mediaInputSource"))
+                    .put("sound", s.reports("custom.soundmode")).put("keys", s.reports("samsungvd.remoteControl"))
+                    .put("apps", s.reports("custom.launchapp")).end();
+        }
+        // The remote over the home network: never its token, pin or MAC.
+        SamsungRemote r = h.remote;
+        w.key("remote").obj().put("state", r.state()).put("address", r.address()).put("paired", r.paired()).put("label", r.label())
+                .put("model", r.model()).put("canWake", r.canWake()).put("error", r.error()).end();
+        w.end();
     }
 
     private static void weather(Jw w, Model.Weather x) {
@@ -132,7 +155,8 @@ final class State {
 
     private static void bikes(Jw w, Model.Bikes b) {
         if (b == null) return;
-        w.key("bikes").obj().put("ok", b.ok).put("label", b.label).put("fetched", b.fetched).put("published", b.published)
+        w.key("bikes").obj().put("ok", b.ok).put("label", b.label).put("alt", b.altId).put("altLabel", b.altLabel)
+                .put("fetched", b.fetched).put("published", b.published)
                 .key("stations").arr();
         for (Model.Station s : b.stations) {
             w.obj().put("id", s.id).put("name", s.name).put("short", Gbfs.shortName(s, false)).put("ebikes", s.rentableEbikes())
@@ -142,12 +166,22 @@ final class State {
         w.endArr().end();
     }
 
+    /** The e-bike forecast (see Forecast): times in ms, 0 when beyond eight hours. */
+    private static void forecast(Jw w, Forecast.Result r) {
+        if (r == null) return;
+        w.key("forecast").obj().put("empty", r.empty).put("dayType", r.dayType)
+                .key("pool").obj().put("lo", r.poolLo).put("med", r.poolMed).put("hi", r.poolHi).end()
+                .key("first").obj().put("lo", r.firstLo).put("med", r.firstMed).put("hi", r.firstHi).end()
+                .key("next").obj().put("lo", r.nextLo).put("med", r.nextMed).put("hi", r.nextHi).end()
+                .put("morning", r.morning).put("morningAt", r.morningAt).end();
+    }
+
     private static void finder(Jw w) {
         Model.Finder f = Finder.get().snapshot();
         String[] names = {"idle", "searching", "found", "timedout", "stopped"};
         w.key("finder").obj().put("state", names[Math.max(0, Math.min(4, f.state))]).put("started", f.started)
                 .put("deadline", f.deadline).put("ended", f.ended).put("ebikes", f.ebikes).put("checks", f.checks)
-                .put("station", f.station).put("alarm", Alarm.ringing()).put("offline", f.offline).end();
+                .put("station", f.station).put("ebikes2", f.ebikes2).put("alarm", Alarm.ringing()).put("offline", f.offline).end();
     }
 
     private static void transit(Jw w, Model.Transit t, long now) {
@@ -224,7 +258,7 @@ final class State {
         w.key("settings").obj();
         for (String[] c : Prefs.CHOICES) w.put(Prefs.api(c[0]), p.choice(c[0]));
         w.put("awakeFrom", p.get(Prefs.AWAKE_FROM, "07:00")).put("awakeTo", p.get(Prefs.AWAKE_TO, "00:30"))
-                .put("bedtime", p.get(Prefs.BEDTIME, "off")).put("station", p.station())
+                .put("bedtime", p.get(Prefs.BEDTIME, "off")).put("station", p.station()).put("station2", p.station2())
                 .put("mbtaKey", p.get(Prefs.MBTA_KEY, "").isEmpty() ? "" : "set").put("wifiSsid", p.get(Prefs.WIFI_SSID, ""))
                 .put("wifiSet", !p.get(Prefs.WIFI_PASS, "").isEmpty() || !p.get(Prefs.WIFI_SSID, "").isEmpty())
                 .put("theme", p.get(Prefs.MODE, "auto")).put("alexa", p.get(Prefs.ALEXA, "off"));

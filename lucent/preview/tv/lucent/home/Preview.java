@@ -40,6 +40,7 @@ public final class Preview {
         shot(out, "07-weather-panel", wallFile, new int[] {L, L, OK}, 0);
         shot(out, "08-shuttles-panel", wallFile, new int[] {R, R, OK}, 0);
         shot(out, "09-sky-panel", wallFile, new int[] {R, R, R, OK}, 0);
+        shot(out, "32-bikes-panel", wallFile, new int[] {R, OK, OK}, 0);
         shot(out, "10-finding-home", wallFile, new int[] {OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
         shot(out, "12-apps", wallFile, new int[] {D}, 0);
@@ -70,10 +71,18 @@ public final class Preview {
 
     private static Model.Bikes bikes(boolean docked) throws Exception {
         List<Model.Station> all = Gbfs.stations(fixture("gbfs_info.json"), Gbfs.WESTGATE_LAT, Gbfs.WESTGATE_LON);
-        List<Model.Station> follow = Gbfs.follow(all, Gbfs.westgate(all), 3);
+        // The recorded feed predates the Erie Street dock's current place: its nearest neighbour stands in.
+        String west = Gbfs.westgate(all);
+        String erie = Gbfs.erie(all);
+        if (erie == null) erie = Gbfs.follow(all, west, 1).get(1).id;
+        List<Model.Station> follow = Gbfs.follow(all, west, erie, 3);
         Gbfs.status(fixture(docked ? "gbfs_status_found.json" : "gbfs_status.json"), follow);
         Model.Bikes b = new Model.Bikes();
         b.stations.addAll(follow);
+        if (erie != null) {
+            b.altId = erie;
+            b.altLabel = "Erie St";
+        }
         b.fetched = NOW - 12000;
         b.ok = true;
         return b;
@@ -171,6 +180,7 @@ public final class Preview {
         scene.setAudio(audio());
         scene.setPicture(picture());
         scene.setBikes(bikes(extra == 4));
+        scene.setForecast(forecast(extra), NOW);
         scene.setTransit(transit());
         scene.setSky(sky());
         scene.setClock("2:05", "PM", "Tuesday, October 27");
@@ -533,6 +543,28 @@ public final class Preview {
         m.canNext = true;
         m.canPrev = true;
         return m;
+    }
+
+    /** A forecast as the TV would make it at 2:05 pm with e-bikes docked, or none left for the night shots. */
+    private static Forecast.Result forecast(int extra) {
+        Forecast.Result r = new Forecast.Result();
+        r.dayType = "class";
+        if (extra == 6 || extra == 7 || extra == 11 || extra == 13) {
+            r.empty = true;
+            r.nextLo = NOW + 9 * 60000L;
+            r.nextMed = NOW + 34 * 60000L;
+            r.nextHi = NOW + 88 * 60000L;
+            r.morning = 0.41;
+            r.morningAt = NOW + 17 * 3600000L + 25 * 60000L;
+        } else {
+            r.poolLo = NOW + 38 * 60000L;
+            r.poolMed = NOW + 71 * 60000L;
+            r.poolHi = NOW + 132 * 60000L;
+            r.firstLo = NOW + 22 * 60000L;
+            r.firstMed = NOW + 47 * 60000L;
+            r.firstHi = NOW + 95 * 60000L;
+        }
+        return r;
     }
 
     /** The Fire TV on the Samsung's HDMI 1 with Input Signal Plus on. */

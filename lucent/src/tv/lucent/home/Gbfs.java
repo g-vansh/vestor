@@ -28,6 +28,12 @@ final class Gbfs {
      * does not break it.
      */
     static final double WESTGATE_LAT = 42.35560, WESTGATE_LON = -71.10395;
+    /**
+     * The second dock bike finder watches: "Sidney Research Campus/Erie Street at Waverly", outside
+     * Flour's Cambridgeport bakery, 240 m from Westgate. Found by name, or as the dock nearest this
+     * point within 150 m.
+     */
+    static final double ERIE_LAT = 42.35775, ERIE_LON = -71.10393;
     /** MIT Pacific St at Purrington St, the station Vestor's wall shows. */
     static final String PACIFIC = "f835141c-0de8-11e7-991c-3863bb43a7d0";
 
@@ -82,16 +88,44 @@ final class Gbfs {
         return best == null ? null : best.id;
     }
 
+    /** The Erie Street dock's id (see {@link #ERIE_LAT}), or null. */
+    static String erie(List<Model.Station> all) {
+        for (Model.Station s : all) {
+            String n = s.name.toLowerCase(Locale.US);
+            if (n.contains("erie st")) return s.id;
+        }
+        Model.Station best = null;
+        double bestM = 150;
+        for (Model.Station s : all) {
+            double m = metres(ERIE_LAT, ERIE_LON, s.lat, s.lon);
+            if (m < bestM) {
+                bestM = m;
+                best = s;
+            }
+        }
+        return best == null ? null : best.id;
+    }
+
     /** The station to watch first, then the {@code extra} nearest others (all sorted by distance). */
     static List<Model.Station> follow(List<Model.Station> sorted, String mainId, int extra) {
+        return follow(sorted, mainId, null, extra);
+    }
+
+    /**
+     * The station to watch first, the second watched one (when there is one) next, then the nearest
+     * others, {@code extra} after the first in all.
+     */
+    static List<Model.Station> follow(List<Model.Station> sorted, String mainId, String altId, int extra) {
         List<Model.Station> out = new ArrayList<>();
         Model.Station main = find(sorted, mainId);
         if (main == null && !sorted.isEmpty()) main = sorted.get(0);
         if (main == null) return out;
         out.add(copy(main));
+        Model.Station alt = find(sorted, altId);
+        if (alt != null && !alt.id.equals(main.id)) out.add(copy(alt));
         for (Model.Station s : sorted) {
             if (out.size() > extra) break;
-            if (!s.id.equals(main.id)) out.add(copy(s));
+            if (!s.id.equals(main.id) && (alt == null || !s.id.equals(alt.id))) out.add(copy(s));
         }
         return out;
     }

@@ -99,6 +99,74 @@ final class Cards {
         return new SimpleDateFormat(h24 ? "HH:mm" : "h:mm a", Locale.US).format(new Date(at));
     }
 
+    /** The forecast's words, made when it arrives: for the bar, the card, and the panel's two lines. */
+    String fcShort = "", fcCard = "", fcLine = "", fcLine2 = "", fcTag = "";
+    boolean fcEmpty;
+
+    private String altShortFor, altShortText = "";
+
+    /** "Erie" for "Erie St", worked out once per label rather than every frame. */
+    private String altShort() {
+        String l = bikes.altLabel;
+        if (l != altShortFor) {
+            altShortFor = l;
+            altShortText = l.endsWith(" St") ? l.substring(0, l.length() - 3) : l;
+        }
+        return altShortText;
+    }
+
+    /** "8:10", without AM or PM, for the bar and the card's short lines. */
+    private String hm(long at) {
+        return new SimpleDateFormat(h24 ? "H:mm" : "h:mm", Locale.US).format(new Date(at));
+    }
+
+    void setForecast(Forecast.Result r, long at) {
+        if (r == null) {
+            fcShort = fcCard = fcLine = fcLine2 = fcTag = "";
+            return;
+        }
+        fcEmpty = r.empty;
+        boolean two = bikes != null && bikes.alt() != null;
+        if (!r.empty) {
+            if (r.poolMed > 0) {
+                fcShort = "out " + hm(r.poolMed);
+                fcCard = "All gone by about " + clock(r.poolMed);
+                fcLine = "Likely all gone by " + clock(r.poolMed)
+                        + (r.poolLo > 0 && r.poolHi > 0 ? " (" + hm(r.poolLo) + " to " + hm(r.poolHi) + ")" : ", maybe later");
+            } else {
+                fcShort = "";
+                fcCard = "Should last the next 8 hours";
+                fcLine = "E-bikes should last for the next 8 hours";
+            }
+            fcLine2 = bikes != null && bikes.alt() != null && r.firstMed > 0 && bikes.main() != null && bikes.main().rentableEbikes() > 0
+                    ? stationLabel() + " likely empty by " + clock(r.firstMed) : "";
+        } else {
+            if (r.nextMed > 0) {
+                fcShort = "next " + hm(r.nextMed);
+                fcCard = "Next e-bike around " + clock(r.nextMed);
+                fcLine = "Next e-bike likely around " + clock(r.nextMed)
+                        + (r.nextLo > 0 && r.nextHi > 0 ? " (" + hm(r.nextLo) + " to " + hm(r.nextHi) + ")" : "");
+            } else {
+                fcShort = "";
+                fcCard = "No e-bike expected for hours";
+                fcLine = "No e-bike expected in the next 8 hours";
+            }
+            fcLine2 = "";
+        }
+        if (r.morning >= 0) {
+            java.util.Calendar c = java.util.Calendar.getInstance();
+            c.setTimeInMillis(at);
+            int today = c.get(java.util.Calendar.DAY_OF_YEAR);
+            c.setTimeInMillis(r.morningAt);
+            boolean tomorrow = c.get(java.util.Calendar.DAY_OF_YEAR) != today;
+            String chance = Math.round(r.morning * 100) + "% chance of an e-bike";
+            fcLine2 = (tomorrow ? "Tomorrow at " : "At ") + clock(r.morningAt) + ", " + chance;
+        }
+        String[] tags = {"MIT class day", "MIT finals", "No MIT classes", "Saturday", "Sunday"};
+        int k = java.util.Arrays.asList(Forecast.DAY_TYPES).indexOf(r.dayType);
+        fcTag = (two ? "Both docks  ·  " : "") + (k >= 0 ? tags[k] : "");
+    }
+
     private long elapsedFor = -1;
     private String elapsedText = "";
 
@@ -236,17 +304,39 @@ final class Cards {
         String es = String.valueOf(e);
         int ec = e > 0 ? Pixels.alpha(Tone.VOLT, a * dim) : Tone.text(Tone.TERTIARY, a);
         if (draw) g.text(es, Gfx.TEXT_SEMIBOLD, dp(21), 0, x, base, ec, Gfx.LEFT, 0);
-        x += g.measure(es, Gfx.TEXT_SEMIBOLD, dp(21), 0) + dp(16);
-        if (draw) Icons.bike(g, x + dp(12), cy, dp(24), Pixels.alpha(Tone.PEDAL, 0.9f * a * dim));
-        x += dp(30);
-        String cs = String.valueOf(s.rentableClassic());
-        if (draw) g.text(cs, Gfx.TEXT_MEDIUM, dp(17), 0, x, base, Tone.text(Tone.SECONDARY, a * dim), Gfx.LEFT, 0);
-        x += g.measure(cs, Gfx.TEXT_MEDIUM, dp(17), 0) + dp(14);
-        if (draw) Icons.dock(g, x + dp(10), cy, dp(20), Pixels.alpha(Tone.SLATE, 0.85f * a));
-        x += dp(26);
-        String ds = String.valueOf(s.docks);
-        if (draw) g.text(ds, Gfx.TEXT_MEDIUM, dp(17), 0, x, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
-        x += g.measure(ds, Gfx.TEXT_MEDIUM, dp(17), 0);
+        x += g.measure(es, Gfx.TEXT_SEMIBOLD, dp(21), 0) + dp(14);
+        Model.Station o = bikes.alt();
+        if (o != null && o.live) {
+            // The second watched dock's e-bikes, named, beside the first's.
+            String nm = altShort();
+            if (draw) g.text(nm, Gfx.TEXT_MEDIUM, dp(14), 0, x, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            x += g.measure(nm, Gfx.TEXT_MEDIUM, dp(14), 0) + dp(6);
+            int oe = o.rentableEbikes();
+            String os = String.valueOf(oe);
+            if (draw) g.text(os, Gfx.TEXT_SEMIBOLD, dp(19), 0, x, base, oe > 0 ? Pixels.alpha(Tone.VOLT, a) : Tone.text(Tone.TERTIARY, a),
+                    Gfx.LEFT, 0);
+            x += g.measure(os, Gfx.TEXT_SEMIBOLD, dp(19), 0) + dp(4);
+        }
+        if (o == null) {
+            // With one dock watched, the classic bikes and docks too; with two, e-bikes only.
+            if (draw) Icons.bike(g, x + dp(12), cy, dp(24), Pixels.alpha(Tone.PEDAL, 0.9f * a * dim));
+            x += dp(30);
+            String cs = String.valueOf(s.rentableClassic());
+            if (draw) g.text(cs, Gfx.TEXT_MEDIUM, dp(17), 0, x, base, Tone.text(Tone.SECONDARY, a * dim), Gfx.LEFT, 0);
+            x += g.measure(cs, Gfx.TEXT_MEDIUM, dp(17), 0);
+            x += dp(14);
+            if (draw) Icons.dock(g, x + dp(10), cy, dp(20), Pixels.alpha(Tone.SLATE, 0.85f * a));
+            x += dp(26);
+            String ds = String.valueOf(s.docks);
+            if (draw) g.text(ds, Gfx.TEXT_MEDIUM, dp(17), 0, x, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            x += g.measure(ds, Gfx.TEXT_MEDIUM, dp(17), 0);
+        }
+        if (!fcShort.isEmpty() && !bikesStale()) {
+            // "gone by 8:10" or "next 9:25": the forecast in a few words.
+            x += dp(14);
+            if (draw) g.text(fcShort, Gfx.TEXT_MEDIUM, dp(14), 0, x, base, Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+            x += g.measure(fcShort, Gfx.TEXT_MEDIUM, dp(14), 0);
+        }
         return x - x0;
     }
 
@@ -417,8 +507,19 @@ final class Cards {
             return;
         }
         stats(g, s, x, r - dp(22), t + dp(46), 1f, a);
-        dockBar(g, s, x, t + dp(132), r - dp(22), dp(8), a);
-        hint(g, x, r, t + dp(166), a);
+        Model.Station o = bikes.alt();
+        if (o != null) {
+            // The second watched dock on one line: its name and counts.
+            g.text(bikes.altLabel.toUpperCase(Locale.US), Gfx.MONO, dp(11), 0.1f, x, t + dp(136), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+            miniCounts(g, o, x + dp(86), t + dp(138), a);
+        } else {
+            dockBar(g, s, x, t + dp(128), r - dp(22), dp(8), a);
+        }
+        if (!fcCard.isEmpty() && !bikesStale() && !finding() && !foundRecently()) {
+            g.text(fcCard, Gfx.TEXT_SEMIBOLD, dp(13.5f), 0, x, t + dp(155), fcEmpty ? Tone.text(Tone.SECONDARY, a)
+                    : Pixels.alpha(Tone.VOLT, a), Gfx.LEFT, 0);
+        }
+        hint(g, x, r, t + dp(176), a);
     }
 
     /** The three counts: e-bikes as the hero in Volt, classic and docks beside it. */
@@ -641,7 +742,7 @@ final class Cards {
     float[] panelSize(int kind) {
         switch (kind) {
             case WEATHER: return new float[] {dp(640), dp(356)};
-            case BIKES: return new float[] {dp(660), dp(372)};
+            case BIKES: return new float[] {dp(660), dp(436)};
             case TRANSIT: return new float[] {dp(620), dp(436)};
             case PLANS: return new float[] {dp(760), dp(440)};
             case MUSIC: return new float[] {dp(720), dp(360)};
@@ -765,15 +866,30 @@ final class Cards {
         } else {
             g.text("Waiting for Bluebikes", Gfx.TEXT_MEDIUM, dp(17), 0, x, t + dp(150), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
         }
+        // The forecast across the panel: when the e-bikes run out, or when the next one comes.
+        if (!fcLine.isEmpty() && !bikesStale()) {
+            float fy = t + dp(268);
+            g.fillRect(x, fy - dp(26), r - dp(32), fy - dp(26) + Math.max(1, dp(1)), Tone.hairline(a));
+            String tag = fcTag.isEmpty() ? "FORECAST" : "FORECAST  ·  " + fcTag.toUpperCase(Locale.US);
+            g.text(tag, Gfx.MONO, dp(11), 0.1f, x, fy - dp(6), Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+            g.text(Notice.fit(g, fcLine, Gfx.TEXT_SEMIBOLD, dp(16), r - x - dp(32)), Gfx.TEXT_SEMIBOLD, dp(16), 0, x, fy + dp(18),
+                    fcEmpty ? Tone.text(Tone.PRIMARY, a) : Pixels.alpha(Tone.VOLT, a), Gfx.LEFT, 0);
+            if (!fcLine2.isEmpty()) {
+                g.text(Notice.fit(g, fcLine2, Gfx.TEXT_REGULAR, dp(14), r - x - dp(32)), Gfx.TEXT_REGULAR, dp(14), 0, x, fy + dp(40),
+                        Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            }
+        }
         // Nearby docks, in a column on the right.
         float nx = leftR + dp(12);
         g.fillRect(leftR - dp(6), t + dp(98), leftR - dp(6) + Math.max(1, dp(1)), t + dp(232), Tone.hairline(a));
         meta(g, "Nearby", nx, t + dp(112), a);
         float y = t + dp(140);
         if (bikes != null) {
-            for (int i = 1; i < Math.min(4, bikes.stations.size()); i++) {
+            // Two neighbours when the forecast takes the panel's lower band, three otherwise.
+            int shown = !fcLine.isEmpty() && !bikesStale() ? 3 : 4;
+            for (int i = 1; i < Math.min(shown, bikes.stations.size()); i++) {
                 Model.Station o = bikes.stations.get(i);
-                String nm = Gbfs.shortName(o, false);
+                String nm = o == bikes.alt() ? bikes.altLabel + ", also watched" : Gbfs.shortName(o, false);
                 g.text(Notice.fit(g, nm, Gfx.TEXT_MEDIUM, dp(14.5f), r - nx - dp(80)), Gfx.TEXT_MEDIUM, dp(14.5f), 0, nx, y,
                         Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
                 g.text(String.format(Locale.US, "%.1f mi", o.metres / 1609.344), Gfx.TEXT_REGULAR, dp(12.5f), 0, r - dp(32), y,
@@ -799,12 +915,13 @@ final class Cards {
         String status;
         if (finding()) {
             status = finder.offline ? "Bluebikes is not answering; still trying"
-                    : "Checking " + stationLabel() + " every 5 s. You will hear a chime, even in another app. "
+                    : "Checking " + (finder.station.isEmpty() ? stationLabel() : finder.station) + " every 5 s. You will hear it, even in another app. "
                             + Notice.minutes(finder.deadline - now) + " left.";
         } else if (foundRecently()) {
             status = "An e-bike docked at " + clock(finder.ended) + ".";
         } else {
-            status = "Lucent will check every 5 s and chime the moment an e-bike can be rented.";
+            status = bikes != null && bikes.alt() != null ? "Lucent checks " + stationLabel() + " and " + bikes.altLabel
+                    + " every 5 s and rings for the first e-bike at either." : "Lucent will check every 5 s and ring the moment an e-bike can be rented.";
         }
         g.text(Notice.fit(g, status, Gfx.TEXT_REGULAR, dp(13), r - l - dp(64)), Gfx.TEXT_REGULAR, dp(13), 0, (l + r) / 2, b - dp(24),
                 finder.offline && finding() ? Pixels.alpha(Tone.AMBER, a) : Tone.text(Tone.TERTIARY, a), Gfx.CENTER, 0);

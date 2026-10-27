@@ -44,6 +44,8 @@ final class Prefs {
     /** Phone alerts through ntfy, and the Samsung's picture modes (see {@link Samsung}). */
     static final String PUSH = "push", PUSH_TOPIC = "push_topic", PICTURE_FOLLOW = "picture_follow", DAY_MODE = "day_mode",
             NIGHT_MODE = "night_mode", GLARE_MODE = "glare_mode", GLARE = "glare", GLARE_BACK = "glare_back";
+    /** The second dock bike finder watches: "auto" for Erie St (outside Flour), "none", or a station id. */
+    static final String STATION2 = "bike_station2";
 
     /** Every setting the control center may change, with its allowed values (null: free text checked elsewhere). */
     static final String[][] CHOICES = {
@@ -222,6 +224,11 @@ final class Prefs {
 
     String station() {
         String v = get(STATION, "auto");
+        return v.matches(STATION_RULE) ? v : "auto";
+    }
+
+    String station2() {
+        String v = get(STATION2, "auto");
         return v.matches(STATION_RULE) ? v : "auto";
     }
 

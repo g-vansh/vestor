@@ -352,6 +352,10 @@ final class Scene {
         cards.bikes = b;
     }
 
+    void setForecast(Forecast.Result r, long now) {
+        cards.setForecast(r, now);
+    }
+
     void setTransit(Model.Transit t) {
         cards.transit = t;
     }
