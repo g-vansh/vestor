@@ -1696,6 +1696,40 @@ add airline branding.
   Samsung a new address, pass it in. After a TV restart the port may change, and the script finds
   the new one by itself.
 
+### 2026-10-27: VestorOS 2.3, an AirPlay beacon for every Apple device
+- Did: the owner asked for AirPlay from any device, built into VestorOS, through the Samsung's
+  own receiver and no Appstore apps. Researched every path first. Bonjour: this Mac hears no
+  other device's services on MIT's Wi-Fi, even inside its own /20, so announcing from the Fire TV
+  would reach nobody. Unicast DNS-SD: Apple says AirPlay needs live discovery, and a published
+  attempt never reached the Screen Mirroring menu. Tailscale carries no multicast, and guests
+  would need it too. A fixed port would not help: the port travels inside the Bonjour record,
+  the Samsung has no setting for it, and 7000 is closed on it. The Samsung also ignores lookups
+  sent straight to it from another subnet. Personal routers and access points are against
+  MITnet's residential policy. What works: Apple's Bluetooth LE "AirPlay Target" message (Apple
+  manufacturer data 09 08 13 30, then the IPv4 address and port), which Apple TVs, Webex boards
+  and UxPlay broadcast, and which makes a nearby iPhone, iPad or Mac ask that address for /info
+  over IP and list the receiver. Built AirPlay.java (finds the port, checks /info for an AirTunes
+  server, builds the message) and Beacon.java (Android's LE advertiser, not connectable, no name,
+  balanced pace). A setting and an AirPlay card in the control center (on by default, status,
+  Find the TV Again, how it works). Mirror a Screen's Apple row now shows the AirPlay steps and no
+  longer opens AirReceiver or AirScreen. New permission: Bluetooth admin, granted at install, used
+  only to advertise. Version 2.3, code 10.
+- Verified: AirPlayTest, 41 checks (the bytes, the AirTunes check, a search that skips other
+  servers, and the beacon through on, away, moved, missing and off), and every desk suite green
+  except SecurityTest, which cannot bind 127.0.0.2 on macOS. From the Mac against the real
+  Samsung: 46977 answers as AirPlay in 45 ms, 7000 is refused in 8 ms, a 100-port search finds
+  46977 in 0.2 s, and the message reads 09 08 13 30 0a 1d 93 50 b7 81. build.sh green (Android 11,
+  warnings as errors), and the APK carries code 10 and the Bluetooth admin permission. Preview
+  renders of both Mirror pages, and the AirPlay card in ConsoleDemo. Also fixed the preview's key
+  path to Mirror a Screen and Sound, off by one since Ask Vestor joined the top row in 2.2.
+- Changed from brief: not on the TV yet, so whether this Fire TV's Bluetooth chip can advertise
+  is unknown until 2.3 is installed. The AirPlay card says so plainly either way. The full port
+  search (about 70 s at 400 ports a second) runs only when the TV answers but its AirPlay moved,
+  at most once an hour, and only against the Samsung's address.
+- Next: publish 2.3 and install it from Settings, Updates. Check the AirPlay card says On. Then
+  stop the Mac's airplay-samsung.sh helper, watch the Mac's AirPlay log for AirPlayTarget, and
+  look for the Samsung in an iPhone's Screen Mirroring list.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
