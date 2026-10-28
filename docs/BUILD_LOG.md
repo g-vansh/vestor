@@ -1726,7 +1726,9 @@ add airline branding.
   is unknown until 2.3 is installed. The AirPlay card says so plainly either way. The full port
   search (about 70 s at 400 ports a second) runs only when the TV answers but its AirPlay moved,
   at most once an hour, and only against the Samsung's address.
-- Next: publish 2.3 and install it from Settings, Updates. Check the AirPlay card says On. Then
+- Published with the owner's go-ahead: ota serves 2.3 (code 10, SHA-256 5849bbd1...), byte for
+  byte the build and signed with the release certificate, with code 9 kept for going back.
+- Next: install 2.3 from Settings, Updates. Check the AirPlay card says On. Then
   stop the Mac's airplay-samsung.sh helper, watch the Mac's AirPlay log for AirPlayTarget, and
   look for the Samsung in an iPhone's Screen Mirroring list.
 
