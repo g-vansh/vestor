@@ -5,5 +5,5 @@
     <string name="guard_description">Sends the HOME button to the Vestor home screen instead of Amazon\'s, and shows notes and the bike alarm over other apps. It reads no screen content.</string>
     <string name="listener_label">Vestor Now Playing</string>
     <!-- What changed in this version: the TV shows it when this version arrives as an update. Plain text, under 300 characters. -->
-    <string name="update_notes">Ask Vestor is new: hold the Menu button, and type or hold the mic button to speak while the keyboard is up. Answers fit their card, and the phone page folds away finished setups.</string>
+    <string name="update_notes">AirPlay for every Apple device: this TV now points iPhones, iPads and Macs nearby at the Samsung\'s own AirPlay over Bluetooth, even on MIT\'s Wi-Fi. Mirror a Screen shows the steps.</string>
 </resources>

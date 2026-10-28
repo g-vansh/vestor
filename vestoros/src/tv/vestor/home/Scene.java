@@ -69,8 +69,8 @@ final class Scene {
         /** The next (1) or previous (-1) wallpaper. */
         void wallpaper(int dir);
 
-        /** Mirroring: an AirPlay receiver app ({@code apple}) or Fire TV's own (Android, Windows). */
-        void mirror(boolean apple);
+        /** Fire TV's own mirroring, for Android phones and Windows PCs. Apple devices use the Samsung's AirPlay. */
+        void mirror();
 
         /** Opens or closes the window for pairing a phone. */
         void pairing(boolean open);
@@ -161,11 +161,14 @@ final class Scene {
     /** OK on the card counts only after this long, so a press meant for the screen before it cannot allow a device. */
     static final long ASK_GUARD_MS = 1000;
     private String wifiSsid = "";
-    private String mirrorApp;
     private String toastTitle = "", toastDetail = "";
     private int toastIcon;
     private long toastAt = -100000;
     private int mirrorRow;
+    /** The mirroring sheet shows the AirPlay steps rather than the two ways. */
+    private boolean mirrorSteps;
+    /** The Fire TV's Bluetooth is pointing Apple devices nearby at the Samsung (see AirPlay). */
+    private boolean airplayBeacon;
     /** The clock's words, rebuilt only when what they say changes (never once a frame). */
     private String eyebrowText = "", skyText = "", nextText = "", greetText = "", todayCount = "";
     /** The standfirst as drawn: whole sentences dropped from the end until it clears the pinned note. */
@@ -215,7 +218,8 @@ final class Scene {
     private final Spring look = new Spring(0, 6f, 0);
     private final Spring noteSpring = new Spring(0, 0.55f, 0.14f), modal = new Spring(0, 0.42f, 0.1f);
     private final Spring alarmSpring = new Spring(0, 0.45f, 0.12f), toastSpring = new Spring(0, 0.4f, 0.1f);
-    private final Spring pinSpring = new Spring(0, 0.6f, 0.1f), mirrorPill = new Spring(0, 0.28f, 0.08f);
+    private final Spring pinSpring = new Spring(0, 0.6f, 0.1f), mirrorPill = new Spring(0, 0.28f, 0.08f),
+            mirrorPage = new Spring(0, 0.34f, 0);
     private long lastInput, start = -1, wallSince, nowMs, enteredAt;
     private float[] wallRect = new float[4];
 
@@ -651,9 +655,9 @@ final class Scene {
         }
     }
 
-    /** Which AirPlay receiver app is installed, by name, or null. */
-    void setMirrorApp(String label) {
-        mirrorApp = label;
+    /** Whether the AirPlay beacon is on air, which the Mirror sheet's AirPlay page mentions. */
+    void setAirPlayBeacon(boolean on) {
+        airplayBeacon = on;
     }
 
     /** A short message at the top: headphones connected, a photo arrived. */
@@ -979,7 +983,9 @@ final class Scene {
                     case T_MIRROR:
                         mode = MIRROR;
                         mirrorRow = 0;
+                        mirrorSteps = false;
                         mirrorPill.snap(0);
+                        mirrorPage.snap(0);
                         modal.to(1);
                         break;
                     default:
@@ -1112,6 +1118,18 @@ final class Scene {
     }
 
     private void mirrorKey(int k) {
+        if (mirrorSteps) {
+            // The AirPlay steps: Back returns to the two ways, OK closes.
+            if (k == BACK) {
+                mirrorSteps = false;
+                host.sound(false);
+            } else if (k == OK || k == MENU) {
+                mode = NONE;
+                modal.to(0);
+                host.sound(k == OK);
+            }
+            return;
+        }
         switch (k) {
             case UP:
             case LEFT:
@@ -1129,9 +1147,14 @@ final class Scene {
                 break;
             case OK:
                 host.sound(true);
+                if (mirrorRow == 0) {
+                    // Apple devices mirror to the Samsung's own AirPlay, started on the device, so this shows how.
+                    mirrorSteps = true;
+                    break;
+                }
                 mode = NONE;
                 modal.to(0);
-                host.mirror(mirrorRow == 0);
+                host.mirror();
                 break;
             case BACK:
             case MENU:
@@ -1553,6 +1576,7 @@ final class Scene {
         sheetPill.to(row);
         menuPill.to(menuRow);
         mirrorPill.to(mirrorRow);
+        mirrorPage.to(mirrorSteps ? 1 : 0);
         if (mode == SETTINGS) {
             float rowH = dp(58);
             float view = height - dp(34) * 2 - dp(128);
@@ -1590,6 +1614,7 @@ final class Scene {
         moving |= sheetPill.step(dt, false);
         moving |= menuPill.step(dt, false);
         moving |= mirrorPill.step(dt, false);
+        moving |= mirrorPage.step(dt, false);
         moving |= fade.step(dt, false);
         moving |= look.step(dt, false);
         moving |= noteSpring.step(dt, instant);
@@ -2630,15 +2655,31 @@ final class Scene {
         float w = dp(700), h = dp(360), l = (width - w) / 2, tp = (height - h) / 2;
         sheetFrame(g, l, tp, w, h, p, t);
         float x = l + dp(36), right = l + w - dp(36);
+        // The two ways slide out to the left as the AirPlay steps come in from the right.
+        float s = clamp01(mirrorPage.value), ways = p * (1 - s), steps = p * s;
+        int save = g.save();
+        g.clipRect(l, tp, l + w, tp + h);
+        if (steps > 0.003f) {
+            g.translate(dp(32) * (1 - s), 0);
+            drawAirPlaySteps(g, x, right, tp, steps);
+            g.translate(-dp(32) * (1 - s), 0);
+        }
+        if (ways > 0.003f) {
+            g.translate(-dp(32) * s, 0);
+            drawMirrorWays(g, x, right, tp, ways);
+        }
+        g.restore(save);
+    }
+
+    /** The Mirror sheet's first page: Apple devices, or Android phones and Windows PCs. */
+    private void drawMirrorWays(Gfx g, float x, float right, float tp, float p) {
         g.text("MIRROR A SCREEN", Gfx.MONO, dp(12.5f), 0.1f, x, tp + dp(54), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
         g.text("Show a phone or laptop here", Gfx.SERIF, dp(34), -0.01f, x, tp + dp(98), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
         float rowH = dp(92), y0 = tp + dp(126);
         float py = y0 + mirrorPill.value * (rowH + dp(10));
         g.fillRoundRect(x - dp(12), py, right + dp(12), py + rowH, dp(24), Tone.focus(0.93f * p));
         String[] titles = {"iPhone, iPad or Mac", "Android phone or Windows PC"};
-        String[] details = {mirrorApp != null ? "Opens " + mirrorApp + ", then pick it under Screen Mirroring."
-                : "Needs AirReceiver or AirScreen from the Appstore first.",
-            "Opens Fire TV's mirroring. On Windows, press Win and K."};
+        String[] details = {"Goes to the Samsung's own AirPlay. OK shows how.", "Opens Fire TV's mirroring. On Windows, press Win and K."};
         for (int i = 0; i < 2; i++) {
             float y = y0 + i * (rowH + dp(10));
             float near = clamp01(1 - Math.abs(mirrorPill.value - i));
@@ -2648,6 +2689,32 @@ final class Scene {
             g.text(Text.fit(g, details[i], Gfx.TEXT_MEDIUM, dp(14), right - x - dp(70)), Gfx.TEXT_MEDIUM, dp(14), 0, x + dp(66), y + dp(64),
                     Pixels.alpha(ink, 0.72f * p), Gfx.LEFT, 0);
         }
+    }
+
+    /**
+     * The Mirror sheet's AirPlay page. The Samsung's own AirPlay has nothing to open on this side:
+     * it is started on the Apple device, and the TV switches its input to it by itself.
+     */
+    private void drawAirPlaySteps(Gfx g, float x, float right, float tp, float p) {
+        g.text("AIRPLAY TO THE SAMSUNG", Gfx.MONO, dp(12.5f), 0.1f, x, tp + dp(54), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+        g.text("Start it on the Apple device", Gfx.SERIF, dp(34), -0.01f, x, tp + dp(98), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        String[] steps = {"On it, open Control Center and choose Screen Mirroring.", "Pick the Samsung. The first time, type the code it shows.",
+            "The TV switches over by itself. Home on this remote comes back."};
+        float r = dp(13), num = dp(13), tx = x + dp(40);
+        for (int i = 0; i < steps.length; i++) {
+            float base = tp + dp(152) + i * dp(42), cy = base - dp(6);
+            g.strokeCircle(x + r, cy, r, dp(1.5f), Tone.text(Tone.TERTIARY, p));
+            g.text(String.valueOf(i + 1), Gfx.MONO, num, 0, x + r, cy + g.capHeight(Gfx.MONO, num) / 2, Tone.text(Tone.SECONDARY, p),
+                    Gfx.CENTER, 0);
+            g.text(Text.fit(g, steps[i], Gfx.TEXT_MEDIUM, dp(17), right - tx), Gfx.TEXT_MEDIUM, dp(17), 0, tx, base,
+                    Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+        }
+        String note = airplayBeacon
+                ? "This TV's Bluetooth points Apple devices nearby at the Samsung, so it shows up even on a Wi-Fi that hides it, "
+                        + "like MIT's. Their Bluetooth needs to be on."
+                : "No Samsung in the list? The Wi-Fi is hiding it, as MIT's does. A Mac can still reach it with Vestor's AirPlay "
+                        + "helper, and a phone with a cable.";
+        Pop.lines(g, note, Gfx.TEXT_MEDIUM, dp(14.5f), x, tp + dp(290), right - x, dp(21), 3, Tone.text(Tone.TERTIARY, p));
     }
 
     // ---- Dock --------------------------------------------------------------------------------

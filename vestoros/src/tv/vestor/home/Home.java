@@ -51,9 +51,6 @@ import java.util.concurrent.Executors;
 public final class Home extends Activity implements Scene.Host, Hub.Listener {
     private static final long MINUTE = 60000L;
 
-    /** AirPlay receivers from the Amazon Appstore, best first; any app whose name says AirPlay also counts. */
-    private static final String[] AIRPLAY = {"com.softmedia.receiver", "com.softmedia.receiver.lite", "com.ionitech.airscreen",
-        "io.github.jqssun.airplay"};
     /** Fire TV's own screens, opened directly (found exported, no permission needed, on Fire OS 8). */
     private static final ComponentName MIRACAST = new ComponentName("com.amazon.cast.sink",
             "com.amazon.cast.sink.DisplayMirroringSinkActivity");
@@ -174,6 +171,7 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
         Guard.homeInFront();
         Guard.arrived(this);
         hub.front(true);
+        scene.setAirPlayBeacon(hub.airplay.showing());
         // "Alexa, turn on Ask Vestor" brought Vestor up: the question box opens as it arrives.
         if (hub.askAt > 0 && System.currentTimeMillis() - hub.askAt < 15000L) {
             hub.askAt = 0;
@@ -385,6 +383,9 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                     ask();
                 }
                 break;
+            case Hub.AIRPLAY:
+                scene.setAirPlayBeacon(hub.airplay.showing());
+                break;
             case Hub.ANSWER:
                 if (detail instanceof Claude.Answer) {
                     Claude.Answer a = (Claude.Answer) detail;
@@ -541,14 +542,12 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 }
                 final List<Catalog.Entry> all = found;
                 final List<Catalog.Entry> dock = Catalog.dock(all, order, hidden, shown);
-                final String airplay = airplayLabel(all);
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
                         if (generation != appsGeneration || isDestroyed()) return;
                         entries.clear();
                         for (Catalog.Entry e : all) entries.put(e.pkg, e);
-                        scene.setMirrorApp(airplay);
                         List<Model.App> list = new ArrayList<>();
                         final List<Model.App> needArt = new ArrayList<>();
                         for (Catalog.Entry e : dock) {
@@ -568,27 +567,6 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 });
             }
         });
-    }
-
-    /** The installed AirPlay receiver's name, or null. */
-    private static String airplayLabel(List<Catalog.Entry> all) {
-        for (String pkg : AIRPLAY) {
-            for (Catalog.Entry e : all) if (e.pkg.equals(pkg)) return e.label.toString();
-        }
-        for (Catalog.Entry e : all) {
-            String l = e.label.toString().toLowerCase(Locale.US);
-            if (l.contains("airplay") || l.contains("airscreen") || l.contains("airreceiver")) return e.label.toString();
-        }
-        return null;
-    }
-
-    private Catalog.Entry airplayEntry() {
-        for (String pkg : AIRPLAY) if (entries.containsKey(pkg)) return entries.get(pkg);
-        for (Catalog.Entry e : entries.values()) {
-            String l = e.label.toString().toLowerCase(Locale.US);
-            if (l.contains("airplay") || l.contains("airscreen") || l.contains("airreceiver")) return e;
-        }
-        return null;
     }
 
     /** Changes whenever a file is added to, removed from or renamed in banners/. */
@@ -1171,21 +1149,11 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
     }
 
     /**
-     * Apple devices: the AirPlay receiver app if one is installed (AirReceiver or AirScreen from
-     * the Appstore). Android and Windows: Fire TV's own Miracast screen.
+     * Android and Windows: Fire TV's own Miracast screen. Apple devices need nothing here: they
+     * AirPlay to the Samsung's own receiver, and the Mirror sheet shows the steps.
      */
     @Override
-    public void mirror(boolean apple) {
-        if (apple) {
-            Catalog.Entry e = airplayEntry();
-            if (e != null) {
-                start(new Intent(e.intent), e.pkg);
-            } else {
-                scene.toast("No AirPlay app yet", "Install AirReceiver or AirScreen from the Appstore", Scene.TOAST_INFO,
-                        System.currentTimeMillis());
-            }
-            return;
-        }
+    public void mirror() {
         open("Mirroring is in Fire TV Settings, Display and Sounds", system(new Intent().setComponent(MIRACAST)),
                 system(new Intent("android.settings.CAST_SETTINGS")));
     }

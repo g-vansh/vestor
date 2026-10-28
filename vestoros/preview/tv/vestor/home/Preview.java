@@ -63,9 +63,10 @@ public final class Preview {
         shot(out, "23-pair-phone", "nature-01.jpg", new int[0], 8);
         shot(out, "24-plans-and-music", "nature-03.jpg", new int[] {L, L, L}, 9);
         shot(out, "25-plans-panel", "nature-03.jpg", new int[] {R, R, R, OK}, 5);
-        shot(out, "26-mirror", "nature-10.jpg", new int[] {U, L, L, L, L, R, OK}, 0);
+        shot(out, "26-mirror", "nature-10.jpg", new int[] {U, L, L, L, L, R, R, R, OK}, 0);
+        shot(out, "40-airplay-steps", "nature-10.jpg", new int[] {U, L, L, L, L, R, R, R, OK, OK}, 21);
         shot(out, "27-allow-phone", "nature-04.jpg", new int[0], 11);
-        shot(out, "28-headphones", "nature-05.jpg", new int[] {U, L, L, L, L, R, R, R, OK}, 12);
+        shot(out, "28-headphones", "nature-05.jpg", new int[] {U, L, L, L, L, R, R, R, R, R, OK}, 12);
         shot(out, "29-hearts", "nature-04.jpg", new int[0], 13);
         shot(out, "30-guest-wifi", "nature-12.jpg", new int[0], 14);
         shot(out, "31-day-apps", "nature-11.jpg", new int[] {D}, 5);
@@ -176,7 +177,7 @@ public final class Preview {
             }
             public void media(int what) {}
             public void wallpaper(int dir) {}
-            public void mirror(boolean apple) {}
+            public void mirror() {}
             public void pairing(boolean open) {}
             public void decide(String id, boolean allow) {}
             public void action(String key) {}
@@ -260,6 +261,7 @@ public final class Preview {
         }
         if (extra == 13) scene.hearts("hearts", "Alex", now - 1400);
         if (extra >= 17 && extra <= 20) scene.setAnswer(answer(extra), true);
+        scene.setAirPlayBeacon(extra == 21);
         if (extra == 14) {
             BufferedImage scratch = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
             scene.setWifi("Memorial Guest", new AwtGfx(scratch.createGraphics(), new File(ROOT, "assets/fonts")),

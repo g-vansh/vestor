@@ -4031,9 +4031,10 @@
 
       const samsung = this.buildSamsung();
       const remote = this.buildRemote();
+      const airplay = this.buildAirPlay();
       const push = this.buildPush();
       const claude = this.buildClaude();
-      const left = h('div', { class: 'set-col' }, look.el, samsung.el, remote.el, quiet.el, bikes.el, push.el, notes.el, photos.el);
+      const left = h('div', { class: 'set-col' }, look.el, samsung.el, remote.el, airplay.el, quiet.el, bikes.el, push.el, notes.el, photos.el);
       const right = h('div', { class: 'set-col' }, claude.el, cals.el, wifi.el, alexa.el, devices.el, health.el, about.el, calls.el);
       const cols = h('div', { class: 'set-cols' }, left, right);
       stagger(cols);
@@ -4051,6 +4052,7 @@
       this.syncCalForm();
       this.renderSamsung();
       this.renderRemote();
+      this.renderAirPlay();
       this.renderClaude();
       this.renderPush();
       this.renderAlexa();
@@ -4661,6 +4663,66 @@
           sw.el, del);
         return item;
       }));
+    },
+    // The AirPlay beacon: the Fire TV's Bluetooth points Apple devices nearby at the Samsung's own AirPlay.
+    buildAirPlay: function () {
+      const self = this;
+      const c = card(17, 'AirPlay', 'card-set card-airplay');
+      c.el.hidden = true;
+      this.apCard = c;
+      this.apOn = toggle({ id: 'airplay-on', label: 'AirPlay beacon', onChange: function (on) {
+        return setSetting('airplay', on ? 'on' : 'off').then(function () { self.renderAirPlay(true); pollSoon(); });
+      } });
+      this.apLine = h('p', { class: 'set-help', role: 'status' });
+      this.apFind = h('button', { class: 'btn btn-quiet btn-sm', type: 'button' }, icon('refresh'), 'Find the TV Again');
+      this.apFind.addEventListener('click', async function () {
+        self.apFind.disabled = true;
+        try {
+          await act('airplay', { do: 'find' });
+          toast('Looking for the Samsung’s AirPlay. This can take a few minutes.');
+          pollSoon();
+        } catch (e) {
+          toast(serverError(e), 'alert');
+        }
+        self.apFind.disabled = false;
+      });
+      fill(c.body, [
+        h('div', { class: 'switch-row' }, h('label', { class: 'switch-label', for: 'airplay-on' }, h('span', { class: 'strong', text: 'Show the Samsung to Apple devices' }), h('span', { class: 'switch-help', text: 'A Bluetooth beacon from this TV' })), this.apOn.el),
+        this.apLine,
+        h('div', { class: 'btn-row' }, this.apFind),
+        fold('How it works', [
+          h('p', { text: 'Apple devices find AirPlay TVs through Bonjour, which MIT’s Wi-Fi blocks between devices. Apple TVs also announce their address over Bluetooth, and an iPhone, iPad or Mac that hears it asks that address directly. Vestor sends the same announcement from the Fire TV, pointing at the Samsung’s own AirPlay, so guests install nothing and the picture goes straight to the Samsung.' }),
+          h('p', { text: 'It reaches about a room. Apple devices need Bluetooth and Wi-Fi on. The first time, the Samsung shows a code to type. The Samsung picks its AirPlay port itself, so Vestor checks it every few minutes and looks for a new one when it moves.' })
+        ])
+      ]);
+      return c;
+    },
+    renderAirPlay: function (force) {
+      const raw = S.airplay;
+      const has = !!raw && typeof raw === 'object';
+      this.apCard.el.hidden = !has;
+      if (!has) return;
+      const a = obj(raw);
+      const on = str(settings().airplay) !== 'off';
+      this.apOn.set(on);
+      if (!changed('s.airplay', [a.state, a.radio, a.address, a.port, on]) && !force) return;
+      const state = str(a.state);
+      const radio = str(a.radio);
+      const where = str(a.address) + (a.port ? ', port ' + a.port : '');
+      let line;
+      if (!on || state === 'off') line = 'Off. Apple devices find the Samsung only on a Wi-Fi that shows it.';
+      else if (state === 'noaddress') line = 'Type the Samsung’s address under Samsung remote first. The beacon points there.';
+      else if (radio === 'unsupported') line = 'This Fire TV’s Bluetooth can’t send the beacon. A Mac can still use Vestor’s AirPlay helper.';
+      else if (radio === 'bluetooth') line = 'Bluetooth is off on the Fire TV. Turn it on in Settings, Controllers and Bluetooth Devices.';
+      else if (radio === 'refused' || radio === 'failed') line = 'The Fire TV wouldn’t start the beacon. Vestor tries again every few minutes.';
+      else if (state === 'looking') line = 'Looking for the Samsung’s AirPlay. This can take a few minutes.';
+      else if (state === 'notfound') line = 'The Samsung answers, but its AirPlay doesn’t. Turn it on: Settings, General, Apple AirPlay Settings.';
+      else if (state === 'away') line = 'The Samsung isn’t answering, so it’s probably off. The beacon stays on, and Vestor checks again every few minutes.';
+      else if (state === 'on' && radio === 'on') line = 'On. iPhones, iPads and Macs near the TV list the Samsung (' + where + ').';
+      else if (state === 'on') line = 'Starting the beacon…';
+      else line = 'Checking the Samsung…';
+      this.apLine.textContent = line;
+      this.apFind.hidden = !on || state === 'off' || state === 'noaddress' || state === 'looking';
     },
     buildPush: function () {
       const self = this;

@@ -252,6 +252,13 @@ Notes on the newer fields (all optional, the page renders without them):
   Keys go to this remote when `state` is `connected`, or when `paired` (and not `changed` or `refused`). Otherwise
   they go through SmartThings when `can.keys`, else the page offers the setup.
 - `alexa.commands` is present only when `alexa.on`. `off` may be "". `url` and `stopUrl` remain for older pages.
+- `airplay` is the AirPlay beacon (see `AirPlay.java`): `{"state", "radio", "address", "port", "checked"}`. `state` is
+  `off` (the `airplay` setting), `noaddress` (no Samsung address under `samsung.remote`), `looking` (searching for
+  the Samsung's AirPlay port), `on` (the port answers), `away` (the TV does not answer, probably off: the beacon
+  stays on its last port) or `notfound` (the TV answers but its AirPlay does not). `radio` is the Fire TV's
+  Bluetooth: `on`, `starting`, `off`, `unsupported` (its chip cannot advertise), `bluetooth` (Bluetooth is off),
+  `refused` or `failed`. `address` and `port` are where the beacon points (port 0 before one is found). `checked`
+  is when the TV last looked, in ms.
 
 ## Actions: `POST /api/<action>` with a JSON body. Reply is `{"ok": true}` plus fields noted.
 
@@ -291,6 +298,7 @@ Notes on the newer fields (all optional, the page renders without them):
 | `remote` | `{"do": "hold", "key": "KEY_POWER", "ms": 3000}` | Hold a key down (100 to 5000 ms), as a long press on the TV's remote. The page sends it for a long press on Power |
 | `remote` | `{"do": "wake"}` | Wake the TV over the network (when `canWake`). 409 `{"error": "…"}` when Vestor has not read the TV's network card yet |
 | `remote` | `{"do": "close"}`, `{"do": "trust"}`, `{"do": "forget"}` | Close the channel. Trust the TV's new certificate (state `changed`), which also forgets the old key, so pair again after. Forget the TV altogether |
+| `airplay` | `{"do": "find"}` | Look for the Samsung's AirPlay port now, on every port if it is not where it was, however recently the TV last looked. Answers at once: the search runs on its own thread, and `airplay.state` shows `looking` meanwhile |
 | `ask` | `{"text": "≤500 chars"}` | Ask Vestor. Answers at once with the queued Answer (`busy` true, its own `id`). The finished Answer appears in `assistant.history` a few seconds later under a new `id`, so the page finds it by its `question` and an `at` at or after the queued one, or stops waiting when `asking` is gone. It polls every 1.5 s meanwhile. 409 `{"error": "<a sentence>"}` when it cannot ask now: no key yet, the month's budget is used up, 150 questions a day, 6 a minute, or two still being answered |
 | `assistant` | `{"do": "key", "key": "sk-ant-…"}`, `{"do": "forget"}` | Save the Claude API key on the TV (never echoed back), or forget it |
 | `assistant` | `{"do": "mode", "mode": "auto"\|"best"}` | The cheapest model that gets it right, or Opus 5.5 every time |
@@ -316,7 +324,7 @@ bike alarm rings before it gives up by itself), `quality` motion/still (motion i
 still shows the photo pixel for pixel), `pictureFollow` on/off (the Samsung picture follows day and night),
 `dayMode`, `nightMode` and `glareMode` (each one of `samsung.modes`), `push` on/off/new (new makes a fresh topic,
 and phones must subscribe again), `callVoice` headset/webcam (in Video Calls, your voice through the headphones'
-microphone when Fire OS offers it, or through the webcam).
+microphone when Fire OS offers it, or through the webcam), `airplay` on/off (the AirPlay beacon).
 
 Calendars round trip: state.calendar.feeds[].url is masked like "https://calendar.google.com/…". When saving the
 list with `set calendars`, send unchanged feeds back with that exact masked url and the TV keeps the saved

@@ -23,8 +23,12 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <!-- Video Calls with AirPods: whether Bluetooth headphones offer their microphone (the
          hands-free profile), so a call can talk through them. The web engine needs it too, to
-         open the headphones' call link itself. Granted by installing; nothing else uses it. -->
+         open the headphones' call link itself. Granted by installing. -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
+    <!-- The AirPlay beacon (see AirPlay.java): a Bluetooth LE broadcast with the Samsung's address
+         and AirPlay port, so iPhones, iPads and Macs near the TV list the Samsung on a network that
+         hides it. Android needs this to advertise. Granted by installing; it never scans or pairs. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <!-- Updates over the air: hands a new VestorOS, checked first (see Update.java), to Fire OS's
          installer, which asks you to confirm. Works once "Install unknown apps" is allowed for
          Vestor, which install.sh sets and its undo takes back. Android installs only an APK

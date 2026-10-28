@@ -1,4 +1,11 @@
 {
+ "airplay": {
+  "state": "on",
+  "radio": "on",
+  "address": "192.168.1.31",
+  "port": 46977,
+  "checked": 1793160000000
+ },
  "tv": {
   "name": "Vestor",
   "version": "2.0",
@@ -248,6 +255,7 @@
   ]
  },
  "settings": {
+  "airplay": "on",
   "units": "f",
   "clock": "auto",
   "rotate": "hour",

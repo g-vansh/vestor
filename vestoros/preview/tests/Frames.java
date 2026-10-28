@@ -31,7 +31,7 @@ public final class Frames {
             public void silenceAlarm() {}
             public void media(int what) {}
             public void wallpaper(int dir) {}
-            public void mirror(boolean apple) {}
+            public void mirror() {}
             public void pairing(boolean open) {}
             public void decide(String id, boolean allow) {}
             public void action(String key) {}

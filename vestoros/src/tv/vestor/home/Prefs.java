@@ -50,6 +50,8 @@ final class Prefs {
     static final String CALL_VOICE = "call_voice";
     /** When this TV last handed an update to Fire OS's installer, so the new version comes back to the front. */
     static final String UPDATE_AT = "update_at";
+    /** The Bluetooth beacon that shows the Samsung's AirPlay to Apple devices near the TV (see {@link AirPlay}). */
+    static final String AIRPLAY = "airplay";
 
     /** Every setting the control center may change, with its allowed values (null: free text checked elsewhere). */
     static final String[][] CHOICES = {
@@ -68,6 +70,7 @@ final class Prefs {
         {QUALITY, "motion", "still"},
         {PICTURE_FOLLOW, "off", "on"},
         {CALL_VOICE, CallAudio.HEADSET, CallAudio.WEBCAM},
+        {AIRPLAY, "on", "off"},
     };
 
     /** Names the control center uses where they differ from the stored key. */

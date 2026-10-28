@@ -146,6 +146,12 @@ final class Actions {
                 return samsung(h, Json.str(body, "do", ""), body);
             case "remote":
                 return remote(h, Json.str(body, "do", ""), body);
+            case "airplay":
+                // Looks for the Samsung's AirPlay port again, on every port, on the beacon's own thread.
+                if (!"find".equals(Json.str(body, "do", ""))) throw new Http.Refused(400, "airplay");
+                h.airplay.findNow();
+                h.airplay.tick(System.currentTimeMillis());
+                return OK;
             case "volume": {
                 // The Fire TV's own volume: HDMI-CEC carries it to the TV or the soundbar.
                 String what = Json.str(body, "do", "");
@@ -355,6 +361,7 @@ final class Actions {
         try {
             if ("address".equals(what)) {
                 r.setAddress(Json.str(body, "ip", ""));
+                h.airplayNow();
                 SamsungRemote.Info info = r.probe();
                 h.post(Hub.SETTINGS, "remote");
                 return new Jw().obj().put("ok", true).put("label", info.name).put("model", info.modelName.isEmpty() ? info.model : info.modelName)
@@ -376,6 +383,7 @@ final class Actions {
                 r.trustAgain();
             } else if ("forget".equals(what)) {
                 r.forget();
+                h.airplayNow();
             } else {
                 throw new Http.Refused(400, "remote");
             }

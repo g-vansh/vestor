@@ -159,6 +159,10 @@ final class State {
         w.key("remote").obj().put("state", r.state()).put("address", r.address()).put("paired", r.paired()).put("label", r.label())
                 .put("model", r.model()).put("canWake", r.canWake()).put("error", r.error()).end();
         w.end();
+        // The AirPlay beacon: what it found and whether the Fire TV's Bluetooth is sending it.
+        AirPlay a = h.airplay;
+        w.key("airplay").obj().put("state", a.state()).put("radio", a.radio()).put("address", a.address()).put("port", a.port())
+                .put("checked", a.checkedAt()).end();
     }
 
     private static void weather(Jw w, Model.Weather x) {

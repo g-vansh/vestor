@@ -11,6 +11,7 @@ import android.text.format.DateFormat;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -49,7 +50,8 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
 
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
-            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24, UPDATE = 25, ASKING = 26;
+            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24, UPDATE = 25, ASKING = 26,
+            AIRPLAY = 27;
 
     private static Hub instance;
 
@@ -69,6 +71,8 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     final Console console;
     final Samsung samsung;
     final SamsungRemote remote;
+    /** The Bluetooth beacon that shows the Samsung's AirPlay to Apple devices near the TV. */
+    final AirPlay airplay;
     final Assistant assistant;
     final Updater updater;
     private Ntfy ntfy;
@@ -176,6 +180,38 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                 prefs.putNow(key, value);
             }
         });
+        airplay = new AirPlay(new AirPlay.Store() {
+            @Override
+            public String get(String key) {
+                return prefs.get(key, "");
+            }
+
+            @Override
+            public void put(String key, String value) {
+                prefs.putNow(key, value);
+            }
+
+            @Override
+            public boolean enabled() {
+                return "on".equals(prefs.choice(Prefs.AIRPLAY));
+            }
+
+            @Override
+            public InetAddress samsung() {
+                return SamsungRemote.address(remote.address());
+            }
+        }, new Beacon(c));
+        airplay.onChange(new Runnable() {
+            private String last = "";
+
+            @Override
+            public void run() {
+                String now = airplay.state() + " " + airplay.radio() + " " + airplay.port();
+                if (now.equals(last)) return;
+                last = now;
+                post(AIRPLAY, null);
+            }
+        });
         assistant = new Assistant(this);
         updater = new Updater(this);
         Finder.get().listen(this);
@@ -275,6 +311,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                 post(WIFI, null);
             }
             assistant.tick(now);
+            airplay.tick(now);
             main.postDelayed(this, 30000);
         }
     };
@@ -339,6 +376,13 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         } catch (NumberFormatException ignored) {
             // the default stays
         }
+        airplayNow();
+    }
+
+    /** Checks the Samsung's AirPlay now, on its own thread: the beacon setting or the TV's address changed. */
+    void airplayNow() {
+        airplay.kick();
+        airplay.tick(System.currentTimeMillis());
     }
 
     boolean is24h() {

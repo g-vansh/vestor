@@ -59,7 +59,7 @@ public final class Fuzz {
                 }
                 public void media(int what) { calls[13]++; }
                 public void wallpaper(int dir) { calls[14]++; }
-                public void mirror(boolean apple) { calls[15]++; }
+                public void mirror() { calls[15]++; }
                 public void pairing(boolean open) {
                     calls[16]++;
                     if (open) {

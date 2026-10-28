@@ -6,6 +6,16 @@ notes from each other and your own photos on it. You run it from the remote, or 
 through a control center the TV serves itself. Built for a Fire TV Stick 4K (2nd generation) on
 Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
 
+## What 2.3 adds
+
+- **AirPlay for every Apple device, even on MIT's Wi-Fi.** The Fire TV broadcasts the same
+  Bluetooth announcement an Apple TV makes, pointing at the Samsung's own AirPlay, so iPhones,
+  iPads and Macs near the TV list the Samsung under Screen Mirroring without installing anything.
+  See [Mirroring a phone or laptop](#mirroring-a-phone-or-laptop).
+- **Mirror a Screen uses the Samsung's AirPlay.** Vestor no longer opens AirPlay apps from the
+  Appstore (they hit the same wall on a network that hides devices). The iPhone, iPad or Mac row
+  shows the steps instead.
+
 ## What 2.2 adds
 
 - **Ask Vestor, redesigned.** Its box opens in Vestor's own glass with the Fire TV keyboard already
@@ -486,15 +496,37 @@ events, exceptions, all-day events and time zones follow the iCalendar standard.
 
 The Mirror button on the top row offers two ways:
 
-- **iPhone, iPad or Mac:** the best route is your **Samsung TV's own AirPlay** (built into
-  Samsung TVs from 2018 on): Control Center › Screen Mirroring › the Samsung TV. It switches the
-  TV's input by itself, and the Fire TV remote's HOME brings you back. To mirror through the Fire
-  TV instead, install **AirReceiver** ($2.99) or **AirScreen** (free with limits) from the
-  Appstore, and Vestor's Mirror button opens it.
+- **iPhone, iPad or Mac:** the **Samsung TV's own AirPlay** (built into Samsung TVs from 2018
+  on). On the Apple device: Control Center › Screen Mirroring › the Samsung. The first time, type
+  the code the TV shows. The TV switches its input by itself, and the Fire TV remote's HOME
+  brings you back. OK on this row shows the same steps on the TV.
 - **Android phone or Windows PC:** Fire TV's own Miracast screen opens. On Windows press
   Win and K and pick the Fire TV. On Android use Smart View or Cast (Samsung phones support
-  Miracast. Pixels only cast to Chromecast, so use the Samsung TV's own Screen Mirroring or
-  AirScreen there). Any remote button ends a Miracast session.
+  Miracast. Pixels only cast to Chromecast, so use the Samsung TV's own Screen Mirroring
+  there). Any remote button ends a Miracast session.
+
+**The AirPlay beacon (on MIT's Wi-Fi, or any network that hides devices).** Apple devices find
+an AirPlay TV through Bonjour, and MIT's Wi-Fi blocks Bonjour between devices, so on its own the
+Samsung never shows up. Apple TVs have a second way to be found: they broadcast their address and
+AirPlay port over Bluetooth LE (Apple's "AirPlay Target" message), and an iPhone, iPad or Mac that
+hears it asks that address directly over the network. Cisco's Webex boards and UxPlay use the same
+message for the same reason. VestorOS sends it from the Fire TV, pointing at the Samsung, and MIT
+routes the rest between its subnets, so the picture goes straight from the Apple device to the
+Samsung, with nothing in between and nothing to install.
+
+- It is on by default, under Settings › AirPlay in the control center, which also says whether
+  it is on air. It needs the Samsung's address (Settings › Samsung remote, the same field) and
+  AirPlay on in the Samsung (Settings › General › Apple AirPlay Settings).
+- It reaches about a room. Apple devices need Bluetooth and Wi-Fi on. Neighbours in range may
+  see the Samsung too, but cannot use it without the code the TV shows.
+- The Samsung picks its AirPlay port itself and announces it only over Bonjour. VestorOS checks
+  the port it knows every few minutes. When the TV answers but AirPlay is no longer there, it
+  looks for the new port among the ports Linux hands out (32768 to 60999), about 400 a second,
+  at most once an hour. Find the TV Again looks on every port. Only the Samsung's own address is
+  ever tried.
+- Whether a Fire TV's Bluetooth can advertise is up to its chip. If this one cannot, the
+  AirPlay card says so. A Mac can then still use `scripts/airplay-samsung.sh`, which publishes
+  the Samsung's own Bonjour record on that Mac only (`dns-sd -lo`) while it runs.
 
 ## Video calls: WhatsApp on the TV
 
@@ -785,7 +817,8 @@ apps, so it is the last resort.
 - Installs one app, `tv.vestor.home`. Its permissions: internet, keeping the screen awake (for a
   note or Alexa), starting at boot, the camera and microphone (Fire OS asks you the first time a
   WhatsApp call in Video Calls needs them), Bluetooth (to see whether connected headphones offer a
-  microphone for a call), and asking to install packages (its own updates, each confirmed by you).
+  microphone for a call), Bluetooth admin (to broadcast the AirPlay beacon, never to scan or
+  pair), and asking to install packages (its own updates, each confirmed by you).
 - Turns on one accessibility service, "Vestor home button". It looks only at which app and screen
   a new window belongs to, to spot Amazon's home, and it draws the bike alarm, notes and hearts
   over other apps. It is declared unable to read screen content, press keys, read the remote,
