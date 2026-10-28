@@ -32,7 +32,7 @@ final class Ntfy {
     }
 
     static final String[] WORDS = {"find-ebike", "stop-ebike", "night", "day", "auto", "glare-on", "glare-off", "vestor",
-        "firetv", "wifi", "wifi-hide", "hearts", "update"};
+        "firetv", "wifi", "wifi-hide", "hearts", "update", "ask"};
 
     /** The commands an Alexa URL switch can send, as {name, what to say, word for on, word for off}. */
     static final String[][] SWITCHES = {
@@ -42,6 +42,7 @@ final class Ntfy {
         {"Vestor", "Alexa, turn on Vestor", "vestor", "firetv"},
         {"Guest Wi-Fi", "Alexa, turn on guest Wi-Fi", "wifi", "wifi-hide"},
         {"Hearts", "Alexa, turn on hearts", "hearts", ""},
+        {"Ask Vestor", "Alexa, turn on Ask Vestor", "ask", ""},
     };
     private static final long FRESH_MS = 120000L;
 

@@ -83,7 +83,7 @@ final class Scene {
     }
 
     static final int LEFT = 1, RIGHT = 2, UP = 3, DOWN = 4, OK = 5, LONG_OK = 6, BACK = 7, MENU = 8,
-            PLAY = 9, REWIND = 10, FORWARD = 11;
+            PLAY = 9, REWIND = 10, FORWARD = 11, LONG_MENU = 12;
     static final int MEDIA_TOGGLE = 0, MEDIA_NEXT = 1, MEDIA_PREV = 2;
 
     private static final int NONE = 0, SETTINGS = 1, TILE_MENU = 2, AUDIO = 4, MOVE = 5, PANEL = 6, PAIR = 7, ASK = 8,
@@ -561,26 +561,40 @@ final class Scene {
         float p = mode == ANSWER ? modal.value : 0;
         Claude.Answer a = answer;
         if (p <= 0.003f || a == null) return;
-        float w = Math.min(dp(860), width - dp(80)), h = dp(470), l = (width - w) / 2, tp = (height - h) / 2;
+        float w = Math.min(dp(900), width - dp(80)), l = (width - w) / 2;
+        float x = l + dp(48), right = l + w - dp(48), mw = right - x;
+        // The answer sets the card's height. A short one is set large in the serif, like the clock,
+        // and a long one in the text face, so a one-line reply never sits in an empty card.
+        String body = a.busy ? "" : !a.error.isEmpty() && a.text.isEmpty() ? a.error : a.text;
+        boolean lead = !a.busy && body.length() <= 120;
+        int face = lead ? Gfx.SERIF : Gfx.TEXT_MEDIUM, maxLines = lead ? 3 : 9;
+        float size = lead ? dp(38) : dp(23), leading = lead ? dp(48) : dp(33);
+        int qn = Pop.count(g, a.question, Gfx.TEXT_SEMIBOLD, dp(19), mw, 2);
+        int n = a.busy ? 2 : Math.max(1, Pop.count(g, body, face, size, mw, maxLines));
+        float top = dp(100) + (qn - 1) * dp(26) + dp(30);
+        float block = a.busy ? dp(96) : dp(14) + size * 0.8f + (n - 1) * leading;
+        float h = top + block + (a.did.isEmpty() ? 0 : dp(46)) + dp(104);
+        h = Math.max(dp(330), Math.min(height - dp(80), h));
+        float tp = (height - h) / 2;
         sheetFrame(g, l, tp, w, h, p, t);
-        float x = l + dp(44), right = l + w - dp(44), mw = right - x;
-        Icons.sparkle(g, x + dp(12), tp + dp(52), dp(24), Pixels.alpha(Tone.ACCENT, p));
+        // While Vestor thinks, the sparkle breathes.
+        float breathe = a.busy ? 1 + 0.14f * (float) Math.sin(now / 260.0) : 1;
+        Icons.sparkle(g, x + dp(12), tp + dp(52), dp(24) * breathe, Pixels.alpha(Tone.ACCENT, p));
         String who = a.from.isEmpty() || "the TV".equals(a.from) ? "YOU ASKED" : "ASKED ON " + a.from.toUpperCase(Locale.US);
         g.text(who, Gfx.MONO, dp(12.5f), 0.1f, x + dp(36), tp + dp(57), Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
         Pop.lines(g, a.question, Gfx.TEXT_SEMIBOLD, dp(19), x, tp + dp(100), mw, dp(26), 2, Tone.text(Tone.SECONDARY, p));
-        float y = tp + dp(172);
+        float y = tp + top;
+        g.line(x, y, right, y, dp(1), Tone.text(0.16f, p));
         if (a.busy) {
             int dots = (int) ((now / 400) % 4);
             String thinking = "Thinking" + "...".substring(0, dots);
-            g.text(thinking, Gfx.SERIF, dp(34), -0.01f, x, y + dp(8), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
-            g.text("A search on the web can take up to a minute.", Gfx.TEXT_MEDIUM, dp(15), 0, x, y + dp(52), Tone.text(Tone.TERTIARY, p),
+            g.text(thinking, Gfx.SERIF, dp(38), -0.01f, x, y + dp(50), Tone.text(Tone.PRIMARY, p), Gfx.LEFT, 0);
+            g.text("A search on the web can take up to a minute.", Gfx.TEXT_MEDIUM, dp(15), 0, x, y + dp(86), Tone.text(Tone.TERTIARY, p),
                     Gfx.LEFT, 0);
-        } else if (!a.error.isEmpty() && a.text.isEmpty()) {
-            Pop.lines(g, a.error, Gfx.TEXT_MEDIUM, dp(23), x, y, mw, dp(33), 4, Tone.text(Tone.PRIMARY, p));
         } else {
-            Pop.lines(g, a.text, Gfx.TEXT_MEDIUM, dp(23), x, y, mw, dp(33), 6, Tone.text(Tone.PRIMARY, p));
+            Pop.lines(g, body, face, size, x, y + dp(14) + size * 0.8f, mw, leading, maxLines, Tone.text(Tone.PRIMARY, p));
         }
-        float by = tp + h - dp(92);
+        float by = y + block + dp(36);
         if (!a.did.isEmpty()) {
             StringBuilder did = new StringBuilder();
             for (String d : a.did) did.append(did.length() > 0 ? "  \u00b7  " : "").append(d);
@@ -588,17 +602,18 @@ final class Scene {
             g.text(Text.fit(g, did.toString(), Gfx.TEXT_SEMIBOLD, dp(16), mw - dp(30)), Gfx.TEXT_SEMIBOLD, dp(16), 0, x + dp(28), by,
                     Pixels.alpha(Tone.ACCENT, p), Gfx.LEFT, 0);
         }
-        StringBuilder src = new StringBuilder();
+        float fy = tp + h - dp(42);
+        // Sources as small outlined tags, as many as fit beside the keys.
+        float sx = x, room = mw - dp(250);
         for (String[] sr : a.sources) {
             String host = sr[1].replaceFirst("^https://(www\\.)?", "");
             int slash = host.indexOf('/');
             if (slash > 0) host = host.substring(0, slash);
-            src.append(src.length() > 0 ? "  \u00b7  " : "Sources: ").append(host);
-        }
-        float fy = tp + h - dp(40);
-        if (src.length() > 0) {
-            g.text(Text.fit(g, src.toString(), Gfx.TEXT_REGULAR, dp(13.5f), mw - dp(220)), Gfx.TEXT_REGULAR, dp(13.5f), 0, x, fy,
-                    Tone.text(Tone.TERTIARY, p), Gfx.LEFT, 0);
+            float tw = g.measure(host, Gfx.TEXT_MEDIUM, dp(13), 0) + dp(24);
+            if (sx + tw > x + room) break;
+            g.strokeRoundRect(sx, fy - dp(19), sx + tw, fy + dp(9), dp(14), dp(1), Tone.text(Tone.TERTIARY, p));
+            g.text(host, Gfx.TEXT_MEDIUM, dp(13), 0, sx + dp(12), fy, Tone.text(Tone.SECONDARY, p), Gfx.LEFT, 0);
+            sx += tw + dp(8);
         }
         // Keys, right to left: Back closes, OK asks the next question once this one is answered.
         int ink = Tone.text(Tone.SECONDARY, p);
@@ -774,6 +789,16 @@ final class Scene {
             return true;
         }
         if (resting && k != DOWN) hintUntil = Math.max(hintUntil, now + 6000);
+        // Holding Menu asks Vestor from anywhere on the home screen, dimmed or not. A phone's request
+        // to pair waits for its own answer, so it stays up.
+        if (k == LONG_MENU) {
+            dim.to(0);
+            if (mode != ASK) {
+                closeOverlays();
+                host.action("ask");
+            }
+            return true;
+        }
         if (wasDim) {
             dim.to(0);
             if (mode != ASK && mode != NOTE) return true;

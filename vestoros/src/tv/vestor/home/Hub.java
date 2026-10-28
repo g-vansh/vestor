@@ -49,7 +49,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
 
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
-            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24, UPDATE = 25;
+            ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24, UPDATE = 25, ASKING = 26;
 
     private static Hub instance;
 
@@ -103,6 +103,8 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     volatile Model.Picture picture;
     volatile boolean night, front;
     volatile long nextChange, wifiUntil, heartsAt;
+    /** When Alexa last asked for the question box, so Home opens it once Vestor is in front. */
+    volatile long askAt;
     private volatile String[] window;
 
     private Hub(Context c) {
@@ -689,6 +691,11 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
                     post(WIFI, null);
                 } else if ("hearts".equals(word)) {
                     hearts("hearts", "Alexa");
+                } else if ("ask".equals(word)) {
+                    // "Alexa, turn on Ask Vestor": Vestor comes to the front with its question box open.
+                    askAt = System.currentTimeMillis();
+                    Guard.wake(app, true);
+                    post(ASKING, null);
                 } else if ("update".equals(word)) {
                     // publish.sh's nudge: look in a few minutes rather than within six hours. Installing still waits for you.
                     updater.checkSoon();

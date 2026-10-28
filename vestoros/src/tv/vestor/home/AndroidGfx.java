@@ -105,6 +105,11 @@ final class AndroidGfx implements Gfx {
         c = canvas;
     }
 
+    /** One of the typefaces, for Android widgets that should match the drawn screens (Ask Vestor's box). */
+    Typeface face(int f) {
+        return faces[f];
+    }
+
     @Override
     public int save() {
         return c.save();

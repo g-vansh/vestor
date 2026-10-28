@@ -1503,6 +1503,9 @@ textarea.input { padding: 13px 16px; min-height: 80px; resize: vertical; line-he
 .help[open] summary::after { transform: rotate(45deg); }
 .help-body { display: grid; gap: 10px; padding: 0 16px 16px; font-size: 13.5px; line-height: 1.5; color: var(--text-2); }
 .help-body .strong { color: var(--text); }
+/* A finished setup, folded: its controls read at full strength, not as help text. */
+.fold .help-body { color: var(--text); }
+.rm-cloud { display: grid; gap: 10px; justify-items: start; }
 .pass-wrap { position: relative; }
 .pass-wrap .input { padding-right: 52px; }
 .eye { position: absolute; right: 4px; top: 4px; background: transparent; box-shadow: none; color: var(--text-2); }

@@ -2,6 +2,7 @@ package tv.vestor.home;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -173,6 +174,11 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
         Guard.homeInFront();
         Guard.arrived(this);
         hub.front(true);
+        // "Alexa, turn on Ask Vestor" brought Vestor up: the question box opens as it arrives.
+        if (hub.askAt > 0 && System.currentTimeMillis() - hub.askAt < 15000L) {
+            hub.askAt = 0;
+            ask();
+        }
         if (prefs.readConf()) {
             hub.applySettings();
             hub.live.refreshSlow();
@@ -243,6 +249,7 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
 
     @Override
     protected void onDestroy() {
+        if (askSheet != null) askSheet.dismiss();
         hub.unlisten(this);
         try {
             unregisterReceiver(packages);
@@ -371,6 +378,12 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 break;
             case Hub.UPDATE:
                 updated(now);
+                break;
+            case Hub.ASKING:
+                if (resumed && hub.askAt > 0) {
+                    hub.askAt = 0;
+                    ask();
+                }
                 break;
             case Hub.ANSWER:
                 if (detail instanceof Claude.Answer) {
@@ -1257,9 +1270,14 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
         view.kick();
     }
 
+    /** Ask Vestor's box, while it is open. */
+    private Dialog askSheet;
+
     /**
-     * A question for the assistant from the remote. The Fire TV keyboard's microphone (where this
-     * model offers it) turns speech into the text; a phone's keyboard microphone always does.
+     * A question for the assistant from the remote: Vestor's own box with the Fire TV keyboard open,
+     * where holding the remote's microphone button speaks into it on builds that allow it. A phone's
+     * keyboard microphone always does. Holding Menu, the top row's sparkle and "Alexa, turn on Ask
+     * Vestor" all open it.
      */
     private void ask() {
         if (!hub.assistant.claude.hasKey()) {
@@ -1267,32 +1285,33 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             view.kick();
             return;
         }
-        final EditText field = new EditText(this);
-        field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
-        field.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        field.setHint("Ask anything, or say what to play");
-        field.setFilters(new android.text.InputFilter[] {new android.text.InputFilter.LengthFilter(Claude.MAX_QUESTION)});
-        final AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Ask Vestor")
-                .setView(field)
-                .setPositiveButton("Ask", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int which) {
-                        send(field.getText().toString());
-                    }
-                })
-                .setNegativeButton("Cancel", null)
-                .create();
-        field.setOnEditorActionListener(new android.widget.TextView.OnEditorActionListener() {
+        if (askSheet != null && askSheet.isShowing()) return;
+        askSheet = AskSheet.show(this, askIdeas(), new AskSheet.Asker() {
             @Override
-            public boolean onEditorAction(android.widget.TextView v, int action, android.view.KeyEvent e) {
-                if (action != EditorInfo.IME_ACTION_SEND && action != EditorInfo.IME_ACTION_DONE) return false;
-                dialog.dismiss();
-                send(field.getText().toString());
-                return true;
+            public void ask(String question) {
+                send(question);
             }
         });
-        dialog.show();
+    }
+
+    /** What the box offers under it: the last question asked anywhere, then ones that suit the hour. */
+    private List<String> askIdeas() {
+        List<String> out = new ArrayList<>();
+        try {
+            List<Claude.Answer> past = hub.assistant.claude.history();
+            if (!past.isEmpty()) {
+                String last = Text.clean(past.get(0).question);
+                if (!last.isEmpty() && last.length() <= 60) out.add(last);
+            }
+        } catch (RuntimeException ignored) {
+            // no history to offer
+        }
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        String[] fit = hour >= 5 && hour < 11 ? new String[] {"Will the e-bikes last this morning?", "Will it rain today?", "When's the next Tech Shuttle?"}
+                : hour >= 11 && hour < 17 ? new String[] {"Will it rain before 6?", "When's the next shuttle?", "What's on our calendar tonight?"}
+                : new String[] {"What's on tomorrow?", "Will it rain tomorrow morning?", "Something good to watch tonight"};
+        for (String f : fit) if (out.size() < 3 && !out.contains(f)) out.add(f);
+        return out;
     }
 
     private void send(String text) {

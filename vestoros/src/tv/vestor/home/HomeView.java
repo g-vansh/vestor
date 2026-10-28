@@ -20,8 +20,10 @@ final class HomeView extends View {
     private final AndroidGfx gfx;
     private boolean running;
     private long lastFrame;
-    private long okDown;
+    private long okDown, menuDown;
     private boolean okHeld, longFired, drawn;
+    /** Menu, like OK, is told apart by how long it is held: a tap opens Settings, a hold asks Vestor. */
+    private boolean menuHeld, menuLong;
 
     HomeView(Context c, Scene scene) {
         super(c);
@@ -144,6 +146,18 @@ final class HomeView extends View {
             }
             return true;
         }
+        if (k == Scene.MENU) {
+            if (e.getRepeatCount() == 0) {
+                e.startTracking();
+                menuDown = e.getEventTime();
+                menuHeld = true;
+                menuLong = false;
+            } else if (menuHeld && !menuLong && e.getEventTime() - menuDown >= LONG_PRESS_MS) {
+                menuLong = true;
+                send(Scene.LONG_MENU);
+            }
+            return true;
+        }
         // Held media keys repeat; one press is one track or one photo.
         if ((k == Scene.PLAY || k == Scene.REWIND || k == Scene.FORWARD) && e.getRepeatCount() > 0) return true;
         send(k);
@@ -157,6 +171,11 @@ final class HomeView extends View {
             send(Scene.LONG_OK);
             return true;
         }
+        if (map(code) == Scene.MENU && menuHeld && !menuLong) {
+            menuLong = true;
+            send(Scene.LONG_MENU);
+            return true;
+        }
         return super.onKeyLongPress(code, e);
     }
 
@@ -168,6 +187,11 @@ final class HomeView extends View {
             if (okHeld && !longFired) send(Scene.OK);
             okHeld = false;
             longFired = false;
+        }
+        if (k == Scene.MENU) {
+            if (menuHeld && !menuLong) send(Scene.MENU);
+            menuHeld = false;
+            menuLong = false;
         }
         return true;
     }

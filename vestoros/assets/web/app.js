@@ -309,7 +309,7 @@
 
   function netMessage(e) {
     if (e && e.name === 'AbortError') return 'The TV took too long to answer. Try again.';
-    return 'Can’t reach the TV. Is this device on the home Wi-Fi?';
+    return 'Can’t reach the TV. Is this device on Tailscale or the TV’s network, and is the TV on?';
   }
   function errorText(status, data) {
     const e = str(obj(data).error);
@@ -617,6 +617,13 @@
     if (key && armedKeys[key] > Date.now()) arm(armedKeys[key] - Date.now());
   }
 
+  // A finished setup folds away under one line and opens again when wanted.
+  function fold(title, kids, open) {
+    const el = h('details', { class: 'help fold' }, h('summary', null, title), h('div', { class: 'help-body' }, kids));
+    if (open) el.open = true;
+    return el;
+  }
+
   let cardSeq = 0;
   function card(n, title, cls) {
     const id = 'card-' + (++cardSeq);
@@ -755,7 +762,7 @@
       }
     }
     if (!hello) {
-      $('#boot-text').textContent = 'Can’t reach the TV. Make sure this device is on the home Wi-Fi and the TV is on.';
+      $('#boot-text').textContent = 'Can’t reach the TV. Make sure this device is on Tailscale or the TV’s network, and the TV is on.';
       retry.hidden = false;
       // Keep the secret around so a retry can still use it.
       if (key) boot.key = key;
@@ -2611,7 +2618,7 @@
           ? [h('p', { class: 'rc-hint-text', text: 'The arrows need the TV’s remote set up. It takes a minute.' }), setUp('Set Up the Remote')]
           : h('p', { class: 'rc-hint-text', text: 'Only volume works here. This version of Vestor can’t reach the Samsung.' }));
       } else if (target === 'cloud') {
-        kids.push(h('p', { class: 'rc-hint-text', text: 'Keys go through SmartThings, so each one takes a moment.' }), setup ? setUp('Set Up the Remote for Instant Keys', true) : null);
+        kids.push(h('p', { class: 'rc-hint-text', text: 'Keys go through SmartThings, so each one takes a moment.' }));
       } else if (st === 'unreachable') {
         kids.push(h('p', { class: 'amber-note', text: 'The TV isn’t answering. It may be off.' + (r.canWake === true ? ' Tap Power to wake it.' : '') }));
       } else if (st === 'refused' || (str(r.error) && st !== 'connected')) {
@@ -3877,11 +3884,13 @@
       this.mbtaSave = h('button', { class: 'btn', type: 'submit' }, 'Save');
       this.mbtaRemove = h('button', { class: 'btn btn-quiet btn-sm', type: 'button' }, 'Remove key');
       const mbtaForm = h('form', { class: 'inline-form' }, this.mbtaInput, this.mbtaSave);
+      this.mbtaForm = mbtaForm;
+      this.mbtaReplace = h('button', { class: 'btn btn-quiet btn-sm', type: 'button', on: { click: function () { self.mbtaChange = true; self.syncMbta(); self.mbtaInput.focus(); } } }, 'Replace Key');
       mbtaForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const k = self.mbtaInput.value.trim();
         if (!/^[0-9a-fA-F]{32}$/.test(k)) { toast('An MBTA key is 32 letters a to f and digits.', 'warn'); return; }
-        try { await setSetting('mbtaKey', k.toLowerCase()); self.mbtaInput.value = ''; self.syncMbta(); toast('Key saved. Buses go live.'); } catch (err) { toast(err.message, 'alert'); }
+        try { await setSetting('mbtaKey', k.toLowerCase()); self.mbtaInput.value = ''; self.mbtaChange = false; self.syncMbta(); toast('Key saved. Buses go live.'); } catch (err) { toast(err.message, 'alert'); }
       });
       confirmTap(this.mbtaRemove, 'Tap again to remove', async function () {
         try { await setSetting('mbtaKey', ''); self.syncMbta(); toast('Key removed'); } catch (err) { toast(err.message, 'alert'); }
@@ -3894,7 +3903,7 @@
         row('alarmFor', 'Alarm rings for', 'Then it goes quiet by itself.'),
         h('div', { class: 'set-row' },
           h('div', { class: 'set-text' }, h('label', { class: 'set-label', for: 'mbta', text: 'MBTA key' }), this.mbtaStatus),
-          mbtaForm, this.mbtaRemove)
+          mbtaForm, h('div', { class: 'btn-row' }, this.mbtaReplace, this.mbtaRemove))
       ]);
 
       const notes = card(7, 'Notes & sky', 'card-set');
@@ -3932,19 +3941,19 @@
           await setSetting('calendars', list);
           calName.value = '';
           calUrl.value = '';
+          self.calOpen = false;
           toast('Calendar added. It shows up after the next fetch.');
         } catch (err) { toast(err.message, 'alert'); }
       });
-      fill(cals.body, [
-        this.feedList,
-        calForm,
-        h('details', { class: 'help' },
+      this.calForm = calForm;
+      this.calAddBtn = h('button', { class: 'btn btn-quiet btn-sm', type: 'button', on: { click: function () { self.calOpen = true; self.syncCalForm(); calName.focus(); } } }, icon('plus'), 'Add a Calendar');
+      this.calHelp = h('details', { class: 'help' },
           h('summary', null, 'Where do I find the address?'),
           h('div', { class: 'help-body' },
             h('p', null, h('span', { class: 'strong', text: 'Google Calendar: ' }), 'on a computer, Settings › the calendar under Settings for my calendars › Integrate calendar › Secret address in iCal format. Copy it and paste it here.'),
             h('p', null, h('span', { class: 'strong', text: 'iCloud: ' }), 'in the Calendar app, tap the info button beside the calendar, turn on Public Calendar and tap Share Link. Copy the link that starts with webcal://.'),
-            h('p', { class: 'muted', text: 'The TV keeps the address to itself and only ever shows the start of it here.' })))
-      ]);
+            h('p', { class: 'muted', text: 'The TV keeps the address to itself and only ever shows the start of it here.' })));
+      fill(cals.body, [this.feedList, this.calAddBtn, calForm, this.calHelp]);
 
       const wifi = card(11, 'Guest Wi-Fi', 'card-set');
       this.ssid = h('input', { class: 'input', id: 'wifi-ssid', type: 'text', maxLength: 32, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
@@ -3968,6 +3977,7 @@
           if (ssid !== str(settings().wifiSsid)) await setSetting('wifiSsid', ssid);
           if (pass) await setSetting('wifiPass', pass);
           self.wpass.value = '';
+          self.wifiOpen = false;
           self.syncWifi();
           toast('Guest Wi-Fi saved');
         } catch (err) { toast(err.message, 'alert'); }
@@ -3976,7 +3986,11 @@
       showWifi.addEventListener('click', function () { act('wifi', { do: 'show' }).then(function () { toast('The Wi-Fi code is on the TV for 2 minutes'); }).catch(function (e) { toast(e.message, 'alert'); }); });
       const hideWifi = h('button', { class: 'btn btn-quiet', type: 'button' }, 'Hide');
       hideWifi.addEventListener('click', function () { act('wifi', { do: 'hide' }).catch(function (e) { toast(e.message, 'alert'); }); });
-      fill(wifi.body, [h('p', { class: 'set-help', text: 'Guests scan a code on the TV to join. The password never comes back to this page.' }), wifiForm, h('div', { class: 'btn-row' }, showWifi, hideWifi)]);
+      this.wifiForm = wifiForm;
+      this.wifiState = h('p', { class: 'set-help' });
+      this.wifiEdit = h('button', { class: 'btn btn-quiet btn-sm', type: 'button', on: { click: function () { self.wifiOpen = true; self.syncWifi(); self.ssid.focus(); } } }, 'Set Up Guest Wi-Fi');
+      this.wifiBtns = h('div', { class: 'btn-row' }, showWifi, hideWifi);
+      fill(wifi.body, [this.wifiState, this.wifiBtns, this.wifiEdit, wifiForm]);
 
       const alexa = card(12, 'Alexa', 'card-set');
       this.alexaOn = toggle({ id: 'alexa-on', label: 'Alexa routines', onChange: function (on) {
@@ -4000,12 +4014,11 @@
 
       const health = card(14, 'Health', 'card-set');
       this.healthList = h('ul', { class: 'health' });
-      fill(health.body, [h('p', { class: 'set-help', text: 'Every live source the TV reads, and how it is pacing itself. Limited means the source asked Vestor to slow down.' }), this.healthList]);
+      this.healthFold = fold('Every source', [h('p', { class: 'set-help', text: 'Every live source the TV reads, and how it is pacing itself. Limited means the source asked Vestor to slow down.' }), this.healthList]);
+      fill(health.body, this.healthFold);
 
       const about = card(15, 'About', 'card-set');
       this.aboutBody = h('div', { class: 'about' });
-      const refresh = h('button', { class: 'btn btn-block', type: 'button' }, icon('refresh'), 'Fetch fresh data now');
-      refresh.addEventListener('click', function () { act('refresh', {}).then(function () { toast('The TV is fetching fresh data'); }).catch(function (e) { toast(e.message, 'alert'); }); });
       this.updLine = h('p', { class: 'set-help', role: 'status' });
       this.updBtn = h('button', { class: 'btn btn-block', type: 'button' }, 'Check for updates');
       this.updBtn.addEventListener('click', function () {
@@ -4014,7 +4027,7 @@
           toast(str(obj(d).note) || (install ? 'Confirm on the TV with Install' : 'Checking for updates'));
         }).catch(function (e) { toast(serverError(e), 'alert'); });
       });
-      fill(about.body, [this.aboutBody, this.updLine, this.updBtn, refresh]);
+      fill(about.body, [this.aboutBody, this.updLine, this.updBtn]);
 
       const samsung = this.buildSamsung();
       const remote = this.buildRemote();
@@ -4035,6 +4048,7 @@
       this.syncMbta();
       this.syncWifi();
       this.renderFeeds();
+      this.syncCalForm();
       this.renderSamsung();
       this.renderRemote();
       this.renderClaude();
@@ -4294,7 +4308,11 @@
           self.setRmError(serverError(err));
         }
       });
+      this.rmCloud = h('div', { class: 'rm-cloud', hidden: true },
+        h('p', { class: 'set-help', text: 'The Remote tab works through SmartThings, a moment per key. Instant keys over Wi-Fi pair only when this TV and the Samsung share a network, which MIT’s Wi-Fi does not allow.' }),
+        h('button', { class: 'btn btn-quiet btn-sm', type: 'button', on: { click: function () { self.rmExpanded = true; self.renderRemote(true); } } }, 'Try Instant Keys Anyway'));
       fill(c.body, [
+        this.rmCloud,
         this.rmError,
         this.rmDenied,
         this.rmDevice,
@@ -4413,7 +4431,11 @@
       const shown = this.rmError.hidden ? '' : this.rmError.textContent;
       this.rmDenied.hidden = waiting || !(state === 'refused' || /said no|\bden(y|ied)\b/i.test(shown));
       const ready = (paired || state === 'connected') && !changedCert && !waiting;
-      setMeta(this.rm.card, state === 'connected' ? 'Connected' : changedCert ? 'Check the TV' : paired ? 'Paired' : waiting ? 'Waiting' : '', state === 'connected' ? 'live' : '');
+      // SmartThings already carries the keys: the Wi-Fi steps stay folded unless asked for.
+      const cloudOnly = sam.connected === true && obj(sam.can).keys === true && !ready && !waiting && !changedCert && !this.rmExpanded;
+      this.rmCloud.hidden = !cloudOnly;
+      if (cloudOnly) { this.rmError.hidden = true; this.rmDenied.hidden = true; }
+      setMeta(this.rm.card, cloudOnly ? 'Through SmartThings' : state === 'connected' ? 'Connected' : changedCert ? 'Check the TV' : paired ? 'Paired' : waiting ? 'Waiting' : '', state === 'connected' || cloudOnly ? 'live' : '');
       const address = str(r.address);
       if (address && document.activeElement !== this.rmIp && !this.rmIp.value) this.rmIp.value = address;
       // What Vestor knows about the TV: its name, model and address.
@@ -4428,9 +4450,9 @@
       fill(this.rmDevice, deviceKids);
       this.rmDevice.hidden = !(ready || changedCert) || !deviceKids;
       fill(this.rmFound, !ready && known ? h('p', { class: 'rm-found-text' }, icon('check'), h('span', { text: 'Found ' + (label || 'the TV') + (str(r.model) ? ', ' + str(r.model) : '') + '.' })) : null);
-      this.rmFound.hidden = ready || !known;
-      this.rmIntro.hidden = ready || changedCert;
-      this.rmSteps.hidden = ready || changedCert;
+      this.rmFound.hidden = ready || !known || cloudOnly;
+      this.rmIntro.hidden = ready || changedCert || cloudOnly;
+      this.rmSteps.hidden = ready || changedCert || cloudOnly;
       const canPair = !!address && !waiting;
       this.rmStep2.classList.toggle('later', !address);
       this.rmPair.disabled = !canPair;
@@ -4548,7 +4570,7 @@
         this.clModeRow,
         this.clCapRow,
         this.clForgetRow,
-        h('p', { class: 'set-help cl-help', text: 'When you ask, the TV sends Anthropic your question, the last few questions and answers, and what the TV knows right now: the time, both docks’ bike counts and forecast, the finder’s state, weather, shuttle times, your next plans, what is playing, your installed app names, the Samsung’s inputs and picture and sound modes, your automations and the wallpaper look. Questions asked from any phone or the TV share the same memory. Web searches use your rough location (Cambridge, MA). Anthropic does not train on API data and deletes it after 30 days. Your key stays on the TV and phones only ever see its last four characters.' }),
+        fold('What the TV sends to Anthropic', h('p', { class: 'set-help cl-help', text: 'When you ask, the TV sends Anthropic your question, the last few questions and answers, and what the TV knows right now: the time, both docks’ bike counts and forecast, the finder’s state, weather, shuttle times, your next plans, what is playing, your installed app names, the Samsung’s inputs and picture and sound modes, your automations and the wallpaper look. Questions asked from any phone or the TV share the same memory. Web searches use your rough location (Cambridge, MA). Anthropic does not train on API data and deletes it after 30 days. Your key stays on the TV and phones only ever see its last four characters.' })),
         h('div', { class: 'cl-rules' },
           h('p', { class: 'set-label', text: 'Automations' }),
           this.clRules,
@@ -4651,7 +4673,7 @@
       this.pushBody = h('div', { class: 'push-body' });
       fill(c.body, [
         h('div', { class: 'switch-row' }, h('label', { class: 'switch-label', for: 'push-on' }, h('span', { class: 'strong', text: 'Buzz our phones' }), h('span', { class: 'switch-help', text: 'Free, through the ntfy app' })), this.pushOn.el),
-        h('p', { class: 'set-help push-why', text: 'When bike finder finds an e-bike, your phones buzz with a link to Bluebikes, where Reserve holds it for 10 minutes.' }),
+        this.pushWhy = h('p', { class: 'set-help push-why', text: 'When bike finder finds an e-bike, your phones buzz with a link to Bluebikes, where Reserve holds it for 10 minutes.' }),
         this.pushBody
       ]);
       return c;
@@ -4664,6 +4686,7 @@
       const p = obj(raw);
       const on = p.on === true;
       this.pushOn.set(on);
+      this.pushWhy.hidden = on;
       if (!changed('s.push', [on, p.topic]) && !force) return;
       if (!on) { fill(this.pushBody, null); return; }
       const topic = str(p.topic);
@@ -4676,9 +4699,13 @@
         try { await setSetting('push', 'new'); toast('New topic made. Subscribe to it in ntfy.'); pollSoon(); } catch (e) { toast(serverError(e), 'alert'); }
       });
       fill(this.pushBody, [
-        h('p', { class: 'push-steps', text: 'Install ntfy from the App Store, tap +, and subscribe to this topic' }),
-        topic ? copyField('Topic', topic, 'push-topic') : h('p', { class: 'set-help', text: 'The TV is making a topic…' }),
-        h('div', { class: 'btn-row' }, test, fresh)
+        h('p', { class: 'set-help', text: 'On. Phones subscribed in ntfy buzz when bike finder finds an e-bike.' }),
+        h('div', { class: 'btn-row' }, test),
+        fold('Topic and setup', [
+          h('p', { class: 'push-steps', text: 'Install ntfy from the App Store, tap +, and subscribe to this topic' }),
+          topic ? copyField('Topic', topic, 'push-topic') : h('p', { class: 'set-help', text: 'The TV is making a topic…' }),
+          h('div', { class: 'btn-row' }, fresh)
+        ])
       ]);
     },
     syncAwake: function () {
@@ -4719,8 +4746,11 @@
     syncMbta: function () {
       const set = str(settings().mbtaKey) === 'set';
       this.mbtaStatus.textContent = set
-        ? 'A key is saved, so the 85 streams live. It is never shown again.'
+        ? 'A key is saved, so the 85 streams live.'
         : 'Without a key Vestor polls the MBTA gently. Get a free key at api-v3.mbta.com and paste it here.';
+      const form = !set || this.mbtaChange === true;
+      this.mbtaForm.hidden = !form;
+      this.mbtaReplace.hidden = !set || form;
       this.mbtaRemove.hidden = !set;
       this.mbtaInput.placeholder = set ? 'Paste a new key to replace it' : '32 letters and digits';
     },
@@ -4728,6 +4758,19 @@
       const st = settings();
       if (document.activeElement !== this.ssid && !this.ssid.dataset.dirty) this.ssid.value = str(st.wifiSsid);
       this.wpass.placeholder = st.wifiSet ? 'Saved. Type to replace it' : 'Password';
+      const set = !!st.wifiSet && !!str(st.wifiSsid);
+      const open = this.wifiOpen === true;
+      this.wifiState.textContent = set ? 'Guests join ' + str(st.wifiSsid) + ' by scanning a code on the TV. The password never comes back to this page.' : 'Save a guest network and guests can join it by scanning a code on the TV.';
+      this.wifiBtns.hidden = !set;
+      this.wifiForm.hidden = !open;
+      this.wifiEdit.hidden = open;
+      this.wifiEdit.textContent = set ? 'Change Network' : 'Set Up Guest Wi-Fi';
+    },
+    syncCalForm: function () {
+      const open = !arr(obj(S.calendar).feeds).length || this.calOpen === true;
+      this.calForm.hidden = !open;
+      this.calHelp.hidden = !open;
+      this.calAddBtn.hidden = open;
     },
     renderFeeds: function () {
       const feeds = arr(obj(S.calendar).feeds).map(obj);
@@ -4767,11 +4810,14 @@
       });
       const commands = arr(a.commands).map(obj).filter(function (c) { return str(c.name) && str(c.on); });
       fill(this.alexaBody, [
-        h('p', { class: 'set-help', text: 'At virtualsmarthome.xyz/url_switch, sign in with Amazon, add a switch per command with these addresses, then enable the URL Switch skill in the Alexa app. Alexa, turn on bike finder works at once. For your own phrase, make a routine in the Alexa app.' }),
-        commands.length ? h('ul', { class: 'cmds' }, commands.map(commandRow))
-          : urls.length ? urls.map(function (u) { return copyField(u[0], u[1], u[2]); })
-          : h('p', { class: 'set-help', text: 'The TV is making the links…' }),
-        fresh
+        h('p', { class: 'set-help', text: commands.length ? 'On, with ' + commands.length + ' commands. Each is a URL switch in the Alexa app, and “Alexa, turn on Ask Vestor” opens Ask Vestor on the TV.' : 'On.' }),
+        fold('Links for the Alexa app', [
+          h('p', { class: 'set-help', text: 'At virtualsmarthome.xyz/url_switch, sign in with Amazon, add a switch per command with these addresses, then enable the URL Switch skill in the Alexa app. Alexa, turn on bike finder works at once. For your own phrase, make a routine in the Alexa app.' }),
+          commands.length ? h('ul', { class: 'cmds' }, commands.map(commandRow))
+            : urls.length ? urls.map(function (u) { return copyField(u[0], u[1], u[2]); })
+            : h('p', { class: 'set-help', text: 'The TV is making the links…' }),
+          fresh
+        ])
       ]);
     },
     renderDevices: function () {
@@ -4795,6 +4841,9 @@
       const list = arr(S.health).map(obj);
       if (!changed('s.health', list)) return;
       if (!list.length) { fill(this.healthList, h('li', null, empty('No sources reported yet.'))); return; }
+      const off = list.filter(function (x) { return /limit|slow|back|wait|pause|fail|down|err|block/.test(str(x.state).toLowerCase()); }).length;
+      this.healthFold.firstChild.textContent = off ? off + ' of ' + list.length + (off === 1 ? ' sources needs a look' : ' sources need a look')
+        : list.length === 1 ? 'The one source is fine' : 'All ' + list.length + ' sources are fine';
       fill(this.healthList, list.map(function (x) {
         const state = str(x.state) || 'Unknown';
         const s = state.toLowerCase();
@@ -4842,8 +4891,7 @@
         urls.length ? h('div', null, h('dt', { text: 'Address' }), h('dd', { class: 'mono-text', text: urls.join('  ') })) : null,
         access ? h('div', null, h('dt', { text: 'Reachable from' }), h('dd', { text: access })) : null,
         picture ? h('div', null, h('dt', { text: 'Picture' }), h('dd', { text: picture })) : null,
-        h('div', null, h('dt', { text: 'Privacy' }), h('dd', { text: 'This page only ever talks to the TV.' }))),
-        str(display.advice) ? h('p', { class: 'amber-note', text: str(display.advice) }) : null]);
+        h('div', null, h('dt', { text: 'Privacy' }), h('dd', { text: 'This page only ever talks to the TV.' })))]);
     }
   };
 

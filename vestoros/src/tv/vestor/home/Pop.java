@@ -94,6 +94,11 @@ final class Pop {
         return f.isEmpty() ? "home" : f;
     }
 
+    /** How many lines {@link #lines} would draw, so a card can size itself to its text. */
+    static int count(Gfx g, String s, int face, float size, float maxW, int maxLines) {
+        return wrap(g, s, face, size, maxW, maxLines).length;
+    }
+
     /** Text wrapped at word breaks into at most {@code maxLines}, the last one ellipsised. */
     static void lines(Gfx g, String s, int face, float size, float x, float base, float maxW, float leading, int maxLines,
             int color) {

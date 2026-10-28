@@ -6,6 +6,20 @@ notes from each other and your own photos on it. You run it from the remote, or 
 through a control center the TV serves itself. Built for a Fire TV Stick 4K (2nd generation) on
 Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
 
+## What 2.2 adds
+
+- **Ask Vestor, redesigned.** Its box opens in Vestor's own glass with the Fire TV keyboard already
+  up, so you can type at once or speak: hold the remote's microphone button while the keyboard is up
+  and it types what you say (on the Fire OS builds that allow it). A few questions wait under the
+  box to pick with the remote. The answer card fits its answer, and a short one is set large in the
+  serif.
+- **Three ways in.** Hold ☰ on the remote anywhere on the home screen, choose the sparkle on the top
+  row, or say "Alexa, turn on Ask Vestor". The microphone button on its own stays Alexa's: Amazon
+  reserves it, and no app can take it over.
+- **A quieter control center.** Setups you have finished fold away to one line each (phone alerts,
+  Alexa links, the MBTA key, calendars, guest Wi-Fi, health), and the Samsung's Wi-Fi remote stops
+  asking to be set up when SmartThings already carries its keys.
+
 ## What 2.1 adds
 
 - **AirPods in video calls.** Call sound plays in your AirPods. When Fire OS offers their
@@ -85,6 +99,7 @@ apps stay out of sight until you ask for them, so nothing sits on top of the pho
 | OK on the bikes card | Start bike finder and open the Bluebikes panel |
 | Hold OK on the bikes card | Start or stop bike finder without opening anything |
 | Hold OK on an app, or ☰ | Move, Hide or App Info. ☰ elsewhere opens Settings |
+| Hold ☰ | Ask Vestor, from anywhere on the home screen |
 | Play/Pause | Play or pause whatever is playing on the TV |
 | Rewind / Fast Forward | The previous or next wallpaper. On the music card, the previous or next track |
 | Back | Close what is open. On the apps, jump to the first app, then put the apps away |
@@ -338,11 +353,13 @@ one that ships:
 
 ## Ask Vestor: Claude on the TV
 
-Press Up to the top row and choose the sparkle (far left), or use the Ask box at the top of the
-phone page. Type, or speak: on the iPhone, tap the microphone on the keyboard. On the TV, the
-Fire TV keyboard's microphone works on some models. The remote's own microphone button always
-belongs to Alexa, so it cannot reach Vestor. The answer shows on a glass card on the TV (when
-Vestor is in front, never over a film) and on the phone.
+Hold ☰ on the remote, choose the sparkle on the top row, say "Alexa, turn on Ask Vestor", or use
+the Ask box at the top of the phone page. On the TV the box opens with the keyboard up: type, or
+hold the remote's microphone button while the keyboard is up and speak, which Fire OS turns into
+text on the builds that allow it. On the iPhone, tap the microphone on the keyboard. Pressed on its
+own, the microphone button always belongs to Alexa: Amazon's documentation calls it a system event
+that no app can intercept. The answer shows on a glass card on the TV (when Vestor is in front,
+never over a film) and on the phone.
 
 **What it can do**
 
@@ -428,6 +445,7 @@ TV:
 | "Alexa, turn on Vestor" (or off) | Brings Vestor to the front. Off opens Fire TV's own home |
 | "Alexa, turn on guest Wi-Fi" (or off) | Shows the guest Wi-Fi code on the TV, or puts it away |
 | "Alexa, turn on hearts" | Hearts float up the screen |
+| "Alexa, turn on Ask Vestor" | Brings Vestor to the front with Ask Vestor's box open and the keyboard up |
 
 Setup, once:
 

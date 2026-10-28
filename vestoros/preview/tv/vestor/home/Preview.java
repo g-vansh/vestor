@@ -48,6 +48,7 @@ public final class Preview {
         shot(out, "36-answer", "nature-03.jpg", new int[0], 17);
         shot(out, "37-answer-playing", "nature-04.jpg", new int[0], 18);
         shot(out, "38-answer-thinking", "nature-04.jpg", new int[0], 19);
+        shot(out, "39-answer-long", "nature-02.jpg", new int[0], 20);
         shot(out, "10-finding-home", wallFile, new int[] {OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
         shot(out, "12-apps", wallFile, new int[] {D}, 0);
@@ -258,7 +259,7 @@ public final class Preview {
             scene.toast("Sam's AirPods Pro connected", "Sound plays on Sam's AirPods Pro now", Scene.TOAST_EARBUDS, now);
         }
         if (extra == 13) scene.hearts("hearts", "Alex", now - 1400);
-        if (extra >= 17 && extra <= 19) scene.setAnswer(answer(extra), true);
+        if (extra >= 17 && extra <= 20) scene.setAnswer(answer(extra), true);
         if (extra == 14) {
             BufferedImage scratch = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
             scene.setWifi("Memorial Guest", new AwtGfx(scratch.createGraphics(), new File(ROOT, "assets/fonts")),
@@ -579,6 +580,13 @@ public final class Preview {
             a.question = "Play Better Call Saul";
             a.text = "Better Call Saul is on Netflix, so I've opened it there. Enjoy.";
             a.did.add("Opened it in Netflix");
+        } else if (extra == 20) {
+            a.from = "the TV";
+            a.question = "When will the e-bikes run out, and is it worth walking to Erie Street?";
+            a.text = "Westgate has 3 e-bikes now and they will likely all be gone by 8:46 AM, somewhere between 8:14 and 9:53. "
+                    + "Erie Street has none at the moment, and the next one should turn up around 9:30. So if you leave before "
+                    + "8:15 the Westgate dock is the better bet, and after that it is worth starting the bike finder, which will "
+                    + "ring the moment one appears at either dock.";
         } else {
             a.from = "Alex's iPhone";
             a.question = "Every weekday at 7:15, start the bike finder, and tell me if it'll rain";
