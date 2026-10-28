@@ -149,6 +149,17 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
         }, new Samsung.Web() {
             @Override
             public Net.Reply call(String method, String url, String[] headers, String contentType, byte[] body) {
+                // The governor spaces requests to SmartThings, and connecting reads the devices right
+                // after trading the code (Glare reads the mode right before setting it). Each request
+                // waits its turn here instead of being refused. Every caller is off the main thread.
+                long wait = Pace.wait("api.smartthings.com", System.currentTimeMillis());
+                if (wait > 0 && wait <= 15000L) {
+                    try {
+                        Thread.sleep(wait);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
                 return Net.call(method, url, 10000, Net.LIMIT_SMALL, headers, contentType, body);
             }
         });

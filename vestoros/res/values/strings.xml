@@ -5,5 +5,5 @@
     <string name="guard_description">Sends the HOME button to the Vestor home screen instead of Amazon\'s, and shows notes and the bike alarm over other apps. It reads no screen content.</string>
     <string name="listener_label">Vestor Now Playing</string>
     <!-- What changed in this version: the TV shows it when this version arrives as an update. Plain text, under 300 characters. -->
-    <string name="update_notes">The first update from the TV. Nothing changed but the version number: if you are reading this, updates from the TV work.</string>
+    <string name="update_notes">Connecting the Samsung through SmartThings works now. Vestor waits its turn between Samsung\'s requests instead of giving up, so sign-in, Glare and picture modes go through.</string>
 </resources>

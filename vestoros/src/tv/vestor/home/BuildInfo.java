@@ -7,6 +7,6 @@ package tv.vestor.home;
 final class BuildInfo {
     private BuildInfo() {}
 
-    static final String VERSION = "2.1.2";
-    static final int CODE = 7;
+    static final String VERSION = "2.1.3";
+    static final int CODE = 8;
 }
