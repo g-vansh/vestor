@@ -1675,6 +1675,27 @@ add airline branding.
 - Next: install 2.2 from Settings, Updates, then try hold Menu, the mic hold in the box, and an
   idea. Add the Ask Vestor URL switch (and an Alexa routine with a short phrase, if wanted).
 
+### 2026-10-27: Samsung webcam ruled out, AirPlay from the Mac across MIT
+- Did: the owner asked to make the webcam work on the Samsung's USB port and to find a way to
+  AirPlay over MIT's Wi-Fi. Webcam: the Samsung is a 2020 TU7000, and Samsung lists USB cameras
+  for the TU8500 and up that year. SmartThings shows no camera capability on it either, so there
+  is nothing to turn on. AirPlay: with it switched on, the Samsung listens on a port it picks
+  itself (46977, AirTunes 377.25.06), not 7000, and answers the Mac across MIT's subnets. Only
+  Bonjour discovery is blocked. New vestoros/scripts/airplay-samsung.sh finds the port (7000, then
+  an nmap scan), asks the TV's /info with the txtAirPlay qualifier for the exact Bonjour record it
+  would announce, and publishes that record on this Mac only (dns-sd -lo), pointing at the TV's
+  address. The first try built the record from plain /info, which leaves out the pairing ID (psi)
+  and key (pk), so macOS logged "Ignoring device found without pairing ID" and Control Center
+  never listed the TV. That try also announced the listing on the Wi-Fi, the script now does not.
+- Verified: the owner mirrored the Mac to "Samsung TV (direct)", typing the code the TV showed.
+  The Mac's AirPlay log shows the endpoint created from the full record.
+- Changed from brief: an iPhone cannot use this, because iOS finds AirPlay devices only by Bonjour
+  on its own network, so the iPhone still needs a cable or the phone's hotspot. The webcam cannot
+  work on this TV.
+- Next: to mirror, run scripts/airplay-samsung.sh from vestoros and leave it open. If MIT gives the
+  Samsung a new address, pass it in. After a TV restart the port may change, and the script finds
+  the new one by itself.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
