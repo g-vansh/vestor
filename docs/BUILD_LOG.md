@@ -1610,13 +1610,36 @@ add airline branding.
   - MIT's Wi-Fi blocks Bonjour between devices (the Mac saw no AirPlay or Cast receiver but itself)
     but routes direct traffic between its subnets (Tailscale found a direct path, 26 ms). While ADB
     is on, it also answers on the TV's MIT address.
+  - Samsung remote over Wi-Fi: cannot pair on MIT's network. The Samsung (UN43TU7000FXZA, at
+    10.29.147.80) answers ms.channel.timeOut within 0.1 seconds and never shows Allow, for Vestor
+    and for a test client from the Mac alike. Samsung TVs only ask devices on their own subnet, and
+    MIT put the Samsung, the Fire TV and the Mac on three different /20s. Ports 8001 and 8002 are
+    reachable, so only the subnet rule stops it.
+  - SmartThings: the CLI made an OAuth-In app (vestor-tv-275fdd00, r:devices:* and x:devices:*,
+    redirect httpbin.org). The ID and secret are in ~/.vestor/smartthings-app.json, mode 600.
+    Connecting failed on 2.1.2 with "SmartThings did not answer" (fixed in 2.1.3, below). On 2.1.3
+    it connected first time. Glare on put the Samsung in Dynamic (the owner saw it), and Glare off
+    put back Standard. The Samsung never reports a picture mode change to SmartThings (its last
+    report stayed hours old), so a status read can be stale. In a browser already signed in to
+    Samsung, the sign-in page answers 406, and an Incognito window works.
+- Did: 2.1.3 (code 8). The governor refuses a SmartThings request sent within 1.5 seconds of the
+  last instead of waiting, and connecting trades the code and reads the devices straight after, so
+  it always failed (Glare too, which reads the mode right before setting it). Every SmartThings
+  request now waits its turn in Hub's Samsung web hook, as the updater does for GitHub. Built on
+  the Mac (openjdk 21, build-tools 35, android-30, SDK licence accepted with the owner's yes),
+  signed by the release key (certificate d6ee2421...772752), installed over ADB with everything
+  kept. Desk suites green except SecurityTest, which binds 127.0.0.2 and so cannot run on macOS.
 - Changed from brief: Tailscale's interface is tun0 or tun1, not always tun0. The Samsung webcam
   check cannot run under Tailscale Only, because it opens the tailnet address, which the Samsung
-  cannot reach. No test call: the Fire TV has no microphone yet.
-- Next: pair the Samsung remote (Vestor accepts any private 10.x address, so a different MIT
-  subnet is fine). A test call once a webcam is on an OTG cable, for its microphone. UI: Settings rows overlap long labels and values (Phone Control,
-  Phone Control Works On), and the info bar runs off the right edge when the 85A card is wide.
-  ADB off at the end.
+  cannot reach. No test call: the Fire TV has no microphone yet. 2.1.3 is on the TV and on
+  lucent but not yet on ota: the publish push was held for the owner to run. build.sh prints a
+  short signature (4d804b99) unlike Android's (8e4a2ae1) for the same certificate.
+- Next: publish 2.1.3 to ota (./publish.sh --skip-build). The remote's message for an instant
+  ms.channel.timeOut should say the TV would not ask, not that time ran out, and the Remote tab
+  could fall back to SmartThings keys when Wi-Fi pairing is impossible. A test call once a webcam
+  is on an OTG cable, for its microphone. UI: Settings rows overlap long labels and values (Phone
+  Control, Phone Control Works On), and the info bar runs off the right edge when the 85A card is
+  wide. ADB off at the end.
 
 ## (template)
 ### YYYY-MM-DD — <step>
