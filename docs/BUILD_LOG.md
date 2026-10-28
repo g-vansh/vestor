@@ -1642,6 +1642,39 @@ add airline branding.
   wide. ADB is off (install.sh --adb-off): port 5555 closed on the tailnet and MIT addresses, and
   phone control still answers over Tailscale. Turn it on in Developer Options for the next session.
 
+### 2026-10-27: VestorOS 2.2, Ask Vestor redesigned and a quieter control center
+- Did: the owner asked for the remote's Alexa button to open Ask Vestor, a way to speak to it, a
+  nicer Ask screen, and a phone page without the setup clutter. Researched the button first.
+  Amazon's remote input docs list the microphone as "a system event and cannot be intercepted",
+  it never reaches an Activity or an accessibility service, and Amazon has blocked remapping its
+  buttons since 7.6.2.4. The one known workaround reads Alexa's transcript off the screen, which
+  would mean letting Vestor read screen content, and Alexa would still act on the request, so it
+  was not built. What shipped instead: holding Menu opens Ask Vestor anywhere on the home screen (a
+  tap still opens Settings), and "Alexa, turn on Ask Vestor" is a new URL switch that brings Vestor
+  up with the box open. Speech: Fire OS lets the remote's microphone dictate only into Amazon's own
+  keyboard (hold the button while it is up, on the builds that allow it), there is no
+  SpeechRecognizer service, and Alexa's Video Skills Kit takes no new partners. So the new Ask box
+  (AskSheet, ordinary Android views in Vestor's glass and type) opens with the keyboard up, says to
+  hold the mic button and speak, and offers three ideas under it (the last question, two for the
+  hour). The answer card now sizes itself to the answer, sets a short one large in the serif,
+  breathes its sparkle while thinking, and shows sources as tags. Control center: finished setups
+  fold to one line (phone alerts, Alexa links, MBTA key, calendars, guest Wi-Fi, health, the Claude
+  privacy note), the Samsung Wi-Fi remote stops asking to be set up while SmartThings carries the
+  keys, "Fetch fresh data now" and the repeated picture advice are gone, and the "home Wi-Fi"
+  wording now allows for Tailscale.
+- Verified: build.sh (Android 11, warnings as errors) and every desk suite green (Hostile 187253,
+  Ical 6277, SamsungRemote 543, Samsung 165 with the new switch, Fuzz and Frames clean), except
+  SecurityTest, which cannot bind 127.0.0.2 on macOS. Preview renders of the answer card (short,
+  long, acted, thinking). The control center on ConsoleDemo in the browser: each fold shows its one
+  line and opens. Published with publish.sh: ota serves 2.2 (code 9, SHA-256 5d260dc7...), byte for
+  byte the build, with code 7 kept for going back.
+- Changed from brief: not tried on the TV. The owner was watching it and ADB is off, so the Ask
+  box, the Menu hold and the new Alexa switch are checked by build and desk tests only. Whether
+  holding the mic dictates on this stick depends on Amazon (users report it vanishing and coming
+  back on 8.1.8.5). The Ask Vestor switch needs adding once at virtualsmarthome, like the others.
+- Next: install 2.2 from Settings, Updates, then try hold Menu, the mic hold in the box, and an
+  idea. Add the Ask Vestor URL switch (and an Alexa routine with a short phrase, if wanted).
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
