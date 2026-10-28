@@ -1639,7 +1639,8 @@ add airline branding.
   could fall back to SmartThings keys when Wi-Fi pairing is impossible. A test call once a webcam
   is on an OTG cable, for its microphone. UI: Settings rows overlap long labels and values (Phone
   Control, Phone Control Works On), and the info bar runs off the right edge when the 85A card is
-  wide. ADB off at the end.
+  wide. ADB is off (install.sh --adb-off): port 5555 closed on the tailnet and MIT addresses, and
+  phone control still answers over Tailscale. Turn it on in Developer Options for the next session.
 
 ## (template)
 ### YYYY-MM-DD — <step>
