@@ -281,6 +281,7 @@ public final class SamsungRemoteTest {
         SamsungRemote remote(Mem mem) {
             SamsungRemote r = new SamsungRemote(mem, dial);
             r.allowMs = 3000;
+            r.quickMs = 150;
             r.handshakeMs = 2000;
             r.restMs = 1500;
             return r;
@@ -389,6 +390,11 @@ public final class SamsungRemoteTest {
             } else if ("deny".equals(mode)) {
                 send(out, "{\"event\":\"ms.channel.unauthorized\",\"from\":\"host\"}");
             } else if ("timeout".equals(mode)) {
+                // The question shown, then left unanswered until the TV gives up.
+                sleep(promptMs);
+                send(out, "{\"event\":\"ms.channel.timeOut\",\"from\":\"host\"}");
+            } else if ("decline".equals(mode)) {
+                // The TV will not ask (another subnet): it says "time out" at once.
                 send(out, "{\"event\":\"ms.channel.timeOut\",\"from\":\"host\"}");
             }
             if (afterConnect != null) {
@@ -742,6 +748,12 @@ public final class SamsungRemoteTest {
         eq("nobody answered", 408, status(r::connect));
         eq("timeout says so", SamsungRemote.NO_ANSWER, r.error());
         eq("off after timeout", SamsungRemote.OFF, r.state());
+
+        tv.mode = "decline";
+        eq("TV on another subnet", 408, status(r::connect));
+        eq("says the TV would not ask", SamsungRemote.WOULD_NOT_ASK, r.error());
+        eq("off after declining", SamsungRemote.OFF, r.state());
+        yes("points at SmartThings", r.error().contains("SmartThings"));
 
         tv.mode = "silent";
         long t0 = System.currentTimeMillis();
