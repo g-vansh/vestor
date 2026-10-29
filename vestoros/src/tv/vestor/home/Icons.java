@@ -341,6 +341,17 @@ final class Icons {
         g.line(cx + dx, cy, cx - dx, cy + s * 0.4f, s * 0.16f, color);
     }
 
+    /** A folded map: three panels in a zigzag, for the bike map. */
+    static void map(Gfx g, float cx, float cy, float s, int color) {
+        float w = s * 0.44f, hgt = s * 0.34f, f = s * 0.15f, dy = s * 0.07f;
+        float[] outline = {cx - w, cy - hgt + dy, cx - f, cy - hgt - dy, cx + f, cy - hgt + dy, cx + w, cy - hgt - dy, cx + w, cy + hgt - dy,
+            cx + f, cy + hgt + dy, cx - f, cy + hgt - dy, cx - w, cy + hgt + dy};
+        float lw = Math.max(1f, s * 0.085f);
+        g.strokePolygon(outline, lw, color);
+        g.line(cx - f, cy - hgt - dy, cx - f, cy + hgt - dy, lw, color);
+        g.line(cx + f, cy - hgt + dy, cx + f, cy + hgt + dy, lw, color);
+    }
+
     /** The assistant: a four-pointed spark with a small one beside it. */
     static void sparkle(Gfx g, float cx, float cy, float s, int color) {
         star(g, cx - s * 0.06f, cy + s * 0.05f, s * 0.42f, color);

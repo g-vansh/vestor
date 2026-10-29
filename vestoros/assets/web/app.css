@@ -1867,6 +1867,18 @@ a.btn { text-decoration: none; }
 .forecast.is-empty .fc-main { color: var(--text); }
 .fc-line { color: var(--text-2); font-size: 14px; line-height: 1.4; }
 .fc-credit { margin-top: 6px; color: var(--text-3); font-size: 12px; line-height: 1.4; text-wrap: pretty; }
+.bu { display: grid; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hair); }
+.bu .fc-eyebrow { margin-bottom: 0; }
+.bu-places { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bu-place { display: grid; gap: 4px; width: 100%; padding: 12px 14px; border: 0; border-radius: 14px; background: var(--hair); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bu-place:active { transform: scale(.98); }
+.bu-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.bu-name { font-weight: 600; font-size: 15px; }
+.bu-free { font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; }
+.bu-free.full { color: var(--warn); }
+.bu-detail { color: var(--text-2); font-size: 13px; line-height: 1.35; }
+.bu-map { margin-top: 2px; }
+@media (max-width: 380px) { .bu-places { grid-template-columns: 1fr; } }
 
 .finder-counts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
 .fcount {

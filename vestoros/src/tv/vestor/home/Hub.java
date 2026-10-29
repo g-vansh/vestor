@@ -51,7 +51,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
             ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24, UPDATE = 25, ASKING = 26,
-            AIRPLAY = 27;
+            AIRPLAY = 27, MAP = 28;
 
     private static Hub instance;
 

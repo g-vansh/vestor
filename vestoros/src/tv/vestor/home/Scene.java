@@ -87,14 +87,17 @@ final class Scene {
     static final int MEDIA_TOGGLE = 0, MEDIA_NEXT = 1, MEDIA_PREV = 2;
 
     private static final int NONE = 0, SETTINGS = 1, TILE_MENU = 2, AUDIO = 4, MOVE = 5, PANEL = 6, PAIR = 7, ASK = 8,
-            NOTE = 9, MIRROR = 10, WIFI = 11, ALARM = 12, ANSWER = 13;
+            NOTE = 9, MIRROR = 10, WIFI = 11, ALARM = 12, ANSWER = 13, MAP = 14;
     private static final int DOCK = 0, TOP = 1, GLANCE = 2;
     /** Top controls, left to right. */
     /** The settings sheet's width in dp. */
     private static final float SHEET_W = 510;
-    private static final int T_ASK = 0, T_CALL = 1, T_EXIT = 2, T_MIRROR = 3, T_PHONE = 4, T_AUDIO = 5, T_GEAR = 6, T_COUNT = 7;
-    private static final String[] TOP_NAMES = {"Ask Vestor", "Video Calls", "Fire TV Home", "Mirror a Screen", "Phone Control", "Sound",
-        "Settings"};
+    private static final int T_ASK = 0, T_CALL = 1, T_EXIT = 2, T_MIRROR = 3, T_PHONE = 4, T_MAP = 5, T_AUDIO = 6, T_GEAR = 7,
+            T_COUNT = 8;
+    private static final String[] TOP_NAMES = {"Ask Vestor", "Video Calls", "Fire TV Home", "Mirror a Screen", "Phone Control", "Bike Map",
+        "Sound", "Settings"};
+    /** The bike map closes itself after this long with no key pressed, since it draws every frame. */
+    static final long MAP_IDLE_MS = 10 * 60000L;
     private static final String[] MENU_ROWS = {"Move", "Hide from Home", "App Info"};
 
     /** Light text drawn straight on the photograph, whatever the look (the scrim keeps it legible). */
@@ -189,6 +192,12 @@ final class Scene {
     private int glanceFocus = Cards.BIKES, panelKind = Cards.BIKES, panelPrev = Cards.BIKES;
     private final List<Spring> tileFocus = new ArrayList<>();
     private final Spring[] topSpring = new Spring[T_COUNT];
+    /** The bike map, made the first time it opens, and what Back returns to. */
+    private BikeMap map;
+    private final Spring mapSpring = new Spring(0, 0.4f, 0);
+    private int mapBack = NONE;
+    /** The preview and tests draw the map's city in the calling thread, so every frame is the same. */
+    boolean mapSync;
     /** How far each glance segment has grown into its card. */
     private final Spring[] grow = new Spring[Cards.COUNT];
     /** Compact widths as last measured, for focus moves between draws. */
@@ -787,6 +796,7 @@ final class Scene {
     String focusedLabel() {
         if (mode == SETTINGS && row < options.size()) return options.get(row).title + ", " + options.get(row).name();
         if (mode == PANEL) return Cards.name(panelKind);
+        if (mode == MAP && map != null) return "Bike map, " + BikeMap.STOP_NAMES[map.stop()] + ". OK for the next place, Back to close.";
         if (mode == ALARM) return "E-bike ready. Press OK to stop the alarm.";
         if (mode == ASK) return "Allow " + askName + " to use the control center? OK to allow, Back to refuse.";
         if (resting && mode == NONE) return "Home. Press Down for your apps.";
@@ -900,6 +910,9 @@ final class Scene {
             case MIRROR:
                 mirrorKey(k);
                 return true;
+            case MAP:
+                mapKey(k, now);
+                return true;
             default:
                 return homeKey(k);
         }
@@ -988,6 +1001,9 @@ final class Scene {
                         break;
                     case T_PHONE:
                         host.pairing(true);
+                        break;
+                    case T_MAP:
+                        showMap(BikeMap.OVERVIEW, lastNow);
                         break;
                     case T_ASK:
                         host.action("ask");
@@ -1123,12 +1139,57 @@ final class Scene {
                     closePanel();
                 }
                 return;
+            case UP:
+                // Up from the Bluebikes panel opens the bike map; Back there comes back here.
+                if (panelKind == Cards.BIKES) showMap(BikeMap.OVERVIEW, lastNow);
+                return;
             case BACK:
             case MENU:
             case DOWN:
                 closePanel();
                 return;
             default:
+        }
+    }
+
+    // ---- Bike map ----------------------------------------------------------------------------
+
+    /** Opens the bike map over everything (from the top row, the Bluebikes panel or a phone) at stop {@code which}. */
+    void showMap(int which, long now) {
+        if (mode == ALARM) return;
+        if (mode != MAP) {
+            mapBack = mode == PANEL ? PANEL : NONE;
+            if (mode != PANEL) closeOverlays();
+            if (map == null) {
+                map = new BikeMap();
+                map.sync = mapSync;
+            }
+            if (!map.isOpen() || mapSpring.value < 0.05f) map.open(now);
+            mode = MAP;
+            mapSpring.to(1);
+            dim.to(0);
+            lastInput = now;
+        }
+        if (which != map.stop()) map.show(which, now);
+    }
+
+    /** Back from the bike map: to the Bluebikes panel if it was opened there, else home. */
+    void closeMap() {
+        if (mode != MAP) return;
+        mode = mapBack;
+        mapSpring.to(0);
+    }
+
+    boolean mapOpen() {
+        return mode == MAP;
+    }
+
+    private void mapKey(int k, long now) {
+        if (k == BACK || k == MENU) {
+            closeMap();
+            host.sound(false);
+        } else if (map.key(k, now)) {
+            host.sound(false);
         }
     }
 
@@ -1527,7 +1588,7 @@ final class Scene {
     private float[] cardRect(int kind, float e) {
         float sw = segWidth(kind);
         float w = lerp(sw, cards.expandedWidth(kind), e);
-        float h = lerp(barH, dp(Cards.CARD_H), e);
+        float h = lerp(barH, dp(cards.cardHeight(kind)), e);
         float bottom = barBottom();
         float l = Math.min(segLeft(kind), dockR - w);
         l = Math.max(dockL, l);
@@ -1575,6 +1636,7 @@ final class Scene {
             mode = NONE;
             modal.to(0);
         }
+        if (mode == MAP && now - lastInput > MAP_IDLE_MS) closeMap();
         if (toastSpring.target > 0.5f && now - toastAt > 6000) toastSpring.to(0);
         for (int i = 0; i < tileFocus.size(); i++) {
             boolean on = zone == DOCK && i == focus && mode != SETTINGS && ambient.target < 0.5f;
@@ -1650,6 +1712,12 @@ final class Scene {
         moving |= alarmSpring.step(dt, instant);
         moving |= toastSpring.step(dt, instant);
         moving |= pinSpring.step(dt, instant);
+        moving |= mapSpring.step(dt, instant);
+        if (map != null) {
+            // The map moves every frame while it shows; once faded out it lets its worker go.
+            if (mode == MAP || mapSpring.value > 0.003f) moving |= map.step(now);
+            else if (map.isOpen()) map.close();
+        }
         if (!fade.moving() && oldWall != null) oldWall = null;
         // The found alert's rings and bounce play out at full frame rate.
         if (!reduced && notice.value > 0.01f && (now - noticeAt) / 1000f < Notice.PULSE_SECONDS) moving = true;
@@ -1688,6 +1756,11 @@ final class Scene {
         Tone.use(look.value);
         if (start < 0) start = now;
         float t = (now - start) / 1000f;
+        if (map != null && mode == MAP && mapSpring.value > 0.999f) {
+            // The map covers the whole screen: nothing beneath it is drawn.
+            map.draw(g, width, height, d, now, cards.bikes, 1);
+            return;
+        }
         computeWallRect(t);
         drawWallpaper(g);
 
@@ -1725,6 +1798,7 @@ final class Scene {
         drawNotice(g, now, t);
         drawAlarm(g, now, t);
         drawToast(g, t, now);
+        if (map != null && mapSpring.value > 0.003f) map.draw(g, width, height, d, now, cards.bikes, Math.min(1, mapSpring.value));
         if (heartsActive(now)) Pop.hearts(g, heartKind, 0, 0, width, height, d, (now - heartsAt) / 1000f, heartSeed);
         // Idle: the whole screen settles to a dim, quiet state, as a living-room lamp would.
         float dimA = dim.value * (0.38f + 0.22f * (1 - look.value));
@@ -2306,6 +2380,9 @@ final class Scene {
                 case T_CALL:
                     Icons.video(g, cx, mid, dp(22), ink);
                     break;
+                case T_MAP:
+                    Icons.map(g, cx, mid, dp(22), ink);
+                    break;
                 default: {
                     float iconC = r[0] + capH / 2;
                     boolean bt = audio != null && "Bluetooth".equals(audio.route);
@@ -2467,7 +2544,7 @@ final class Scene {
         float rad = lerp(dp(30), dp(40), p);
         glassLifted(g, l, top0, r, b, rad, 1f, 1f - 0.6f * p, t, lerp(0.06f, 0.16f, p));
         float cardA = clamp01(1 - p * 2.4f);
-        if (cardA > 0.003f) cards.expanded(g, panelKind, l, top0, l + cards.expandedWidth(panelKind), top0 + dp(Cards.CARD_H), cardA);
+        if (cardA > 0.003f) cards.expanded(g, panelKind, l, top0, l + cards.expandedWidth(panelKind), top0 + dp(cards.cardHeight(panelKind)), cardA);
         float a = clamp01((p - 0.5f) / 0.5f);
         if (a <= 0.003f) return;
         int clip = g.save();

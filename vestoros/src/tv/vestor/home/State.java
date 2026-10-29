@@ -192,6 +192,17 @@ final class State {
                     .put("classic", s.rentableClassic()).put("docks", s.docks).put("capacity", s.capacity)
                     .put("renting", s.installed && s.renting).put("miles", s.metres / 1609.344).end();
         }
+        w.endArr();
+        // BU Law and Pardee: free docks near each, nearest dock first, and the walk from it.
+        w.key("places").arr();
+        for (Model.Place p : b.places) {
+            w.obj().put("label", p.label).put("live", p.live()).put("free", p.freeDocks()).key("docks").arr();
+            for (Model.Station s : p.docks) {
+                w.obj().put("name", Gbfs.placeName(s)).put("live", s.live).put("free", s.returnableDocks()).put("returning", s.installed && s.returning)
+                        .put("ebikes", s.rentableEbikes()).put("classic", s.rentableClassic()).put("walk", Math.max(1, Math.round(s.metres / 80))).end();
+            }
+            w.endArr().end();
+        }
         w.endArr().end();
     }
 
