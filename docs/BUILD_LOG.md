@@ -1732,6 +1732,29 @@ add airline branding.
   stop the Mac's airplay-samsung.sh helper, watch the Mac's AirPlay log for AirPlayTarget, and
   look for the Samsung in an iPhone's Screen Mirroring list.
 
+### 2026-10-29: VestorOS polish, the info bar and Settings fit the screen
+- Did: three fixes from the setup-night list. The info bar no longer runs off the right edge:
+  with music playing, bike finder looking and the 85A due, it was up to 276 px past the dock.
+  Planes and plans still step aside first, then the shuttles show only the next line, then the
+  weather segment steps aside (the line under the clock still says it). Settings rows no longer
+  overlap: the sheet is 510 dp wide (from 460), and a value that still does not fit steps down a
+  size, then is cut with an ellipsis, then the title is. The shuttles card cuts a long line name
+  before its times instead of running into "then 13". The Samsung remote now says the TV turned
+  Vestor away without asking, and points at SmartThings, when the TV answers ms.channel.timeOut
+  within 2 seconds (MIT's subnets), instead of saying nobody chose Allow in time.
+- Did: the preview's Settings and Sound shots open the right buttons again (both were off since
+  Video Calls joined the top row), and new shots show the widest bar and the Phone Control rows.
+  New desk suite GlanceTest (88 checks): every mix of music, plans, bike finder, the 85A first
+  and planes keeps the bar inside the dock, and no settings row's title meets its value.
+- Verified: GlanceTest fails 17 checks on the old code and passes on the new. Every desk suite
+  green (SamsungRemoteTest 546, three runs) except AirPlayTest's three TEST-NET checks, which
+  fail the same way before the change because the build machine's network refuses 192.0.2.1
+  instead of letting it time out. Whole tree compiles warning-free against Android 11 framework
+  classes. Not built into an APK or tried on the TV.
+- Changed from brief: the Remote tab's SmartThings fallback was already in 2.2, so only the
+  message changed. No version bump or publish.
+- Next: raise CODE in BuildInfo.java, build, and publish once merged.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

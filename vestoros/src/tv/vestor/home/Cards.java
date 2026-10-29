@@ -345,6 +345,9 @@ final class Cards {
     }
 
     /** Lines with a bus coming, soonest first, a minor line after the others. */
+    /** How many lines the bar's shuttle segment shows: two, or one when the bar would run off the screen. */
+    int transitShown = 2;
+
     List<Model.Line> running() {
         List<Model.Line> out = new ArrayList<>();
         // Minutes are worked out at fetch time: once they are old they are wrong, so none show.
@@ -372,7 +375,7 @@ final class Cards {
             return x + g.measure(s, Gfx.TEXT_MEDIUM, dp(15), 0) - x0;
         }
         float base = cy + cap(g, Gfx.TEXT_SEMIBOLD, dp(21)) / 2;
-        int shown = Math.min(2, run.size());
+        int shown = Math.min(transitShown, run.size());
         for (int i = 0; i < shown; i++) {
             Model.Line l = run.get(i);
             if (i > 0) x += dp(18);
@@ -643,12 +646,17 @@ final class Cards {
             float la = live ? a : a * 0.5f;
             Icons.chip(g, x, cy, dp(22), ln.chip, ln.color, la);
             float base = cy + cap(g, Gfx.TEXT_MEDIUM, dp(15)) / 2;
-            g.text(ln.label, Gfx.TEXT_MEDIUM, dp(15), 0, x + chipW + dp(12), base, Tone.text(Tone.PRIMARY, la), Gfx.LEFT, 0);
+            // The times first, so the name can be cut to end a little before them.
+            float edge;
             if (!live) {
                 g.text(ln.idle, Gfx.TEXT_REGULAR, dp(13), 0, right, base, Tone.text(Tone.TERTIARY, a), Gfx.RIGHT, 0);
+                edge = right - g.measure(ln.idle, Gfx.TEXT_REGULAR, dp(13), 0);
             } else {
-                countdown(g, ln, right, cy, dp(22), a);
+                edge = countdown(g, ln, right, cy, dp(22), a);
             }
+            float lx = x + chipW + dp(12);
+            g.text(Text.fit(g, ln.label, Gfx.TEXT_MEDIUM, dp(15), edge - dp(12) - lx), Gfx.TEXT_MEDIUM, dp(15), 0, lx, base,
+                    Tone.text(Tone.PRIMARY, la), Gfx.LEFT, 0);
             y += rowH;
         }
     }

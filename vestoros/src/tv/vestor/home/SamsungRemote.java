@@ -109,6 +109,9 @@ final class SamsungRemote {
             SAID_NO = "The TV said no to Vestor. On the TV: Settings, General, External Device Manager, Device Connection Manager, "
                     + "Device List. Set Vestor to Allow, then try again.",
             NO_ANSWER = "Nobody chose Allow on the TV in time. Try again, then choose Allow on the TV.",
+            WOULD_NOT_ASK = "The TV turned Vestor away without asking. Samsung TVs only ask devices on their own part of the "
+                    + "network, and building networks like MIT's put the TV and the Fire TV on different parts. Connect SmartThings "
+                    + "and the Remote tab sends its keys through Samsung instead.",
             CERT = "The TV's security certificate changed. After a TV software update that is expected: choose Trust the TV "
                     + "again. If the TV was not updated, another device may be pretending to be it.",
             ODD = "The TV's answer made no sense.",
@@ -162,6 +165,8 @@ final class SamsungRemote {
     private volatile long askingAt;
     /** Tests shorten them. */
     int allowMs = ALLOW_MS, handshakeMs = HANDSHAKE_MS, restMs = REST_MS, staleMs = 30000;
+    /** A "time out" sooner than this after asking means the TV never showed its question. */
+    int quickMs = 2000;
 
     SamsungRemote(Store store) {
         this(store, DIRECT);
@@ -500,13 +505,13 @@ final class SamsungRemote {
         // A known token is let in at once: still waiting after 2 s means the TV is asking.
         askingAt = fresh ? start : start + 2000000000L;
         try {
-            return pairing(w, deadline);
+            return pairing(w, start, deadline);
         } finally {
             askingAt = 0;
         }
     }
 
-    private String pairing(Ws w, long deadline) throws IOException, Samsung.Failed {
+    private String pairing(Ws w, long start, long deadline) throws IOException, Samsung.Failed {
         for (int messages = 0; ; ) {
             long left = (deadline - System.nanoTime()) / 1000000L;
             String text = null;
@@ -534,9 +539,11 @@ final class SamsungRemote {
             if ("ms.channel.connect".equals(event)) return Json.str(Json.obj(m, "data"), "token", "");
             if ("ms.channel.unauthorized".equals(event) || "ms.error".equals(event) && authError(m)) throw refused();
             if ("ms.channel.timeOut".equals(event)) {
+                // A real question waits for an answer. A "time out" within moments is the TV
+                // declining to ask at all, as Samsungs do for devices outside their own subnet.
                 state = OFF;
-                error = NO_ANSWER;
-                throw new Samsung.Failed(408, NO_ANSWER);
+                error = System.nanoTime() - start < quickMs * 1000000L ? WOULD_NOT_ASK : NO_ANSWER;
+                throw new Samsung.Failed(408, error);
             }
             // Anything else (ed.edenTV.update, ms.voiceApp.hide) is news Vestor does not need.
         }

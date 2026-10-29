@@ -20,7 +20,7 @@ import javax.imageio.ImageIO;
 public final class Preview {
     private static final File ROOT = new File(System.getProperty("vestor.root", "."));
 
-    private static final long NOW = 1793124300000L;
+    static final long NOW = 1793124300000L;
     private static final File FIX = new File(ROOT, "preview/fixtures");
 
     public static void main(String[] args) throws Exception {
@@ -52,9 +52,14 @@ public final class Preview {
         shot(out, "10-finding-home", wallFile, new int[] {OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
         shot(out, "12-apps", wallFile, new int[] {D}, 0);
-        shot(out, "13-settings", wallFile, new int[] {U, R, R, R, R, R, OK, D}, 0);
+        shot(out, "13-settings", wallFile, new int[] {U, L, L, L, L, L, L, R, R, R, R, R, R, OK, D}, 0);
+        // Down to Phone Control Works On, the longest title beside one of the longest values.
+        shot(out, "41-settings-phone-control", wallFile, new int[] {U, L, L, L, L, L, L, R, R, R, R, R, R, OK,
+                D, D, D, D, D, D, D, D, D, D, D, D, D, D, D, D}, 0);
+        shot(out, "42-bar-widest", wallFile, new int[0], 22);
+        shot(out, "43-bar-widest-shuttles", wallFile, new int[] {R, R}, 22);
         shot(out, "14-dock-scrolled", wallFile, new int[] {D, R, R, R, R}, 0);
-        shot(out, "15-sound", wallFile, new int[] {U, L, L, L, L, R, R, R, OK}, 0);
+        shot(out, "15-sound", wallFile, new int[] {U, L, L, L, L, L, L, R, R, R, R, R, OK}, 0);
         shot(out, "18-home-forest", "nature-02.jpg", new int[] {R}, 0);
         shot(out, "19-home-night", "nature-04.jpg", new int[0], 0);
         shot(out, "20-day", "nature-11.jpg", new int[0], 5);
@@ -74,11 +79,11 @@ public final class Preview {
         overlay(out, "17-reminder-over-video", true);
     }
 
-    private static String fixture(String name) throws Exception {
+    static String fixture(String name) throws Exception {
         return new String(java.nio.file.Files.readAllBytes(new File(FIX, name).toPath()), java.nio.charset.StandardCharsets.UTF_8);
     }
 
-    private static Model.Bikes bikes(boolean docked) throws Exception {
+    static Model.Bikes bikes(boolean docked) throws Exception {
         List<Model.Station> all = Gbfs.stations(fixture("gbfs_info.json"), Gbfs.WESTGATE_LAT, Gbfs.WESTGATE_LON);
         // The recorded feed predates the Erie Street dock's current place: its nearest neighbour stands in.
         String west = Gbfs.westgate(all);
@@ -97,7 +102,7 @@ public final class Preview {
         return b;
     }
 
-    private static Model.Transit transit(boolean grocery) throws Exception {
+    static Model.Transit transit(boolean grocery) throws Exception {
         Gtfs.Static st = Gtfs.readStatic(java.nio.file.Files.readAllBytes(new File(FIX, "mit_gtfs.zip").toPath()));
         Model.Line tech = Transit.tech(), tech2 = Transit.tech2(), safe = Transit.saferide();
         Model.Line asm = Transit.toAssembly(), rug = Transit.toRuggles();
@@ -124,7 +129,7 @@ public final class Preview {
         return t;
     }
 
-    private static Model.Sky sky() throws Exception {
+    static Model.Sky sky() throws Exception {
         Model.Sky s = Sky.aircraft(fixture("adsb.json"), Gbfs.WESTGATE_LAT, Gbfs.WESTGATE_LON);
         String[] r = Sky.route(fixture("hexdb_route.json"));
         Model.Flight f = s.hero();
@@ -200,7 +205,12 @@ public final class Preview {
         if ((extra == 6 || extra == 7 || extra == 11 || extra == 13 || extra == 16) && bk.alt() != null) bk.alt().ebikes = 0;
         scene.setBikes(bk);
         scene.setForecast(forecast(extra), NOW);
-        scene.setTransit(transit(extra == 15));
+        Model.Transit tr = transit(extra == 15);
+        if (extra == 22) {
+            // The 85A due first, so the bar's two lines are the two widest: 85A Assembly and 85B BU.
+            for (Model.Line ln : tr.lines) if ("85A".equals(ln.chip) && !ln.minutes.isEmpty()) ln.minutes.set(0, 1);
+        }
+        scene.setTransit(tr);
         scene.setSky(sky());
         scene.setClock("2:05", "PM", "Tuesday, October 27");
         scene.setOptions(options());
@@ -213,6 +223,13 @@ public final class Preview {
         scene.setNight(extra == 6 || extra == 7 || extra == 11 || extra == 13 || extra == 16 || wallFile.equals("nature-04.jpg"), true);
         if (extra == 5 || extra == 9 || extra == 12) scene.setPlans(events(), java.util.Arrays.asList("Us", "Work"), countdowns(), items());
         if (extra == 9 || extra == 12) scene.setMedia(music());
+        if (extra == 22) {
+            // The widest bar there is: a long title playing, bike finder looking and the 85A due.
+            Model.Media m = music();
+            m.title = "A Very Long Song Title From the Live Album";
+            scene.setMedia(m);
+            scene.setPlans(events(), java.util.Arrays.asList("Us", "Work"), countdowns(), items());
+        }
         if (extra != 1) scene.setPinned(note(false));
         Model.Air air = new Model.Air();
         air.ok = true;
@@ -236,6 +253,7 @@ public final class Preview {
             Model.Station st = bikes(true).main();
             scene.setFinder(f, st, now);
         }
+        if (extra == 22) host.findBike();
         if (extra == 6) scene.showNote(note(true), now);
         if (extra == 7) {
             Model.Finder f = finder.copy();
@@ -363,7 +381,7 @@ public final class Preview {
      * carry other companies' logos, so every tile here is built by {@link Tiles} (the composer
      * Vestor uses for apps without a banner) from a plain geometric stand-in icon.
      */
-    private static List<Model.App> apps() {
+    static List<Model.App> apps() {
         String[] names = {"Netflix", "YouTube", "Prime Video", "Disney+", "Hulu", "Max", "Apple TV", "Peacock", "Spotify", "Plex"};
         int[][] colors = {
             {0xFF1A1A1A, 0xFFB3121B}, {0xFFF2F2F2, 0xFFD9D9D9}, {0xFF0F79AF, 0xFF0A3D62}, {0xFF0B1B5C, 0xFF2541B2},
@@ -505,7 +523,7 @@ public final class Preview {
         return n;
     }
 
-    private static List<Ical.Event> events() {
+    static List<Ical.Event> events() {
         List<Ical.Event> list = new ArrayList<>();
         String[][] e = {{"Dinner with friends", "Oleana", "0", "19", "0"}, {"Wedding cake tasting", "Flour, Central Sq", "0", "26", "0"},
             {"Seminar: Platform economics", "E62-450", "1", "38", "1"}, {"Marathon training run", "", "0", "62", "0"}};
@@ -527,7 +545,7 @@ public final class Preview {
         return list;
     }
 
-    private static List<Plans.Countdown> countdowns() {
+    static List<Plans.Countdown> countdowns() {
         List<Plans.Countdown> list = new ArrayList<>();
         Plans.Countdown c = new Plans.Countdown();
         c.title = "Wedding";
@@ -536,7 +554,7 @@ public final class Preview {
         return list;
     }
 
-    private static List<Plans.Item> items() {
+    static List<Plans.Item> items() {
         List<Plans.Item> list = new ArrayList<>();
         String[] t = {"Oat milk", "Flowers for Saturday", "Return the library books"};
         for (int i = 0; i < t.length; i++) {
@@ -550,7 +568,7 @@ public final class Preview {
         return list;
     }
 
-    private static Model.Media music() {
+    static Model.Media music() {
         Model.Media m = new Model.Media();
         m.active = true;
         m.playing = true;
@@ -622,7 +640,7 @@ public final class Preview {
     }
 
     /** The Fire TV on the Samsung's HDMI 1 with Input Signal Plus on. */
-    private static Model.Picture picture() {
+    static Model.Picture picture() {
         Model.Picture p = new Model.Picture();
         p.width = 3840;
         p.height = 2160;
@@ -639,7 +657,7 @@ public final class Preview {
         return p;
     }
 
-    private static Model.Audio audio() {
+    static Model.Audio audio() {
         Model.Audio a = new Model.Audio();
         a.known = true;
         a.atmos = true;
@@ -653,7 +671,7 @@ public final class Preview {
     }
 
     /** The same rows as the TV's settings sheet (Home.options), with sample values. */
-    private static List<Model.Option> options() {
+    static List<Model.Option> options() {
         List<Model.Option> list = new ArrayList<>();
         list.add(new Model.Option("look", "Look", new String[] {"auto", "day", "night"}, new String[] {"Day and Night by the Sun", "Day", "Night"}));
         list.add(new Model.Option("glare", "Glare", new String[] {"off", "on"}, new String[] {"Off", "On, Dynamic Picture"}));
@@ -671,7 +689,9 @@ public final class Preview {
         list.add(new Model.Option("alarm_for", "Alarm Rings For", new String[] {"10", "30"}, new String[] {"Up to 10 Minutes", "Up to 30 Minutes"}));
         list.add(new Model.Option("find_for", "Bike Finder Gives Up", new String[] {"30", "60"}, new String[] {"After 30 Minutes", "After an Hour"}));
         list.add(new Model.Option("sky", "Planes Overhead", new String[] {"on", "off"}, new String[] {"Show", "Hide"}));
-        list.add(new Model.Option("pair", "Phone Control", null, new String[] {"Pair a Phone  \u00b7  192.168.1.23:8686"}));
+        list.add(new Model.Option("pair", "Phone Control", null, new String[] {"Pair a Phone  \u00b7  100.101.102.103:8686"}));
+        list.add(new Model.Option("access", "Phone Control Works On", new String[] {"lan", "tailnet", "off"},
+                new String[] {"Home Wi-Fi and Tailscale", "Tailscale Only", "Off"}));
         list.add(new Model.Option("note", "Write a Note", null, new String[] {"Type or Speak"}));
         list.add(new Model.Option("bluetooth", "Bluetooth Headphones", null, new String[] {"Pair or Switch"}));
         list.add(new Model.Option("takeover", "Vestor Opens on HOME", new String[] {"on", "off"}, new String[] {"Yes", "No, Use Fire TV's Home"}));

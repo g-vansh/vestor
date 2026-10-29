@@ -90,6 +90,8 @@ final class Scene {
             NOTE = 9, MIRROR = 10, WIFI = 11, ALARM = 12, ANSWER = 13;
     private static final int DOCK = 0, TOP = 1, GLANCE = 2;
     /** Top controls, left to right. */
+    /** The settings sheet's width in dp. */
+    private static final float SHEET_W = 510;
     private static final int T_ASK = 0, T_CALL = 1, T_EXIT = 2, T_MIRROR = 3, T_PHONE = 4, T_AUDIO = 5, T_GEAR = 6, T_COUNT = 7;
     private static final String[] TOP_NAMES = {"Ask Vestor", "Video Calls", "Fire TV Home", "Mirror a Screen", "Phone Control", "Sound",
         "Settings"};
@@ -138,6 +140,9 @@ final class Scene {
     private long sunrise, sunset;
     private double moon;
     private final List<Model.Option> options = new ArrayList<>();
+    // Each settings row's title and value as drawn, cut to sit side by side, and what they were cut from.
+    private String[] rowTitle = new String[0], rowValue = new String[0], rowTitleFrom = new String[0], rowValueFrom = new String[0];
+    private float[] rowValueSize = new float[0];
     private boolean reduced, still, weatherOn = true;
     private long ambientAfter = 5 * 60000L, dimAfter = 10 * 60000L;
     private String hint = "";
@@ -275,6 +280,8 @@ final class Scene {
         height = h;
         d = density;
         cards.density(density);
+        // Settings rows were cut to fit at the old size.
+        java.util.Arrays.fill(rowTitleFrom, null);
         // The safe frame: 48 dp at the sides, 30 at top and bottom (Fire TV's 5% overscan rule).
         side = dp(48);
         top = dp(34);
@@ -689,6 +696,14 @@ final class Scene {
         options.clear();
         options.addAll(list);
         row = Math.max(0, Math.min(row, options.size() - 1));
+        int n = options.size();
+        if (rowTitle.length != n) {
+            rowTitle = new String[n];
+            rowValue = new String[n];
+            rowTitleFrom = new String[n];
+            rowValueFrom = new String[n];
+            rowValueSize = new float[n];
+        }
     }
 
     void setReduced(boolean on) {
@@ -1435,6 +1450,8 @@ final class Scene {
                     + (m ? segWidth(Cards.MUSIC) : 0);
             if (total > dockR - barL) p = false;
         }
+        // Weather is the last to step aside: the line under the clock still says it.
+        if (w && !(mode == PANEL && panelKind == Cards.WEATHER) && coreWidth(true) > dockR - barL) w = false;
         int n = 0;
         if (m) kindsBuf[n++] = Cards.MUSIC;
         if (w) kindsBuf[n++] = Cards.WEATHER;
@@ -1445,6 +1462,17 @@ final class Scene {
         if (kindsCache.length != n) kindsCache = new int[n];
         System.arraycopy(kindsBuf, 0, kindsCache, 0, n);
         return kindsCache;
+    }
+
+    /** The info bar's right edge as last drawn, and the edge it must stay inside (for the desk tests). */
+    float[] barEdges() {
+        return new float[] {barRight, dockR};
+    }
+
+    /** The segments that always show (bikes, shuttles, music when playing), with the weather if asked. */
+    private float coreWidth(boolean withWeather) {
+        return segWidth(Cards.BIKES) + segWidth(Cards.TRANSIT) + (withWeather ? segWidth(Cards.WEATHER) : 0)
+                + (cards.media.active ? segWidth(Cards.MUSIC) : 0);
     }
 
     private float segLeft(int kind) {
@@ -2357,7 +2385,14 @@ final class Scene {
      */
     private void drawGlance(Gfx g, float alpha, float t) {
         if (alpha <= 0.003f) return;
+        cards.transitShown = 2;
         for (int k = 0; k < Cards.COUNT; k++) segW[k] = cards.compactWidth(g, k);
+        // Music, weather, bikes and two shuttle lines can be wider than the screen on their own:
+        // the shuttles then show the next one only.
+        if (coreWidth(weatherOn && weather != null && weather.ok) > dockR - barL) {
+            cards.transitShown = 1;
+            segW[Cards.TRANSIT] = cards.compactWidth(g, Cards.TRANSIT);
+        }
         int[] kinds = glanceKinds();
         float bottom = barBottom(), topY = bottom - barH;
         float total = 0;
@@ -2827,7 +2862,7 @@ final class Scene {
     private void drawSheet(Gfx g, float t) {
         float p = sheet.value;
         if (p <= 0.003f) return;
-        float r = width - dp(40) + (1 - p) * dp(70), l = r - dp(460);
+        float r = width - dp(40) + (1 - p) * dp(70), l = r - dp(SHEET_W);
         float top0 = dp(34), bot = height - dp(34);
         float rad = dp(34);
         glass(g, l, top0, r, bot, rad, p, 0.1f, t);
@@ -2851,8 +2886,10 @@ final class Scene {
             float edgeFade = Math.min(clamp01((areaB - (y + rowH)) / dp(36) + 1), clamp01((y - areaT) / dp(36) + 1));
             int ink2 = Tone.onFocus(near, p * edgeFade);
             float base = y + rowH / 2 + g.capHeight(Gfx.TEXT_MEDIUM, dp(17)) / 2;
-            g.text(o.title, Gfx.TEXT_MEDIUM, dp(17), 0, l + dp(32), base, ink2, Gfx.LEFT, 0);
-            String value = o.name();
+            fitRow(g, i, o);
+            g.text(rowTitle[i], Gfx.TEXT_MEDIUM, dp(17), 0, l + dp(32), base, ink2, Gfx.LEFT, 0);
+            String value = rowValue[i];
+            float vs = rowValueSize[i];
             float vr = r - dp(32);
             if (o.action) {
                 Icons.chevron(g, vr - dp(4), y + rowH / 2, dp(13), true, Pixels.alpha(ink2, 0.7f));
@@ -2862,14 +2899,57 @@ final class Scene {
                 vr -= dp(20);
             }
             if (!value.isEmpty()) {
-                g.text(value, Gfx.TEXT_REGULAR, dp(16), 0, vr, base, Pixels.alpha(ink2, 0.72f), Gfx.RIGHT, 0);
+                g.text(value, Gfx.TEXT_REGULAR, vs, 0, vr, base, Pixels.alpha(ink2, 0.72f), Gfx.RIGHT, 0);
                 if (!o.action && i == row) {
-                    float vw = g.measure(value, Gfx.TEXT_REGULAR, dp(16), 0);
+                    float vw = g.measure(value, Gfx.TEXT_REGULAR, vs, 0);
                     Icons.chevron(g, vr - vw - dp(14), y + rowH / 2, dp(12), false, Pixels.alpha(ink2, 0.55f));
                 }
             }
         }
         g.restore(clip);
+    }
+
+    /**
+     * Row {@code i}'s title and value, cut so they never run into each other: the value first
+     * steps down a size, then is cut (never below half the row), then the title is cut. Room is
+     * kept for both chevrons a focused choice shows, so a row does not reflow as focus moves.
+     * Measured again only when the text changes.
+     */
+    private void fitRow(Gfx g, int i, Model.Option o) {
+        String title = o.title, value = o.name();
+        if (title == rowTitleFrom[i] && value == rowValueFrom[i]) return;
+        rowTitleFrom[i] = title;
+        rowValueFrom[i] = value;
+        float room = rowRoom(o);
+        float tw = g.measure(title, Gfx.TEXT_MEDIUM, dp(17), 0);
+        float size = dp(16);
+        float vw = value.isEmpty() ? 0 : g.measure(value, Gfx.TEXT_REGULAR, size, 0);
+        if (tw + vw > room && vw > 0) {
+            size = dp(14);
+            vw = g.measure(value, Gfx.TEXT_REGULAR, size, 0);
+            if (tw + vw > room) {
+                value = Text.fit(g, value, Gfx.TEXT_REGULAR, size, Math.max(room - tw, room / 2));
+                vw = g.measure(value, Gfx.TEXT_REGULAR, size, 0);
+            }
+        }
+        if (tw + vw > room) title = Text.fit(g, title, Gfx.TEXT_MEDIUM, dp(17), room - vw);
+        rowTitle[i] = title;
+        rowValue[i] = value;
+        rowValueSize[i] = size;
+    }
+
+    /** What a row's title and value share: the sheet less its padding, the chevrons and the gap between them. */
+    private float rowRoom(Model.Option o) {
+        return dp(SHEET_W - 64) - (o.action ? dp(20) : dp(46)) - dp(18);
+    }
+
+    /** Settings row {@code i} as drawn: its title's and value's widths, and the room they share (for the desk tests). */
+    float[] rowFit(Gfx g, int i) {
+        Model.Option o = options.get(i);
+        fitRow(g, i, o);
+        float room = rowRoom(o);
+        return new float[] {g.measure(rowTitle[i], Gfx.TEXT_MEDIUM, dp(17), 0),
+            rowValue[i].isEmpty() ? 0 : g.measure(rowValue[i], Gfx.TEXT_REGULAR, rowValueSize[i], 0), room};
     }
 
     // ---- Tile menu ---------------------------------------------------------------------------
