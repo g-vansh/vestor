@@ -352,6 +352,16 @@ final class Icons {
         g.line(cx + f, cy - hgt + dy, cx + f, cy + hgt + dy, lw, color);
     }
 
+    /** A microphone: the capsule, the cup under it and the stand. */
+    static void mic(Gfx g, float cx, float cy, float s, int color) {
+        float lw = Math.max(1f, s * 0.085f), w = s * 0.15f, top = cy - s * 0.42f, bottom = cy + s * 0.1f;
+        g.fillRoundRect(cx - w, top, cx + w, bottom, w, color);
+        float r = s * 0.27f, ay = cy - s * 0.06f;
+        g.arc(cx, ay, r, 0, 180, lw, color);
+        g.line(cx, ay + r, cx, cy + s * 0.4f, lw, color);
+        g.line(cx - s * 0.16f, cy + s * 0.4f, cx + s * 0.16f, cy + s * 0.4f, lw, color);
+    }
+
     /** The assistant: a four-pointed spark with a small one beside it. */
     static void sparkle(Gfx g, float cx, float cy, float s, int color) {
         star(g, cx - s * 0.06f, cy + s * 0.05f, s * 0.42f, color);

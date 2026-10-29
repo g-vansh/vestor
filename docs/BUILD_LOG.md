@@ -1774,6 +1774,32 @@ add airline branding.
 - Changed from brief: none.
 - Next: raise CODE in BuildInfo.java, build and publish once merged.
 
+### 2026-10-29: VestorOS 2.4, speak to Ask Vestor from a phone
+- Did: the owner asked for voice in Ask Vestor like YouTube's search mic. Researched first.
+  Amazon's remote input docs list the mic as "a system event and cannot be intercepted", the
+  search docs say Fire TV has no speech recognizer, a reply on Amazon's developer forum (Oct 23)
+  says no speech-to-text API exists or is announced and recommends a phone as the mic, and
+  TizenTube's tracker reports no mic audio reaching other apps. Inferred: YouTube's mic works
+  through access Amazon gives it. Samsung's voice stays in Tizen. Safari's Web Speech API needs
+  HTTPS, so the phone page cannot use it. What shipped: "Speak on your phone" in the TV's Ask
+  box (Down from the field). It sets the TV's box state, nudges the phones through ntfy when
+  alerts are on, and the phone page shows a Speak button (and a "The TV is listening" bar on
+  other tabs). Whatever the phone's Ask field holds while the TV's box is open is sent to the TV
+  as it changes (new action askdraft, text only, about four a second at most) and shown in the
+  box live, so the iPhone keyboard's dictation lands on the TV as you talk. Send on the phone
+  closes the TV's box and asks, and OK on "Ask this" asks from the TV.
+- Did: the Fire TV keyboard's own mic. On the Stick 4K (2nd gen) it worked on 8.1.8.2 and
+  stopped on 8.1.8.5 (forum report Oct 28), with the keyboard logging "Voice input is disabled
+  since user's locale = en_US is not supported" (Stremio bug 2890). Amazon's bug, nothing in the
+  app changes it. README lists what to try: update, restart, English (Australia).
+- Verified: whole tree compiles against Android framework classes, every desk suite green
+  (IcalTest's 200 ms timing check failed once under load and passed on three reruns, AirPlayTest
+  not rerun). The phone page passes a no-undef lint. No browser here, so the phone page and the
+  Ask box were not seen running. Not built into an APK: the signing key is on the owner's Mac.
+- Changed from brief: VERSION 2.4, CODE 11, update notes written, not published.
+- Next: on the Mac, pull lucent and run ./publish.sh. Then on the TV: Settings, Updates,
+  Install, and try Speak on your phone.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

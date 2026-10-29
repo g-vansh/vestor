@@ -474,6 +474,8 @@
     const tv = obj(S.tv);
     if (num(tv.now) !== null) skew = tv.now - Date.now();
     askSync();
+    // While the TV's Ask box is open, notice quickly when it closes or starts listening.
+    if (tvBox().open) pollFast(4000);
     applyTheme(str(tv.mode));
     renderUrgent();
     renderNavFoot();
@@ -1316,6 +1318,7 @@
     const view = views[tab];
     if (!view.built) { view.build(); view.built = true; }
     view.render();
+    if (loaded) renderUrgent();
     const el = $('#v-' + tab);
     el.classList.remove('enter');
     void el.offsetWidth;
@@ -1344,8 +1347,18 @@
     const f = obj(S.finder);
     const on = ringing();
     const slot = $('#urgent');
-    if (!changed('urgent', [on, f.ebikes, f.station, f.ended, hour12()])) return;
+    // The TV's Ask box is waiting for this phone's voice, and the Ask card is on another tab.
+    const listen = !on && tvBox().phone && current !== 'home';
+    if (!changed('urgent', [on, listen, f.ebikes, f.station, f.ended, hour12()])) return;
     document.title = on ? 'E-bike docked · Vestor' : 'Vestor';
+    if (listen) {
+      slot.hidden = false;
+      fill(slot, h('section', { class: 'listen-bar', role: 'status' },
+        h('span', { class: 'listen-dot', 'aria-hidden': 'true' }),
+        h('p', { class: 'listen-text', text: 'The TV is listening' }),
+        h('button', { class: 'btn btn-sm listen-btn', type: 'button', on: { click: function () { show('home'); speakNow(); } } }, icon('mic'), 'Speak')));
+      return;
+    }
     if (!on) {
       slot.replaceChildren();
       slot.hidden = true;
@@ -1473,6 +1486,21 @@
     const a = S.assistant;
     return a && typeof a === 'object' && !Array.isArray(a) ? a : null;
   }
+  // Ask Vestor's box on the TV: open, and whether someone chose Speak on your phone in it.
+  function tvBox() {
+    const a = assistantState();
+    const b = a ? obj(a.tvBox) : {};
+    return { open: b.open === true, phone: b.open === true && b.phone === true };
+  }
+  // Opens the keyboard on the Ask field. Called straight from a tap, or iOS keeps the keyboard shut.
+  function speakNow() {
+    const ask = views.home.ask;
+    if (!ask || ask.input.disabled) return;
+    ask.input.focus();
+    try { ask.input.setSelectionRange(ask.input.value.length, ask.input.value.length); } catch (e) { /* not a text field */ }
+    ask.el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
   function sameQuestion(a, b) { return str(a).replace(/\s+/g, ' ').trim().toLowerCase() === str(b).replace(/\s+/g, ' ').trim().toLowerCase(); }
 
   // Each new state: has the question been answered, or did the TV stop answering it?
@@ -1606,7 +1634,39 @@
     const send = h('button', { class: 'btn btn-primary btn-icon ask-send', type: 'submit', 'aria-label': 'Ask' }, icon('send'));
     const form = h('form', { class: 'ask-form', novalidate: true }, input, send);
     form.addEventListener('submit', function (e) { e.preventDefault(); askSend(input.value); });
-    const ask = h('div', { class: 'ask-box' }, form, h('p', { class: 'ask-hint', text: 'Tap the microphone on the keyboard to speak.' }));
+    const hint = h('p', { class: 'ask-hint', text: 'Tap the microphone on the keyboard to speak.' });
+    // While the TV's box is open: what is typed or said here shows there, as it comes.
+    const liveText = h('p', { class: 'ask-live-text' });
+    const live = h('div', { class: 'ask-live', hidden: true },
+      h('span', { class: 'listen-dot', 'aria-hidden': 'true' }), liveText,
+      h('button', { class: 'btn btn-primary btn-sm ask-speak', type: 'button', on: { click: speakNow } }, icon('mic'), 'Speak'));
+    const ask = h('div', { class: 'ask-box' }, live, form, hint);
+    const draft = { sent: '', timer: 0, busy: false, open: false };
+    async function draftSend() {
+      draft.timer = 0;
+      if (!tvBox().open || draft.busy) return;
+      const text = input.value;
+      if (text === draft.sent) return;
+      draft.busy = true;
+      try {
+        const d = await act('askdraft', { text: text });
+        draft.sent = text;
+        if (d && d.open === false) {
+          const a = assistantState();
+          if (a) a.tvBox = { open: false, phone: false };
+          self.render(true);
+          renderUrgent();
+        }
+      } catch (e) {
+        // Quiet: the field still works, and the question can still be sent from here.
+      }
+      draft.busy = false;
+      if (input.value !== draft.sent && tvBox().open && !draft.timer) draft.timer = setTimeout(draftSend, 150);
+    }
+    // At most about four sends a second while words arrive, and always the latest words last.
+    input.addEventListener('input', function () {
+      if (tvBox().open && !draft.timer) draft.timer = setTimeout(draftSend, 200);
+    });
     const nokey = h('div', { class: 'ask-nokey', hidden: true },
       h('p', { class: 'ask-nokey-text', text: 'Add a Claude API key in Settings to ask questions' }),
       h('button', { class: 'btn btn-primary', type: 'button', on: { click: openClaudeSettings } }, 'Add a Key in Settings'));
@@ -1623,9 +1683,21 @@
         const on = a.on === true;
         const hist = arr(a.history).map(obj).filter(function (x) { return x.busy !== true && (str(x.question) || str(x.text) || str(x.error)); });
         const p = asking.pending;
-        if (!changed('h.ask', [on, hist, a.asking, p, asking.error, asking.busy, asking.fresh, str(obj(S.me).name)]) && !force) return;
+        const box = tvBox();
+        if (box.open !== draft.open) {
+          // A newly opened box starts empty on the TV, so the next words go whatever they are.
+          draft.open = box.open;
+          draft.sent = '';
+        }
+        if (!changed('h.ask', [on, hist, a.asking, p, asking.error, asking.busy, asking.fresh, str(obj(S.me).name), box.open, box.phone]) && !force) return;
         setMeta(c, on ? 'Claude' : '');
         ask.hidden = !on;
+        live.hidden = !box.open;
+        c.el.classList.toggle('ask-listening', box.open);
+        liveText.textContent = box.phone ? 'The TV is listening. Tap Speak, then the microphone on your keyboard.'
+          : 'Ask Vestor is open on the TV. What you type or say here shows there too.';
+        input.placeholder = box.open ? 'Speak or type, it shows on the TV' : 'Ask Vestor anything';
+        hint.hidden = box.open;
         nokey.hidden = on;
         input.disabled = !!p;
         send.disabled = !!p;
