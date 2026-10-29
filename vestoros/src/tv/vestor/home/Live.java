@@ -431,6 +431,16 @@ final class Live {
             b.altLabel = "auto".equals(choice2) ? "Erie St" : Gbfs.shortName(follow.get(1), false);
         }
         for (int i = 0; i < allStations.size() && i < 8; i++) b.nearby.add(Gbfs.copy(allStations.get(i)));
+        // BU Law and Pardee, and every dock on the bike map, from the same status file.
+        b.places.add(Gbfs.place(allStations, "BU Law", Gbfs.BU_LAW_LAT, Gbfs.BU_LAW_LON));
+        b.places.add(Gbfs.place(allStations, "Pardee", Gbfs.PARDEE_LAT, Gbfs.PARDEE_LON));
+        b.area.addAll(Gbfs.area(allStations));
+        try {
+            for (Model.Place p : b.places) Gbfs.status(status, p.docks);
+            Gbfs.status(status, b.area);
+        } catch (IllegalArgumentException e) {
+            // The watched docks were read; the rest shows as waiting until the next good file.
+        }
         b.published = Gbfs.lastUpdated(status) * 1000L;
         b.fetched = now;
         b.ok = true;

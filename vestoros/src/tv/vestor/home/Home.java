@@ -415,6 +415,10 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             case Hub.WALL:
                 if (detail instanceof String) showPhoto((String) detail);
                 break;
+            case Hub.MAP:
+                if (detail instanceof Integer && (Integer) detail >= 0) scene.showMap((Integer) detail, now);
+                else scene.closeMap();
+                break;
             default:
                 return;
         }

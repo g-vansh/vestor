@@ -108,6 +108,45 @@ final class Model {
         int rentableClassic() {
             return installed && renting ? classic : 0;
         }
+
+        /** Docks a bike can be returned to now: none while the station is not taking bikes back. */
+        int returnableDocks() {
+            return installed && returning ? docks : 0;
+        }
+    }
+
+    /**
+     * A building one of us rides to (BU Law, the Pardee School) and the docks nearest it, so the
+     * home screen can say whether there is somewhere to leave the bike.
+     */
+    static final class Place {
+        String label = "";
+        double lat, lon;
+        /** Nearest first; each station's {@code metres} is measured from the place. */
+        final List<Station> docks = new ArrayList<>();
+
+        Station nearest() {
+            return docks.isEmpty() ? null : docks.get(0);
+        }
+
+        /** Free docks at every listed dock that is live and taking bikes back. */
+        int freeDocks() {
+            int n = 0;
+            for (Station s : docks) if (s.live) n += s.returnableDocks();
+            return n;
+        }
+
+        /** Whether any listed dock has live counts. */
+        boolean live() {
+            for (Station s : docks) if (s.live) return true;
+            return false;
+        }
+
+        /** The nearest dock with somewhere to leave a bike, or null when every one is full. */
+        Station firstFree() {
+            for (Station s : docks) if (s.live && s.returnableDocks() > 0) return s;
+            return null;
+        }
     }
 
     /** The stations the home screen follows; the first is the one bike finder watches. */
@@ -123,6 +162,10 @@ final class Model {
         final List<Station> stations = new ArrayList<>();
         /** The docks nearest Westgate, for choosing which one to follow. */
         final List<Station> nearby = new ArrayList<>();
+        /** BU Law and the Pardee School, with the free docks near each. */
+        final List<Place> places = new ArrayList<>();
+        /** Every dock on the bike map, with live counts. */
+        final List<Station> area = new ArrayList<>();
 
         Station main() {
             return stations.isEmpty() ? null : stations.get(0);

@@ -427,6 +427,18 @@ final class Cards {
     // ---- Focused cards ---------------------------------------------------------------------------
 
     static final float CARD_H = 188;
+    /** The Bluebikes card is taller once it can say where to leave a bike at BU. */
+    static final float BIKES_CARD_H = 214;
+
+    /** A focused card's height in dp. */
+    float cardHeight(int kind) {
+        return kind == BIKES && hasPlaces() ? BIKES_CARD_H : CARD_H;
+    }
+
+    /** Whether BU Law and Pardee have docks to show. */
+    boolean hasPlaces() {
+        return bikes != null && bikes.places.size() >= 2 && bikes.places.get(0).nearest() != null;
+    }
 
     float expandedWidth(int kind) {
         switch (kind) {
@@ -527,7 +539,57 @@ final class Cards {
             g.text(fcCard, Gfx.TEXT_SEMIBOLD, dp(13.5f), 0, x, t + dp(155), fcEmpty ? Tone.text(Tone.SECONDARY, a)
                     : Pixels.alpha(Tone.VOLT, a), Gfx.LEFT, 0);
         }
-        hint(g, x, r, t + dp(176), a);
+        if (hasPlaces()) {
+            buLine(g, x, r - dp(22), t + dp(178), a);
+            hint(g, x, r, t + dp(202), a);
+        } else {
+            hint(g, x, r, t + dp(176), a);
+        }
+    }
+
+    /** "AT BU  Law 7 free  ·  Pardee Full": somewhere to leave the bike at each end. */
+    private void buLine(Gfx g, float x, float r, float base, float a) {
+        g.text("AT BU", Gfx.MONO, dp(11), 0.1f, x, base, Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+        float cx = x + dp(56);
+        String[] names = {"Law ", "Pardee "};
+        for (int i = 0; i < 2; i++) {
+            Model.Place p = bikes.places.get(i);
+            if (i > 0) {
+                g.text("·", Gfx.TEXT_MEDIUM, dp(13.5f), 0, cx + dp(6), base, Tone.text(Tone.TERTIARY, a), Gfx.LEFT, 0);
+                cx += dp(20);
+            }
+            g.text(names[i], Gfx.TEXT_MEDIUM, dp(13.5f), 0, cx, base, Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+            cx += g.measure(names[i], Gfx.TEXT_MEDIUM, dp(13.5f), 0);
+            String v = placeFigure(p);
+            g.text(v, Gfx.TEXT_SEMIBOLD, dp(13.5f), 0, cx, base, placeColor(p, a), Gfx.LEFT, 0);
+            cx += g.measure(v, Gfx.TEXT_SEMIBOLD, dp(13.5f), 0);
+        }
+    }
+
+    /** "7 free", "Full", or "-" before the first counts. */
+    static String placeFigure(Model.Place p) {
+        if (p == null || !p.live()) return "-";
+        int n = p.freeDocks();
+        return n == 0 ? "Full" : n + " free";
+    }
+
+    private static int placeColor(Model.Place p, float a) {
+        if (p == null || !p.live()) return Tone.text(Tone.TERTIARY, a);
+        return p.freeDocks() == 0 ? Pixels.alpha(Tone.AMBER, a) : Tone.text(Tone.PRIMARY, a);
+    }
+
+    /**
+     * Where to leave a bike near a place, in one line: "7 at BU Central, 1 min walk" or, when the
+     * nearest dock is full, "Silber Way full, 6 at Deerfield St".
+     */
+    static String placeDetail(Model.Place p) {
+        if (p == null || p.nearest() == null) return "";
+        if (!p.live()) return "Waiting for Bluebikes";
+        Model.Station n = p.nearest(), free = p.firstFree();
+        String nn = Gbfs.placeName(n);
+        if (n.live && n.returnableDocks() > 0) return n.returnableDocks() + " at " + nn + ", " + BikeMap.walk(n.metres) + " walk";
+        if (free == null) return "Every dock nearby is full";
+        return nn + (n.live && !n.returning ? " closed" : " full") + ", " + free.returnableDocks() + " at " + Gbfs.placeName(free);
     }
 
     /** The three counts: e-bikes as the hero in Volt, classic and docks beside it. */
@@ -755,7 +817,7 @@ final class Cards {
     float[] panelSize(int kind) {
         switch (kind) {
             case WEATHER: return new float[] {dp(640), dp(356)};
-            case BIKES: return new float[] {dp(660), dp(436)};
+            case BIKES: return new float[] {dp(660), dp(hasPlaces() ? 512 : 436)};
             case TRANSIT: return new float[] {dp(620), dp(436)};
             case PLANS: return new float[] {dp(760), dp(440)};
             case MUSIC: return new float[] {dp(720), dp(360)};
@@ -892,6 +954,7 @@ final class Cards {
                         Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
             }
         }
+        if (hasPlaces()) buBand(g, x, r - dp(32), t + dp(320), a);
         // Nearby docks, in a column on the right.
         float nx = leftR + dp(12);
         g.fillRect(leftR - dp(6), t + dp(98), leftR - dp(6) + Math.max(1, dp(1)), t + dp(232), Tone.hairline(a));
@@ -938,6 +1001,28 @@ final class Cards {
         }
         g.text(Notice.fit(g, status, Gfx.TEXT_REGULAR, dp(13), r - l - dp(64)), Gfx.TEXT_REGULAR, dp(13), 0, (l + r) / 2, b - dp(24),
                 finder.offline && finding() ? Pixels.alpha(Tone.AMBER, a) : Tone.text(Tone.TERTIARY, a), Gfx.CENTER, 0);
+    }
+
+    /** Where to leave a bike at BU Law and at Pardee, side by side, and the way to the map. */
+    private void buBand(Gfx g, float x, float r, float t, float a) {
+        g.fillRect(x, t, r, t + Math.max(1, dp(1)), Tone.hairline(a));
+        meta(g, "Return at BU", x, t + dp(22), a);
+        String go = "Bike map";
+        float gw = g.measure(go, Gfx.TEXT_MEDIUM, dp(13), 0);
+        g.text(go, Gfx.TEXT_MEDIUM, dp(13), 0, r, t + dp(22), Tone.text(Tone.SECONDARY, a), Gfx.RIGHT, 0);
+        float ax = r - gw - dp(12), ay = t + dp(17);
+        g.fillPolygon(new float[] {ax, ay - dp(5), ax + dp(5), ay + dp(3), ax - dp(5), ay + dp(3)}, Tone.text(Tone.SECONDARY, a));
+        String[] names = {"BU Law", "Pardee"};
+        float colW = (r - x) / 2;
+        for (int i = 0; i < 2; i++) {
+            Model.Place p = bikes.places.get(i);
+            float cx = x + i * colW, base = t + dp(50);
+            g.text(names[i], Gfx.TEXT_SEMIBOLD, dp(16), 0, cx, base, Tone.text(Tone.PRIMARY, a), Gfx.LEFT, 0);
+            float nw = g.measure(names[i], Gfx.TEXT_SEMIBOLD, dp(16), 0) + dp(10);
+            g.text(placeFigure(p), Gfx.TEXT_SEMIBOLD, dp(16), 0, cx + nw, base, placeColor(p, a), Gfx.LEFT, 0);
+            g.text(Notice.fit(g, placeDetail(p), Gfx.TEXT_REGULAR, dp(13), colW - dp(16)), Gfx.TEXT_REGULAR, dp(13), 0, cx,
+                    base + dp(21), Tone.text(Tone.SECONDARY, a), Gfx.LEFT, 0);
+        }
     }
 
     private void miniCounts(Gfx g, Model.Station o, float x, float base, float a) {

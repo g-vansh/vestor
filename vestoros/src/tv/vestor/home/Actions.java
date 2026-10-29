@@ -66,6 +66,20 @@ final class Actions {
                 h.post(Hub.WALL, id);
                 return OK;
             }
+            case "map": {
+                // The bike map on the TV: "show" with a place, or "close".
+                String what = Json.str(body, "do", "");
+                if ("close".equals(what)) {
+                    h.post(Hub.MAP, -1);
+                    return OK;
+                }
+                if (!"show".equals(what)) throw new Http.Refused(400, "map");
+                int at = BikeMap.stopNamed(Json.str(body, "at", "all"));
+                if (at < 0) throw new Http.Refused(400, "map place");
+                Guard.wake(h.app, true);
+                h.post(Hub.MAP, at);
+                return OK;
+            }
             case "mode": {
                 String m = Json.str(body, "mode", "");
                 if (!"auto".equals(m) && !"day".equals(m) && !"night".equals(m)) throw new Http.Refused(400, "mode");

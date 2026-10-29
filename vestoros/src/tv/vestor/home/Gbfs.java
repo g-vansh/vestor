@@ -34,6 +34,21 @@ final class Gbfs {
      * point within 150 m.
      */
     static final double ERIE_LAT = 42.35775, ERIE_LON = -71.10393;
+    /**
+     * BU Law: the Law Tower and the Redstone building at 765 Commonwealth Avenue, at the doors on
+     * Comm Ave. The B.U. Central dock is 80 m away, Granby St 310 m.
+     */
+    static final double BU_LAW_LAT = 42.35075, BU_LAW_LON = -71.10745;
+    /**
+     * The Pardee School of Global Studies, 121 Bay State Road. Silber Way, Deerfield St and
+     * Blandford Mall are each 160 to 190 m away, on Comm Ave.
+     */
+    static final double PARDEE_LAT = 42.35028, PARDEE_LON = -71.09889;
+    /** A place counts the docks within this many metres of it, nearest first, at most PLACE_DOCKS. */
+    static final double PLACE_METRES = 350;
+    static final int PLACE_DOCKS = 3;
+    /** The bike map's box (see MapData): BU West to the Prudential, the Fenway to Kendall's edge. */
+    static final double AREA_W = -71.1215, AREA_S = 42.3420, AREA_E = -71.0810, AREA_N = 42.3640;
     /** MIT Pacific St at Purrington St, the station Vestor's wall shows. */
     static final String PACIFIC = "f835141c-0de8-11e7-991c-3863bb43a7d0";
 
@@ -128,6 +143,59 @@ final class Gbfs {
             if (!s.id.equals(main.id) && (alt == null || !s.id.equals(alt.id))) out.add(copy(s));
         }
         return out;
+    }
+
+    /**
+     * The docks near a place, nearest first, each a copy whose {@code metres} is its distance from
+     * the place: every dock within {@link #PLACE_METRES} up to {@link #PLACE_DOCKS}, and at least the
+     * nearest one when it is within twice that.
+     */
+    static Model.Place place(List<Model.Station> all, String label, double lat, double lon) {
+        Model.Place p = new Model.Place();
+        p.label = label;
+        p.lat = lat;
+        p.lon = lon;
+        List<Model.Station> near = new ArrayList<>();
+        for (Model.Station s : all) {
+            double m = metres(lat, lon, s.lat, s.lon);
+            if (m > PLACE_METRES * 2) continue;
+            Model.Station c = copy(s);
+            c.metres = (float) m;
+            near.add(c);
+        }
+        Collections.sort(near, new Comparator<Model.Station>() {
+            @Override
+            public int compare(Model.Station a, Model.Station b) {
+                return Float.compare(a.metres, b.metres);
+            }
+        });
+        for (Model.Station s : near) {
+            if (p.docks.size() >= PLACE_DOCKS || (s.metres > PLACE_METRES && !p.docks.isEmpty())) break;
+            p.docks.add(s);
+        }
+        return p;
+    }
+
+    /** Copies of every dock inside the bike map's box, in the order given. */
+    static List<Model.Station> area(List<Model.Station> all) {
+        List<Model.Station> out = new ArrayList<>();
+        for (Model.Station s : all) {
+            if (s.lon >= AREA_W && s.lon <= AREA_E && s.lat >= AREA_S && s.lat <= AREA_N) out.add(copy(s));
+        }
+        return out;
+    }
+
+    /**
+     * A dock's name without the street it is on, for a place's list: "Silber Way" stays,
+     * "Deerfield St at Commonwealth Ave" becomes "Deerfield St", "Commonwealth Ave at Granby St"
+     * becomes "Granby St" and "B.U. Central T Stop - 725 Commonwealth Ave" becomes "BU Central".
+     */
+    static String placeName(Model.Station s) {
+        String n = s.name.replace("B.U. ", "BU ").replace(" T Stop", "");
+        if (n.startsWith("Commonwealth Ave at ")) n = n.substring(20);
+        int at = indexOfAny(n, new String[] {" at ", " @ ", " - "});
+        if (at > 3) n = n.substring(0, at);
+        return n.trim();
     }
 
     /**

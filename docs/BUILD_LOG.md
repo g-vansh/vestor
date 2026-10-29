@@ -1755,6 +1755,25 @@ add airline branding.
   message changed. No version bump or publish.
 - Next: raise CODE in BuildInfo.java, build, and publish once merged.
 
+### 2026-10-29: VestorOS, BU docks and a 3D bike map
+- Did: the bikes card and the Bluebikes panel now say where to return a bike at BU Law and at
+  Pardee, for Sanjana. Each place takes the nearest three stations within 350 m from the same
+  live GBFS feed ("7 at BU Central, 1 min walk", "Silber Way full, 6 at Deerfield St"), and a
+  station not taking returns shows as closed. The phone page shows the same two places.
+- Did: a full screen 3D bike map, opened with Up on the Bluebikes panel, the new Bike Map button
+  on the top row, or the phone page. Buildings, river, parks, roads and bike lanes from
+  OpenStreetMap and Overture, baked into MapData.java by preview/tools/mapdata.py, drawn with a
+  perspective camera, fog and painter's order on a worker thread. Every dock is a column of
+  e-bikes and classic bikes, the ride from Westgate is drawn to each BU place, OK flies between
+  all three, BU Law, Pardee and Westgate, Left and Right turn it, Up and Down zoom. It closes
+  after 10 idle minutes. New Actions route map?do=show&at=all|law|pardee|home and do=close.
+- Verified: new desk suite MapTest (444 checks: data decode and damage, places, camera,
+  rendered screens, scene keys). Every desk suite green except AirPlayTest's three TEST-NET
+  checks (same as before). Preview renders shots 44 to 49 for the map. Whole tree compiles
+  against Android framework classes. Not built into an APK or tried on the TV.
+- Changed from brief: none.
+- Next: raise CODE in BuildInfo.java, build and publish once merged.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:

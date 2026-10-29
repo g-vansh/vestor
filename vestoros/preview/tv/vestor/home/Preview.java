@@ -43,8 +43,8 @@ public final class Preview {
         shot(out, "32-bikes-panel", wallFile, new int[] {R, OK, OK}, 0);
         shot(out, "33-shuttles-grocery-friday", wallFile, new int[] {R, R, OK}, 15);
         shot(out, "34-bikes-panel-evening", "nature-04.jpg", new int[] {R, OK, OK}, 16);
-        shot(out, "35-ask-button", wallFile, new int[] {U, L, L, L, L, L, L}, 0);
-        shot(out, "39-video-calls-button", wallFile, new int[] {U, L, L, L, L, L, L, R}, 0);
+        shot(out, "35-ask-button", wallFile, new int[] {U, L, L, L, L, L, L, L}, 0);
+        shot(out, "39-video-calls-button", wallFile, new int[] {U, L, L, L, L, L, L, L, R}, 0);
         shot(out, "36-answer", "nature-03.jpg", new int[0], 17);
         shot(out, "37-answer-playing", "nature-04.jpg", new int[0], 18);
         shot(out, "38-answer-thinking", "nature-04.jpg", new int[0], 19);
@@ -52,14 +52,23 @@ public final class Preview {
         shot(out, "10-finding-home", wallFile, new int[] {OK, B, B}, 3);
         shot(out, "11-found-home", wallFile, new int[0], 4);
         shot(out, "12-apps", wallFile, new int[] {D}, 0);
-        shot(out, "13-settings", wallFile, new int[] {U, L, L, L, L, L, L, R, R, R, R, R, R, OK, D}, 0);
+        shot(out, "13-settings", wallFile, new int[] {U, L, L, L, L, L, L, L, R, R, R, R, R, R, R, OK, D}, 0);
         // Down to Phone Control Works On, the longest title beside one of the longest values.
-        shot(out, "41-settings-phone-control", wallFile, new int[] {U, L, L, L, L, L, L, R, R, R, R, R, R, OK,
+        shot(out, "41-settings-phone-control", wallFile, new int[] {U, L, L, L, L, L, L, L, R, R, R, R, R, R, R, OK,
                 D, D, D, D, D, D, D, D, D, D, D, D, D, D, D, D}, 0);
         shot(out, "42-bar-widest", wallFile, new int[0], 22);
+        // The bike map: from its button in the top row, then OK through BU Law, Pardee and Westgate.
+        int[] map = {U, L, L, L, L, L, L, L, R, R, R, R, R, OK};
+        shot(out, "44-map", "nature-04.jpg", map, 23);
+        shot(out, "45-map-bu-law", "nature-04.jpg", concat(map, OK), 23);
+        shot(out, "46-map-pardee", "nature-04.jpg", concat(map, OK, OK), 23);
+        shot(out, "47-map-westgate", "nature-04.jpg", concat(map, OK, OK, OK), 23);
+        shot(out, "48-map-turned", "nature-04.jpg", concat(map, R), 23);
+        // Up from the Bluebikes panel opens it too.
+        shot(out, "49-map-from-panel", wallFile, new int[] {R, OK, OK, U}, 23);
         shot(out, "43-bar-widest-shuttles", wallFile, new int[] {R, R}, 22);
         shot(out, "14-dock-scrolled", wallFile, new int[] {D, R, R, R, R}, 0);
-        shot(out, "15-sound", wallFile, new int[] {U, L, L, L, L, L, L, R, R, R, R, R, OK}, 0);
+        shot(out, "15-sound", wallFile, new int[] {U, L, L, L, L, L, L, L, R, R, R, R, R, R, OK}, 0);
         shot(out, "18-home-forest", "nature-02.jpg", new int[] {R}, 0);
         shot(out, "19-home-night", "nature-04.jpg", new int[0], 0);
         shot(out, "20-day", "nature-11.jpg", new int[0], 5);
@@ -68,15 +77,21 @@ public final class Preview {
         shot(out, "23-pair-phone", "nature-01.jpg", new int[0], 8);
         shot(out, "24-plans-and-music", "nature-03.jpg", new int[] {L, L, L}, 9);
         shot(out, "25-plans-panel", "nature-03.jpg", new int[] {R, R, R, OK}, 5);
-        shot(out, "26-mirror", "nature-10.jpg", new int[] {U, L, L, L, L, R, R, R, OK}, 0);
-        shot(out, "40-airplay-steps", "nature-10.jpg", new int[] {U, L, L, L, L, R, R, R, OK, OK}, 21);
+        shot(out, "26-mirror", "nature-10.jpg", new int[] {U, L, L, L, L, L, L, L, R, R, R, OK}, 0);
+        shot(out, "40-airplay-steps", "nature-10.jpg", new int[] {U, L, L, L, L, L, L, L, R, R, R, OK, OK}, 21);
         shot(out, "27-allow-phone", "nature-04.jpg", new int[0], 11);
-        shot(out, "28-headphones", "nature-05.jpg", new int[] {U, L, L, L, L, R, R, R, R, R, OK}, 12);
+        shot(out, "28-headphones", "nature-05.jpg", new int[] {U, L, L, L, L, L, L, L, R, R, R, R, R, R, OK}, 12);
         shot(out, "29-hearts", "nature-04.jpg", new int[0], 13);
         shot(out, "30-guest-wifi", "nature-12.jpg", new int[0], 14);
         shot(out, "31-day-apps", "nature-11.jpg", new int[] {D}, 5);
         overlay(out, "16-alert-over-video", false);
         overlay(out, "17-reminder-over-video", true);
+    }
+
+    private static int[] concat(int[] a, int... more) {
+        int[] r = java.util.Arrays.copyOf(a, a.length + more.length);
+        System.arraycopy(more, 0, r, a.length, more.length);
+        return r;
     }
 
     static String fixture(String name) throws Exception {
@@ -99,6 +114,37 @@ public final class Preview {
         }
         b.fetched = NOW - 12000;
         b.ok = true;
+        return b;
+    }
+
+    /**
+     * The fixture bikes plus BU Law, Pardee and every dock on the bike map. The map's docks are
+     * real places and names (from Bluebikes' published trip data, September 2026) with made-up
+     * counts: B.U. Central has 7 free docks, Silber Way is full. Westgate and Erie St keep the
+     * counts of the main fixture so the screens agree.
+     */
+    static Model.Bikes mapBikes() throws Exception {
+        return withPlaces(bikes(false));
+    }
+
+    static Model.Bikes withPlaces(Model.Bikes b) throws Exception {
+        List<Model.Station> all = Gbfs.stations(fixture("gbfs_map_info.json"), Gbfs.WESTGATE_LAT, Gbfs.WESTGATE_LON);
+        String status = fixture("gbfs_map_status.json");
+        b.places.add(Gbfs.place(all, "BU Law", Gbfs.BU_LAW_LAT, Gbfs.BU_LAW_LON));
+        b.places.add(Gbfs.place(all, "Pardee", Gbfs.PARDEE_LAT, Gbfs.PARDEE_LON));
+        b.area.addAll(Gbfs.area(all));
+        for (Model.Place pl : b.places) Gbfs.status(status, pl.docks);
+        Gbfs.status(status, b.area);
+        for (Model.Station s : b.area) {
+            Model.Station same = "M32042".equals(s.shortName) ? b.main() : "M32047".equals(s.shortName) ? b.alt() : null;
+            if (same != null) {
+                s.id = same.id;
+                s.classic = same.classic;
+                s.ebikes = same.ebikes;
+                s.docks = same.docks;
+                s.disabled = same.disabled;
+            }
+        }
         return b;
     }
 
@@ -189,6 +235,7 @@ public final class Preview {
         };
         Scene scene = new Scene(host);
         holder[0] = scene;
+        scene.mapSync = true;
         int w = 1920, h = 1080;
         scene.setSize(w, h, 2f);
         scene.setApps(apps());
@@ -200,7 +247,7 @@ public final class Preview {
         scene.setWeather(weather);
         scene.setAudio(audio());
         scene.setPicture(picture());
-        Model.Bikes bk = bikes(extra == 4);
+        Model.Bikes bk = withPlaces(bikes(extra == 4));
         // The evening shots forecast an empty pool: Erie St is empty in them too.
         if ((extra == 6 || extra == 7 || extra == 11 || extra == 13 || extra == 16) && bk.alt() != null) bk.alt().ebikes = 0;
         scene.setBikes(bk);
@@ -293,7 +340,7 @@ public final class Preview {
                 scene.step(1 / 60f, now);
             }
         }
-        int settle = extra == 1 ? 240 : extra == 4 ? 75 : extra == 6 ? 200 : extra == 13 ? 40 : 90;
+        int settle = extra == 1 ? 240 : extra == 4 ? 75 : extra == 6 ? 200 : extra == 13 ? 40 : extra == 23 ? 220 : 90;
         for (int i = 0; i < settle; i++) {
             now += 16;
             clock[0] = now;

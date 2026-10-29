@@ -1783,6 +1783,7 @@
         h('div', { class: 'docks' }, dockColumn(st, label, 'ebikes'), dockColumn(w.alt, w.altLabel, 'ebikes2')),
         forecastBlock(fc, w),
         finderBlock(f, label, w.altLabel),
+        buBlock(b),
         othersList
       ]);
       return;
@@ -1804,8 +1805,51 @@
       renting ? null : h('p', { class: 'bike-note', text: 'This dock isn’t renting right now, so its bikes are shown dimmed and the finder won’t count them.' }),
       forecastBlock(fc, w),
       finderBlock(f, label, ''),
+      buBlock(b),
       othersList
     ]);
+  }
+
+  // Where to leave a bike at BU Law and at Pardee, and a button that puts the 3D bike map on the TV.
+  function buBlock(b) {
+    const places = arr(b.places).map(obj);
+    if (places.length < 2) return null;
+    const keys = ['law', 'pardee'];
+    const rows = places.slice(0, 2).map(function (p, i) {
+      const live = p.live === true;
+      const free = Math.max(0, num(p.free) || 0);
+      return h('li', null,
+        h('button', { class: 'bu-place', type: 'button', 'data-fk': 'map-' + keys[i], 'aria-label': str(p.label) + ', show it on the TV map', on: { click: function () { showMap(keys[i]); } } },
+          h('span', { class: 'bu-head' },
+            h('span', { class: 'bu-name', text: str(p.label) }),
+            h('span', { class: 'bu-free' + (live && !free ? ' full' : ''), text: !live ? '-' : free ? free + ' free' : 'Full' })),
+          h('span', { class: 'bu-detail', text: buDetail(arr(p.docks).map(obj), live) })));
+    });
+    return h('div', { class: 'bu' },
+      h('p', { class: 'fc-eyebrow', text: 'Return at BU' }),
+      h('ul', { class: 'bu-places' }, rows),
+      h('button', { class: 'btn btn-quiet btn-block bu-map', type: 'button', 'data-fk': 'map', on: { click: function () { showMap('all'); } } }, icon('map'), 'Show the bike map on the TV'));
+  }
+
+  // "7 at BU Central, 1 min walk" or, when the nearest dock is full, "Silber Way full, 6 at Deerfield St, 2 min walk".
+  function buDetail(docks, live) {
+    if (!live || !docks.length) return 'Waiting for Bluebikes';
+    const n = docks[0];
+    const room = function (d) { return d.live === true && (num(d.free) || 0) > 0; };
+    const walk = function (d) { return (num(d.walk) || 1) + ' min walk'; };
+    if (room(n)) return n.free + ' at ' + str(n.name) + ', ' + walk(n);
+    const f = docks.filter(room)[0];
+    if (!f) return 'Every dock nearby is full';
+    return str(n.name) + (n.returning === false ? ' closed' : ' full') + ', ' + f.free + ' at ' + str(f.name) + ', ' + walk(f);
+  }
+
+  async function showMap(at) {
+    try {
+      await act('map', { do: 'show', at: at });
+      toast('The bike map is on the TV');
+    } catch (e) {
+      toast(e.message, 'alert');
+    }
   }
 
   // One of the two watched docks: its name, its e-bikes as the hero number, then classic and open docks.
