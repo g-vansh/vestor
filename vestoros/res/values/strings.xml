@@ -5,5 +5,5 @@
     <string name="guard_description">Sends the HOME button to the Vestor home screen instead of Amazon\'s, and shows notes and the bike alarm over other apps. It reads no screen content.</string>
     <string name="listener_label">Vestor Now Playing</string>
     <!-- What changed in this version: the TV shows it when this version arrives as an update. Plain text, under 300 characters. -->
-    <string name="update_notes">AirPlay for every Apple device: this TV now points iPhones, iPads and Macs nearby at the Samsung\'s own AirPlay over Bluetooth, even on MIT\'s Wi-Fi. Mirror a Screen shows the steps.</string>
+    <string name="update_notes">Speak to Ask Vestor from your phone: choose Speak on your phone in the Ask box and your words show on the TV as you talk. A 3D bike map, BU Law and Pardee docks on the bikes card, and the info bar and Settings fit the screen.</string>
 </resources>

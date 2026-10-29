@@ -178,10 +178,18 @@ final class Actions {
                 try {
                     Jw w = new Jw();
                     Claude.answerJson(w, h.assistant.ask(Json.str(body, "text", ""), d.name));
+                    // Asked from a phone while the TV's box was open: the box has done its job.
+                    if (h.askOpen) h.post(Hub.ASK_DRAFT, null);
                     return w.toString();
                 } catch (Claude.Failed f) {
                     throw new Http.Refused(409, f.getMessage());
                 }
+            }
+            case "askdraft": {
+                // What a phone types or says, shown live in the TV's open box. Text only, nothing runs.
+                String text = Json.str(body, "text", "").replaceAll("[\\p{Cntrl}\\u2028\\u2029]", " ");
+                if (text.length() > Claude.MAX_QUESTION) text = text.substring(0, Claude.MAX_QUESTION);
+                return "{\"ok\":true,\"open\":" + h.askDraft(text) + "}";
             }
             case "assistant": {
                 Claude c = h.assistant.claude;

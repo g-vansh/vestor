@@ -51,7 +51,7 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     static final int BIKES = 1, TRANSIT = 2, SKY = 3, WEATHER = 4, ALERTS = 5, AIR = 6, CALENDAR = 7, NOTE = 8,
             HEARTS = 9, MODE = 10, PHOTOS = 11, SETTINGS = 12, FINDER = 13, MEDIA = 14, PAIR = 15, PLANS = 16, WIFI = 17,
             ALARM = 18, FRONT = 19, WALL = 20, SECURITY = 21, FORECAST = 22, ANSWER = 23, CAMCHECK = 24, UPDATE = 25, ASKING = 26,
-            AIRPLAY = 27, MAP = 28;
+            AIRPLAY = 27, MAP = 28, ASK_DRAFT = 29;
 
     private static Hub instance;
 
@@ -776,6 +776,40 @@ final class Hub implements Live.Sink, Finder.Listener, Media.Sink, Console.Host,
     void setPush(String v) {
         if ("new".equals(v) || !Ntfy.validTopic(prefs.get(Prefs.PUSH_TOPIC, ""))) prefs.put(Prefs.PUSH_TOPIC, Ntfy.newTopic(random));
         prefs.put(Prefs.PUSH, "off".equals(v) ? "off" : "on");
+    }
+
+    // ---- Ask Vestor's box on the TV, and speaking into it from a phone ----------------------------
+
+    /** Whether Ask Vestor's box is open on the TV. Set on the main thread, read by the phone's state. */
+    volatile boolean askOpen;
+    /** When someone chose "Speak on your phone" in the open box, else 0. */
+    volatile long askPhoneSince;
+
+    /**
+     * Words from a phone for the TV's open box, as they are typed or spoken. False when the box is
+     * closed, so the phone stops sending.
+     */
+    boolean askDraft(String text) {
+        if (!askOpen) return false;
+        post(ASK_DRAFT, text);
+        return true;
+    }
+
+    /**
+     * "Speak on your phone" in the TV's box: the phone pages show a Speak button, and with phone
+     * alerts on, the phones are told. Answers whether the phones were told.
+     */
+    boolean askOnPhone(long now) {
+        askPhoneSince = now;
+        if (!pushOn()) return false;
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                push("Ask Vestor is listening", "Open Vestor on your phone and tap Speak. Your words show on the TV as you talk.", 4,
+                        "microphone", "");
+            }
+        });
+        return true;
     }
 
     /** One alert to every phone on the topic. False when ntfy did not take it. Slow: off the main thread. */

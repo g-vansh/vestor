@@ -6,6 +6,16 @@ notes from each other and your own photos on it. You run it from the remote, or 
 through a control center the TV serves itself. Built for a Fire TV Stick 4K (2nd generation) on
 Fire OS 8.1.8.5, driving a Samsung TV and a VIZIO 5.1 SE soundbar over eARC.
 
+## What 2.4 adds
+
+- **Speak to Ask Vestor from your phone.** In the Ask box on the TV, press Down to **Speak on
+  your phone**. Your phones get a nudge, the phone page shows a Speak button, and what you say
+  into the iPhone keyboard's microphone appears in the TV's box as you talk. OK on **Ask this** or
+  send on the phone asks it. See [Speaking to it](#speaking-to-it).
+- **BU Law and Pardee docks** on the bikes card, the Bluebikes panel and the phone page, and a
+  **3D bike map**. See [Returning at BU, and the bike map](#returning-at-bu-and-the-bike-map).
+- The info bar and Settings rows fit the screen, and the Samsung remote explains MIT's network.
+
 ## What 2.3 adds
 
 - **AirPlay for every Apple device, even on MIT's Wi-Fi.** The Fire TV broadcasts the same
@@ -392,12 +402,37 @@ one that ships:
 ## Ask Vestor: Claude on the TV
 
 Hold ☰ on the remote, choose the sparkle on the top row, say "Alexa, turn on Ask Vestor", or use
-the Ask box at the top of the phone page. On the TV the box opens with the keyboard up: type, or
-hold the remote's microphone button while the keyboard is up and speak, which Fire OS turns into
-text on the builds that allow it. On the iPhone, tap the microphone on the keyboard. Pressed on its
-own, the microphone button always belongs to Alexa: Amazon's documentation calls it a system event
-that no app can intercept. The answer shows on a glass card on the TV (when Vestor is in front,
-never over a film) and on the phone.
+the Ask box at the top of the phone page. On the TV the box opens with the keyboard up, ready to
+type. The answer shows on a glass card on the TV (when Vestor is in front, never over a film) and
+on the phone.
+
+### Speaking to it
+
+1. In the TV's box, press Down to **Speak on your phone** and press OK. With phone alerts on,
+   your phones buzz with "Ask Vestor is listening".
+2. Open Vestor on the phone. While the TV's box is open, the Ask card says so and has a
+   **Speak** button (on another tab, a "The TV is listening" bar does the same).
+3. Tap Speak, then the microphone on the iPhone keyboard, and talk. The words show in the TV's
+   box as they come. Send on the phone, or **Ask this** on the TV, asks it.
+
+Anything typed in the phone's Ask box shows on the TV the same way while the TV's box is open.
+
+**Why not the remote's microphone.** Fire OS keeps it for Alexa. Amazon's remote input docs call
+the button "a system event" that "cannot be intercepted", Fire OS has no speech recognizer that
+apps can call (Amazon's search docs say so, and a reply on Amazon's developer forum repeated it
+on Oct 23, 2026), and no microphone audio reaches other apps. YouTube's own mic works through access
+Amazon gives YouTube. The Samsung's voice stays inside the Samsung's own apps. A phone page
+cannot use Safari's speech recognition either: it needs HTTPS, and the TV serves the page over
+your home network. The iPhone keyboard's microphone has none of these limits.
+
+**The Fire TV keyboard's own mic.** With Amazon's keyboard up, holding the remote's microphone
+button types what you say, when Fire OS allows it. On the Fire TV Stick 4K (2nd generation) it
+worked on Fire OS 8.1.8.2 and stopped on 8.1.8.5: the button opens Alexa instead, and the
+keyboard's log says voice input is off because the en_US language "is not supported" (reports
+on Amazon's developer forum and Stremio's bug tracker, October 2026). It is Amazon's bug, and no
+app setting changes it. To try for it: Settings › My Fire TV › About › Check for Updates, then
+restart. One owner got it back by setting the Fire TV's language to English (Australia), and
+another saw no change with English (UK). Changing the language also changes Alexa's.
 
 **What it can do**
 

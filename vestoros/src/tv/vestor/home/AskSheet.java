@@ -31,8 +31,10 @@ import java.util.List;
  * It sits at the top of the screen with the Fire TV keyboard open below it, so a question can be
  * typed at once or spoken: holding the remote's microphone button while Amazon's own keyboard is up
  * types what you say, on the Fire OS builds that allow it. Fire OS gives apps no other way to hear
- * the remote, and the microphone button itself always belongs to Alexa. Under the box, a few
- * questions to pick with the remote, and OK on one asks it.
+ * the remote, and the microphone button itself always belongs to Alexa. So "Speak on your phone"
+ * hands the listening to a phone: the phone page shows a Speak button, the phone's own keyboard
+ * microphone turns speech into text, and the words appear in this box as they are said. Under the
+ * box, a few questions to pick with the remote, and OK on one asks it.
  *
  * Built from ordinary Android views, so the keyboard, focus and Back behave as they do everywhere
  * on Fire TV.
@@ -40,6 +42,53 @@ import java.util.List;
 final class AskSheet {
     interface Asker {
         void ask(String question);
+
+        /** "Speak on your phone" was chosen. Answers whether the phones were told. */
+        boolean onPhone();
+
+        /** The box closed, by an answer, Back or anything else. */
+        void closed();
+    }
+
+    /** The open box, so words from a phone can be shown in it. Main thread. */
+    static final class Sheet {
+        final Dialog dialog;
+        private final EditText field;
+        private final TextView hint, micLabel;
+        private boolean listening, heard;
+
+        private Sheet(Dialog dialog, EditText field, TextView hint, TextView micLabel) {
+            this.dialog = dialog;
+            this.field = field;
+            this.hint = hint;
+            this.micLabel = micLabel;
+        }
+
+        boolean isShowing() {
+            return dialog.isShowing();
+        }
+
+        void dismiss() {
+            dialog.dismiss();
+        }
+
+        /** Words from a phone, typed or spoken, replacing what the box holds. */
+        void draft(String text) {
+            if (!dialog.isShowing() || text.equals(field.getText().toString())) return;
+            field.setText(text);
+            field.setSelection(field.length());
+            if (!heard) {
+                heard = true;
+                hint.setText("From your phone. Tap send there, or press OK on Ask this.");
+            }
+            micLabel.setText(Text.clean(text).isEmpty() ? "Listening on your phone" : "Ask this");
+        }
+
+        private void listen(boolean told) {
+            listening = true;
+            micLabel.setText("Listening on your phone");
+            hint.setText((told ? "Your phones were told. " : "") + "Open Vestor on your phone and tap Speak. Your words show here as you talk.");
+        }
     }
 
     private static final int WRAP = ViewGroup.LayoutParams.WRAP_CONTENT, MATCH = ViewGroup.LayoutParams.MATCH_PARENT;
@@ -48,7 +97,7 @@ final class AskSheet {
     }
 
     /** Opens the box. {@code ideas} are offered under it, at most three. */
-    static Dialog show(Activity a, List<String> ideas, final Asker asker) {
+    static Sheet show(Activity a, List<String> ideas, final Asker asker) {
         final float d = a.getResources().getDisplayMetrics().density;
         final boolean day = Tone.mix > 0.5f;
         final AndroidGfx gfx = new AndroidGfx(a.getAssets());
@@ -82,7 +131,7 @@ final class AskSheet {
         field.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
         field.setTextColor(primary);
         field.setHintTextColor(tertiary);
-        field.setHint("Type, or hold the mic button and speak");
+        field.setHint("Type, or speak on your phone");
         field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         field.setImeOptions(EditorInfo.IME_ACTION_SEND | EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_FLAG_NO_FULLSCREEN);
         field.setFilters(new InputFilter[] {new InputFilter.LengthFilter(Claude.MAX_QUESTION)});
@@ -105,8 +154,45 @@ final class AskSheet {
         });
         box.addView(field, new LinearLayout.LayoutParams(MATCH, WRAP));
 
-        box.addView(text(a, "With the keyboard up, hold the microphone button on the remote and speak. Down picks an idea.",
-                gfx.face(Gfx.TEXT_REGULAR), 14, tertiary), margins(d, 2, 10, 0, 0));
+        TextView hint = text(a, "Down for Speak on your phone. Holding the remote's mic button with the keyboard up also types, where Fire OS allows it.",
+                gfx.face(Gfx.TEXT_REGULAR), 14, tertiary);
+        box.addView(hint, margins(d, 2, 10, 0, 0));
+
+        // Speak on your phone: the remote's microphone is Alexa's, a phone's keyboard microphone is not.
+        ColorStateList ink = new ColorStateList(new int[][] {{android.R.attr.state_focused}, {}}, new int[] {Tone.INK, primary});
+        final LinearLayout mic = new LinearLayout(a);
+        mic.setOrientation(LinearLayout.HORIZONTAL);
+        mic.setGravity(Gravity.CENTER_VERTICAL);
+        mic.setPadding(px(d, 14), px(d, 9), px(d, 18), px(d, 9));
+        mic.setBackground(states(pill(d, 20, Tone.FOCUS, 0, 0), pill(d, 20, 0, Tone.ACCENT, 1.5f)));
+        mic.setFocusable(true);
+        mic.setClickable(true);
+        final Glyph micIcon = new Glyph(a, gfx, Tone.INK, Tone.ACCENT);
+        mic.addView(micIcon, new LinearLayout.LayoutParams(px(d, 22), px(d, 22)));
+        TextView micLabel = text(a, "Speak on your phone", gfx.face(Gfx.TEXT_MEDIUM), 16, primary);
+        micLabel.setTextColor(ink);
+        micLabel.setDuplicateParentStateEnabled(true);
+        mic.addView(micLabel, margins(d, 8, 0, 0, 0));
+        final Sheet sheet = new Sheet(dialog, field, hint, micLabel);
+        mic.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean has) {
+                micIcon.invalidate();
+            }
+        });
+        mic.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String q = Text.clean(field.getText().toString());
+                if (sheet.heard && !q.isEmpty()) {
+                    dialog.dismiss();
+                    asker.ask(q);
+                    return;
+                }
+                if (!sheet.listening) sheet.listen(asker.onPhone());
+            }
+        });
+        box.addView(mic, margins(d, 0, 18, 0, 0));
 
         if (!ideas.isEmpty()) {
             TextView pick = text(a, "OR PICK ONE", gfx.face(Gfx.MONO), 11.5f, tertiary);
@@ -114,7 +200,6 @@ final class AskSheet {
             box.addView(pick, margins(d, 0, 22, 0, 10));
             LinearLayout row = new LinearLayout(a);
             row.setOrientation(LinearLayout.HORIZONTAL);
-            ColorStateList ink = new ColorStateList(new int[][] {{android.R.attr.state_focused}, {}}, new int[] {Tone.INK, primary});
             for (int i = 0; i < ideas.size() && i < 3; i++) {
                 final String q = ideas.get(i);
                 TextView chip = text(a, q, gfx.face(Gfx.TEXT_MEDIUM), 16, primary);
@@ -154,10 +239,16 @@ final class AskSheet {
             // The keyboard opens with the box, so speaking or typing is one step away.
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
         }
+        dialog.setOnDismissListener(new android.content.DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(android.content.DialogInterface di) {
+                asker.closed();
+            }
+        });
         field.requestFocus();
         dialog.show();
         if (w != null) w.setLayout(width, WRAP);
-        return dialog;
+        return sheet;
     }
 
     private static int px(float d, float dp) {
@@ -193,6 +284,26 @@ final class AskSheet {
         s.addState(new int[] {android.R.attr.state_focused}, focused);
         s.addState(new int[0], rest);
         return s;
+    }
+
+    /** The microphone, in the button's ink when it has focus and the accent otherwise. */
+    private static final class Glyph extends View {
+        private final AndroidGfx gfx;
+        private final int on, off;
+
+        Glyph(Context c, AndroidGfx gfx, int on, int off) {
+            super(c);
+            this.gfx = gfx;
+            this.on = on;
+            this.off = off;
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            gfx.begin(canvas);
+            View p = (View) getParent();
+            Icons.mic(gfx, getWidth() / 2f, getHeight() / 2f, Math.min(getWidth(), getHeight()), p != null && p.isFocused() ? on : off);
+        }
     }
 
     /** The sparkle, drawn by the same code as the home screen's. */

@@ -2,7 +2,6 @@ package tv.vestor.home;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -419,6 +418,13 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
                 if (detail instanceof Integer && (Integer) detail >= 0) scene.showMap((Integer) detail, now);
                 else scene.closeMap();
                 break;
+            case Hub.ASK_DRAFT:
+                // Words from a phone for the open box, or null once the phone asked them.
+                if (askSheet != null && askSheet.isShowing()) {
+                    if (detail instanceof String) askSheet.draft((String) detail);
+                    else askSheet.dismiss();
+                }
+                return;
             default:
                 return;
         }
@@ -1243,13 +1249,14 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
     }
 
     /** Ask Vestor's box, while it is open. */
-    private Dialog askSheet;
+    private AskSheet.Sheet askSheet;
 
     /**
      * A question for the assistant from the remote: Vestor's own box with the Fire TV keyboard open,
      * where holding the remote's microphone button speaks into it on builds that allow it. A phone's
-     * keyboard microphone always does. Holding Menu, the top row's sparkle and "Alexa, turn on Ask
-     * Vestor" all open it.
+     * keyboard microphone always does: "Speak on your phone" in the box, and what the phone hears
+     * shows in it live. Holding Menu, the top row's sparkle and "Alexa, turn on Ask Vestor" all
+     * open it.
      */
     private void ask() {
         if (!hub.assistant.claude.hasKey()) {
@@ -1258,10 +1265,23 @@ public final class Home extends Activity implements Scene.Host, Hub.Listener {
             return;
         }
         if (askSheet != null && askSheet.isShowing()) return;
+        hub.askPhoneSince = 0;
+        hub.askOpen = true;
         askSheet = AskSheet.show(this, askIdeas(), new AskSheet.Asker() {
             @Override
             public void ask(String question) {
                 send(question);
+            }
+
+            @Override
+            public boolean onPhone() {
+                return hub.askOnPhone(System.currentTimeMillis());
+            }
+
+            @Override
+            public void closed() {
+                hub.askOpen = false;
+                hub.askPhoneSince = 0;
             }
         });
     }

@@ -2152,6 +2152,44 @@ a.btn { text-decoration: none; }
 .ask-send .ico { width: 20px; height: 20px; }
 .ask-send.busy .ico { display: none; }
 .ask-hint { color: var(--text-3); font-size: 12.5px; padding-left: 6px; }
+/* The TV's Ask box is open: this field types into it, live. */
+.ask-live {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 14px;
+  border-radius: 16px;
+  background: var(--accent-soft);
+  animation: rise .4s var(--spring) both;
+}
+.ask-live[hidden] { display: none; }
+.ask-live-text { flex: 1; min-width: 0; font-size: 13.5px; line-height: 1.35; color: var(--text-2); }
+.ask-speak, .listen-btn { flex: none; gap: 6px; }
+.ask-speak .ico, .listen-btn .ico { width: 18px; height: 18px; }
+.card-ask.ask-listening .ask-input { box-shadow: 0 0 0 2px var(--accent), 0 10px 30px -14px var(--accent-glow); }
+.listen-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: listen-pulse 1.4s ease-in-out infinite;
+}
+@keyframes listen-pulse { 50% { transform: scale(.6); opacity: .45; } }
+.listen-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 18px;
+  border-radius: var(--r-card);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: 0 0 0 1.5px var(--accent), 0 18px 40px -20px var(--accent-glow);
+  animation: rise .4s var(--spring) both;
+}
+.listen-text { flex: 1; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .listen-dot { animation: none; } }
 @media (hover: hover) and (pointer: fine) { .ask-hint { display: none; } }
 .ask-nokey { display: grid; gap: 12px; justify-items: start; }
 .ask-nokey-text { font: 400 22px/1.25 var(--font-serif); letter-spacing: -.01em; color: var(--text-2); }

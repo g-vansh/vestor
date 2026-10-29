@@ -22,6 +22,8 @@ final class State {
         Claude c = h.assistant.claude;
         w.key("assistant").obj().put("on", c.hasKey()).put("hint", c.keyHint()).put("mode", c.mode()).put("cap", c.cap())
                 .put("spent", c.spent(now)).put("perDay", Claude.PER_DAY);
+        // Ask Vestor's box on the TV: while it is open, what a phone types or says shows in it.
+        w.key("tvBox").obj().put("open", h.askOpen).put("phone", h.askOpen && h.askPhoneSince > 0).end();
         Claude.Answer latest = h.assistant.latest;
         if (latest != null && latest.busy) {
             w.key("asking");
