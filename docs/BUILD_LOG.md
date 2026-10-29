@@ -1800,6 +1800,17 @@ add airline branding.
 - Next: on the Mac, pull lucent and run ./publish.sh. Then on the TV: Settings, Updates,
   Install, and try Speak on your phone.
 
+### 2026-10-29: VestorOS 2.4 published
+- Did: on the Mac, pulled lucent (PR #2, 8b80532; claude/vestoros-polish holds the same two
+  patches, already in it) and published with the owner's go-ahead.
+- Verified: whole tree compiled with warnings as errors, and every desk suite green, AirPlayTest,
+  MapTest (444) and GlanceTest (88) included, except SecurityTest, which cannot bind 127.0.0.2 on
+  macOS. No new permissions or network hosts. ota serves 2.4 (code 11, SHA-256 0603b86c...), byte
+  for byte the build and signed with the release certificate, with code 10 kept for going back.
+  GitHub's cache served code 11 within 15 s of the push.
+- Next: on the TV, Settings, Updates, Check Now, Install. Then try Speak on your phone and the
+  bike map.
+
 ## (template)
 ### YYYY-MM-DD — <step>
 - Did:
